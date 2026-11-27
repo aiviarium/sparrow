@@ -71,6 +71,9 @@ func TestRelayAckLimits(t *testing.T) {
 		})
 		waitFacet(t, c, "acme")
 		waitFacet(t, c, "hub-b/remote")
+		// Let updates still on their way (a node that connected while
+		// this client did) arrive before the client starts stalling.
+		time.Sleep(500 * time.Millisecond)
 		stalling.Store(true)
 		return c.Session()
 	}

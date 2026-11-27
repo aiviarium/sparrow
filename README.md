@@ -13,8 +13,8 @@ Dual-licensed under MIT (`LICENSE-MIT`) or Apache-2.0 (`LICENSE-APACHE`), at you
 ## Repository layout
 
 ```
-spec/core.md               Core protocol specification with the Web and Hub profiles (snapshot of draft revision 316)
-spec/hub-admin.md          Sparrow Hub Administration: the sparrow.hub.admin v1 interface (companion, revision 18)
+spec/core.md               Core protocol specification with the Web and Hub profiles (snapshot of draft revision 324)
+spec/hub-admin.md          Sparrow Hub Administration: the sparrow.hub.admin v1 interface (companion, revision 25)
 spec/reference-server.md   Design note for the Go reference server (not part of the spec)
 SPEC-ISSUES.md             Resolution log of spec questions raised while writing the test vectors
 test-vectors/              Test vectors, one JSON file per area, and their format (README.md)
@@ -22,6 +22,7 @@ test-vectors/scenarios/    Behaviour scenarios: scripted message sequences with 
 tools/vectorgen-go/        Go program that generates the vectors (canonical reference)
 tools/verify-js/           Independent Node.js verifier (cbor2 + node:crypto)
 go/                        Go reference implementation (see go/README.md)
+e2e/browser/               Browser end-to-end test: a minimal page in headless Chromium (Playwright)
 .github/workflows/         CI: regenerate, check for drift, verify
 ```
 

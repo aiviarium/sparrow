@@ -1,10 +1,10 @@
 # Sparrow RPC: Go reference implementation
 
-Module `github.com/aiviarium/sparrow-rpc/go`, Go 1.24, following core spec revision 316
-(`../spec/core.md`) and hub-admin revision 18 (`../spec/hub-admin.md`). Phase 1 is the encoding,
+Module `github.com/aiviarium/sparrow-rpc/go`, Go 1.24, following core spec revision 324
+(`../spec/core.md`) and hub-admin revision 25 (`../spec/hub-admin.md`). Phase 1 is the encoding,
 wire format, schema model and web-profile signing (below); phase 2 the sessions, transports and the
 node library (`session/README.md`); phase 3 the hub, `sparrow.hub.admin` and the `sparrow-hub`
-program (section "Hub" below). The Web Profile's HTTP endpoints come in phase 4.
+program (section "Hub" below); phase 4 the Web Profile server (section "Web Profile" below).
 
 | Package | Purpose |
 | --- | --- |
@@ -19,6 +19,7 @@ program (section "Hub" below). The Web Profile's HTTP endpoints come in phase 4.
 | `session`, `transport/...`, `node`, `examples/echo-node` | Phase 2: see `session/README.md`. |
 | `admin` | `sparrow.hub.admin` v1: the document (CBOR and JSON forms), validation, revisions, confirmation and rollback, stored secrets and facets, watch, persistence in a data directory, the facet handler and a client. |
 | `hub` | The Hub Profile (core section 10): node links, composition, authorization, forwarding, call contexts, offline nodes, federation. |
+| `web` | The Web Profile (core section 9): `/sparrow/connect`, tickets, schema and module resources, the `web.*` annotations, and a client that follows the browser rules (signatures, rollback, revocation, snapshots). |
 | `cmd/sparrow-hub` | The reference server program. |
 | `cmd/sparrow-admin` | A command-line controller for `sparrow.hub.admin`. |
 | `conformance` | Tests only: checks the library against every vector in `../test-vectors`, and the messages of every behaviour scenario in `../test-vectors/scenarios`. |
@@ -100,11 +101,20 @@ Choices worth knowing (details in `spec/reference-server.md`):
   by (node ID, facet name, major); a counter that only grows means retired IDs are never handed out
   again. The last definition of every ID is persisted too: a node reconnecting (or updating) with a
   facet that is not a compatible successor is refused with `schema_mismatch`, also across restarts.
-- A node's update is relayed to every session whose view changes; the node is acked only after each
-  of them acked or was closed (5 s each, 2.5 s for an update from a peer hub).
-- Interfaces: the hub verifies `implements` against the interfaces it knows (built in:
-  `sparrow.hub.admin`; more in the document extension `ref.interfaces`). A claim it cannot verify is
-  refused unless `AcceptUnknownInterfaces` is set; unverified claims never become defaults.
+- A node's update, or the change a superseding session brings, is relayed to every session whose
+  view changes; the node is acked only after each of them acked or was closed with
+  `GoAway(schema_mismatch)` (5 s each, 2 s for an update from a peer hub; `Options.RelayAckTimeout`,
+  `PeerRelayAckTimeout`). The node library gives its hub at least 10 s.
+- Dial-in: only a node configured to dial in has a dial-in credential; anything else is
+  `GoAway(unauthenticated)`. Calls from a peer hub never carry a `context` (one that does, or that names
+  a `peer:` principal, gets `permission_denied`), the hub sends none to a peer, and a call acting for
+  a `peer:` principal is never forwarded to another peer.
+- Client sessions whose credential has a login session and an end (Web Profile tickets) get
+  `AuthStatus` 60 s before the end and `GoAway(unauthenticated)` at the end; `AuthRefresh` for the same
+  principal and login session extends them (`Actor.LoginSession`, `Actor.Expires`).
+- Interfaces: the hub verifies `implements` against the interfaces it holds documents for (built in:
+  `sparrow.hub.admin`; more in the document extension `ref.interfaces`). A claim to any other
+  interface is refused with `schema_mismatch`, like an incompatible update.
 - Contexts are 16 random bytes, bound to the node link they were issued on, valid while the call is
   open and 2 s after (never after its deadline); when the grace period ends the hub ends nested calls
   still carrying it with `permission_denied` (Error to the node, Cancel to the callee).
@@ -115,8 +125,13 @@ Choices worth knowing (details in `spec/reference-server.md`):
   crashes restart with backoff, and 5 crashes within a minute mark the node failed until its
   configuration changes.
 - Dialed nodes: the TLS chain is not verified, only the SHA-256 of the leaf's SubjectPublicKeyInfo
-  (the pin); `https` dials WebTransport, `wss` WebSocket. A changed Dial keeps the old session until the
-  new one supersedes it, or until the first new attempt fails.
+  (the pin); `https` dials WebTransport, `wss` WebSocket. A changed Dial ends the old session when the
+  new one is ready or the first new attempt fails.
+
+Limitations: the hub presents only `["link", credential]` when dialing (no mutual TLS); `Other` start
+kinds (`wasm`, `oci`) are not implemented and are validation problems; the hub never calls a client's
+own facets (they are scoped to the client's session); spawned nodes get their own process group only
+on Unix (elsewhere the process alone is killed).
 
 ## Hub tests
 
@@ -132,3 +147,31 @@ hubs, a fake clock for context expiry and admin deadlines, restarts on the same 
 every behaviour scenario of `../test-vectors/scenarios` through the hub to a node (`TestScenariosThroughHub`).
 `cmd/sparrow-hub` builds the binaries and drives them as an operator would (`sparrow-admin`, SIGTERM,
 restart, cached schemas).
+
+## Web Profile (phase 4)
+
+```sh
+cat > hub.json <<'JSON'
+{ "webtransport": "127.0.0.1:4433", "websocket": "127.0.0.1:4434", "selfSigned": true, "dataDir": "./data",
+  "bootstrap": [{"principal": "user:admin", "credential": "change-me"}],
+  "tokens": [{"token": "alice", "principal": "user:alice"}],
+  "web": {"modulesDir": "./mods", "rootKeys": ["<hex root key>"], "minHostApi": "3.0.0"} }
+JSON
+bin/sparrow-hub -config hub.json -addr-file addrs.json     # addrs.json gets "web": "https://127.0.0.1:4434"
+curl -k -H 'Authorization: Bearer alice' -H 'Content-Type: application/json' \
+     -d '{"client": {"name": "x", "hostApi": "3.2.0"}}' https://127.0.0.1:4434/sparrow/connect
+```
+
+`"web": true` turns the profile on with the defaults. Package `web` serves `POST /sparrow/connect`
+(static bearer tokens, or any `web.Authenticator`), `GET /sparrow/schema/{hash}` and
+`GET /sparrow/mods/{hash}.{ext}` on both listeners; tickets go in `Hello` and `AuthRefresh` as
+`["bearer", ticket]`. Module files live in `modulesDir` under any name and are found by content hash;
+the facets' `web.modules` entries sign them. The document extension `ref.web` (a CBOR map of `web.*`
+annotations) puts `web.keys`, `web.revoked`, `web.apply` and client configuration at the top level of
+every schema. `examples/echo-node -web-modules file.cbor` ships a list of signed entries. Details:
+`spec/reference-server.md`, section 5.
+
+```sh
+go test -race ./web ./cmd/sparrow-hub        # unit tests, and the binary end to end (TestWebEndToEnd)
+e2e/browser/run.sh                           # headless Chromium: WebTransport and WebSocket (TestBrowser)
+```
