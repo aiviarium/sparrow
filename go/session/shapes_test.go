@@ -14,7 +14,10 @@ import (
 
 func forBindings(t *testing.T, f func(t *testing.T, b binding)) {
 	for _, b := range allBindings() {
-		t.Run(b.name, func(t *testing.T) { f(t, b) })
+		t.Run(b.name, func(t *testing.T) {
+			t.Parallel()
+			f(t, b)
+		})
 	}
 }
 
@@ -25,6 +28,7 @@ func tctx(t *testing.T) context.Context {
 }
 
 func TestShapes(t *testing.T) {
+	t.Parallel()
 	forBindings(t, func(t *testing.T, b binding) {
 		h := newTestHandlers()
 		cli, srv := stdPair(t, b, h, nil)
@@ -234,6 +238,7 @@ func TestShapes(t *testing.T) {
 
 // TestBidirectional: both sides publish a schema and call each other.
 func TestBidirectional(t *testing.T) {
+	t.Parallel()
 	forBindings(t, func(t *testing.T, b binding) {
 		hc, hs := newTestHandlers(), newTestHandlers()
 		ccfg := Config{Schema: testSchema("client", testFacet(20, "cli")), Handler: hc.mux(20)}

@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -310,11 +311,14 @@ func wsBinding() binding {
 	}, false}
 }
 
+// One WebTransport server serves every test; each connection gets its own
+// path, so tests running in parallel each receive their own server end.
 var (
 	wtOnce  sync.Once
 	wtURL   string
 	wtHash  []byte
-	wtConns = make(chan transport.Conn, 16)
+	wtConns sync.Map // path -> chan transport.Conn
+	wtSeq   atomic.Int64
 	wtErr   error
 )
 
@@ -330,7 +334,13 @@ func wtBinding() binding {
 			srv := wtb.NewServer(wtb.ServerOptions{TLSConfig: &tls.Config{Certificates: []tls.Certificate{cert}},
 				CheckOrigin: func(*http.Request) bool { return true }})
 			mux := http.NewServeMux()
-			mux.Handle("/sparrow", srv.Handler(func(c *wtb.Conn, _ *http.Request) { wtConns <- c }))
+			mux.Handle("/sparrow/", srv.Handler(func(c *wtb.Conn, r *http.Request) {
+				if ch, ok := wtConns.Load(r.URL.Path); ok {
+					ch.(chan transport.Conn) <- c
+					return
+				}
+				_ = c.Close(status.NotFound, "no test waits for this connection")
+			}))
 			srv.WT.H3.Handler = mux
 			pc, err := net.ListenPacket("udp", "127.0.0.1:0")
 			if err != nil {
@@ -338,19 +348,23 @@ func wtBinding() binding {
 				return
 			}
 			go func() { _ = srv.Serve(pc) }()
-			wtURL = fmt.Sprintf("https://127.0.0.1:%d/sparrow", pc.LocalAddr().(*net.UDPAddr).Port)
+			wtURL = fmt.Sprintf("https://127.0.0.1:%d", pc.LocalAddr().(*net.UDPAddr).Port)
 		})
 		if wtErr != nil {
 			t.Fatal(wtErr)
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		c, err := wtb.Dial(ctx, wtURL, &wtb.DialOptions{CertHashes: [][]byte{wtHash}})
+		path := fmt.Sprintf("/sparrow/%d", wtSeq.Add(1))
+		ch := make(chan transport.Conn, 1)
+		wtConns.Store(path, ch)
+		defer wtConns.Delete(path)
+		c, err := wtb.Dial(ctx, wtURL+path, &wtb.DialOptions{CertHashes: [][]byte{wtHash}})
 		if err != nil {
 			t.Fatal(err)
 		}
 		select {
-		case s := <-wtConns:
+		case s := <-ch:
 			return c, s
 		case <-ctx.Done():
 			t.Fatal("no server connection")
@@ -370,8 +384,26 @@ func pair(t testing.TB, b binding, ccfg, scfg Config) (*Session, *Session) {
 	return pairOn(t, cc, sc, ccfg, scfg)
 }
 
+// testLinger replaces DefaultLinger in tests: messages that precede the
+// end of a connection arrive within it on every binding here.
+const testLinger = 200 * time.Millisecond
+
+// fastTimers shortens the wall-clock waits that tests do not assert on
+// (the linger after a connection ends and the wait for a GoAway being
+// written); a test that sets them keeps its values.
+func fastTimers(c *Config) {
+	if c.Linger == 0 {
+		c.Linger = testLinger
+	}
+	if c.GoAwayWait == 0 {
+		c.GoAwayWait = testLinger
+	}
+}
+
 func pairOn(t testing.TB, cc, sc transport.Conn, ccfg, scfg Config) (*Session, *Session) {
 	t.Helper()
+	fastTimers(&ccfg)
+	fastTimers(&scfg)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	var srv *Session

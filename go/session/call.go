@@ -615,6 +615,7 @@ func (s *Session) forgetEarly(c *call) {
 	s.mu.Lock()
 	if s.calls[c.id] == c {
 		delete(s.calls, c.id)
+		s.callGoneLocked()
 	}
 	if l := c.ln; l != nil && !l.shared && l.current == c {
 		l.current = nil
@@ -656,6 +657,7 @@ func (s *Session) forgetLocked(c *call) bool {
 	defer s.mu.Unlock()
 	if s.calls[c.id] == c {
 		delete(s.calls, c.id)
+		s.callGoneLocked()
 	}
 	if c.ln == nil || c.ln.heldCall != c {
 		s.uncountCallLocked(c)

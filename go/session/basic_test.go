@@ -7,8 +7,10 @@ import (
 )
 
 func TestUnaryAllBindings(t *testing.T) {
+	t.Parallel()
 	for _, b := range allBindings() {
 		t.Run(b.name, func(t *testing.T) {
+			t.Parallel()
 			h := newTestHandlers()
 			cli, _ := stdPair(t, b, h, nil)
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

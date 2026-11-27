@@ -117,6 +117,7 @@ type Session struct {
 	pingSent    bool
 	notifySem   chan struct{}
 	ackQ        chan func()
+	noCalls     chan struct{} // closed once no call is open after the shared lane ended
 }
 
 // NewClient runs the client side of the handshake on conn (5.2). It sends
@@ -1227,7 +1228,7 @@ func (s *Session) sendGoAwayAndClose(code status.Code, reason string, retry *uin
 	if !send && pending != nil {
 		// A GoAway is being written; close once it is out.
 		go func() {
-			t := time.NewTimer(2 * time.Second)
+			t := time.NewTimer(dur(s.cfg.GoAwayWait, DefaultGoAwayWait))
 			defer t.Stop()
 			select {
 			case <-pending:
@@ -1249,7 +1250,7 @@ func (s *Session) sendGoAwayAndClose(code status.Code, reason string, retry *uin
 			s.terminate(code, reason, false)
 		}()
 		go func() {
-			t := time.NewTimer(2 * time.Second)
+			t := time.NewTimer(dur(s.cfg.GoAwayWait, DefaultGoAwayWait))
 			defer t.Stop()
 			select {
 			case <-written:
@@ -1288,20 +1289,36 @@ func (s *Session) sharedEnded(err error) {
 		s.terminate(code, reason, remote)
 		return
 	}
-	linger := dur(s.cfg.Linger, DefaultLinger)
-	deadline := time.Now().Add(linger)
+	s.mu.Lock()
+	if s.noCalls == nil {
+		s.noCalls = make(chan struct{})
+		if len(s.calls) == 0 {
+			close(s.noCalls)
+		}
+	}
+	noCalls := s.noCalls
+	s.mu.Unlock()
 	go func() {
-		for time.Now().Before(deadline) {
-			s.mu.Lock()
-			n := len(s.calls)
-			s.mu.Unlock()
-			if n == 0 {
-				break
-			}
-			time.Sleep(10 * time.Millisecond)
+		t := time.NewTimer(dur(s.cfg.Linger, DefaultLinger))
+		defer t.Stop()
+		select {
+		case <-noCalls:
+		case <-t.C:
 		}
 		s.terminate(code, reason, remote)
 	}()
+}
+
+// callGoneLocked signals sharedEnded once the last open call is gone
+// (s.mu held).
+func (s *Session) callGoneLocked() {
+	if s.noCalls != nil && len(s.calls) == 0 {
+		select {
+		case <-s.noCalls:
+		default:
+			close(s.noCalls)
+		}
+	}
 }
 
 func (s *Session) transportGone() {

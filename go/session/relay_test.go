@@ -160,8 +160,20 @@ func newRelay(t *testing.T, up, down binding) *relaySetup {
 
 // check compares the client's messages for its call with the node's for
 // the forwarded call, in both directions.
+// The last messages may still be on their way when the calls are no
+// longer counted (the End a relay sends on the caller's behalf, 10.5), so
+// it compares until both sides agree or 5 s pass.
 func (r *relaySetup) check(t *testing.T, clientID uint64, method uint64) {
 	t.Helper()
+	var last string
+	if testutil.WaitFor(5*time.Second, func() bool { last = r.compare(t, clientID, method); return last == "" }) {
+		return
+	}
+	t.Fatal(last)
+}
+
+// compare returns how the two hops differ, or "".
+func (r *relaySetup) compare(t *testing.T, clientID uint64, method uint64) string {
 	r.cliConn.mu.Lock()
 	cw, cr := append([][]byte(nil), r.cliConn.written...), append([][]byte(nil), r.cliConn.read...)
 	r.cliConn.mu.Unlock()
@@ -179,15 +191,15 @@ func (r *relaySetup) check(t *testing.T, clientID uint64, method uint64) {
 		}
 	}
 	if nodeID == 0 {
-		t.Fatal("the node never saw the call")
+		return "the node never saw the call"
 	}
 	up, down := callMessages(t, cw, clientID), callMessages(t, nr, nodeID)
 	if !equalStrings(up, down) {
-		t.Fatalf("caller -> callee differs:\nclient wrote %d messages\nnode read   %d messages\n%v\n%v", len(up), len(down), head(up), head(down))
+		return fmt.Sprintf("caller -> callee differs:\nclient wrote %d messages\nnode read   %d messages\n%v\n%v", len(up), len(down), head(up), head(down))
 	}
 	up, down = callMessages(t, nw, nodeID), callMessages(t, cr, clientID)
 	if !equalStrings(up, down) {
-		t.Fatalf("callee -> caller differs:\nnode wrote  %d messages\nclient read %d messages\n%v\n%v", len(up), len(down), head(up), head(down))
+		return fmt.Sprintf("callee -> caller differs:\nnode wrote  %d messages\nclient read %d messages\n%v\n%v", len(up), len(down), head(up), head(down))
 	}
 	// The forwarded Request carries the hub's principal and context.
 	for _, b := range nr {
@@ -202,6 +214,7 @@ func (r *relaySetup) check(t *testing.T, clientID uint64, method uint64) {
 			}
 		}
 	}
+	return ""
 }
 
 func head(xs []string) []string {
@@ -231,6 +244,7 @@ func equalStrings(a, b []string) bool {
 }
 
 func TestRelay(t *testing.T) {
+	t.Parallel()
 	combos := [][2]binding{
 		{wsBinding(), wsBinding()},
 		{wtBinding(), memBinding()},
@@ -239,6 +253,7 @@ func TestRelay(t *testing.T) {
 	}
 	for _, cb := range combos {
 		t.Run(cb[0].name+"->"+cb[1].name, func(t *testing.T) {
+			t.Parallel()
 			r := newRelay(t, cb[0], cb[1])
 			ctx := tctx(t)
 			cli := r.cli

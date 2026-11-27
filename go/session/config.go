@@ -24,6 +24,7 @@ const (
 	DefaultKeepIdle         = 2
 	DefaultLinger           = time.Second
 	DefaultResetWait        = 5 * time.Second
+	DefaultGoAwayWait       = 2 * time.Second
 
 	// PreAuthLimit bounds the shared-lane data the server buffers after
 	// Hello until the credential is verified, and the data an optimistic
@@ -157,6 +158,10 @@ type Config struct {
 	// direction (4.2 rule 5); default 5 s. On a binding that cannot reset
 	// one direction alone, the stream stays counted for this long.
 	ResetWait time.Duration
+	// GoAwayWait bounds how long the session waits for a GoAway it is
+	// writing before it closes the transport anyway (the lane may be
+	// blocked); default 2 s.
+	GoAwayWait time.Duration
 }
 
 // PeerSchemaUpdate describes an applied SchemaUpdate from the peer.

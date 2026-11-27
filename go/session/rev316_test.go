@@ -18,6 +18,7 @@ import (
 // notification method gets Error(invalid_argument); a call-ID-0 Request
 // for a method without flag 0x2 is dropped (7.1).
 func TestNotificationWithCallID(t *testing.T) {
+	t.Parallel()
 	h := newTestHandlers()
 	p, _, _ := rawClient(t, Config{Schema: testSchema("s"), Handler: h.mux(tFacet)}, mem.Options{NoLeases: true})
 	p.handshake(nil)
@@ -35,6 +36,7 @@ func TestNotificationWithCallID(t *testing.T) {
 // TestReadyMismatch: a Ready naming another hash closes the session with
 // GoAway(schema_mismatch) (5.2).
 func TestReadyMismatch(t *testing.T) {
+	t.Parallel()
 	p, _, ech := rawClient(t, Config{Schema: testSchema("s")}, mem.Options{})
 	p.send(hello(nil))
 	if _, ok := p.recv().(*wire.Welcome); !ok {
@@ -53,11 +55,16 @@ func TestReadyMismatch(t *testing.T) {
 // open even when the caller's half is already finished (7.5); the callee
 // answers Error(cancelled).
 func TestCancelAfterCallerHalf(t *testing.T) {
+	t.Parallel()
 	h := newTestHandlers()
 	p, _, _ := rawClient(t, Config{Schema: testSchema("s"), Handler: h.mux(tFacet)}, mem.Options{NoLeases: true})
 	p.handshake(nil)
 	p.send(reqMsg(2, tFacet, mBlock, nil)) // unary: the Request finishes the caller's half
-	time.Sleep(20 * time.Millisecond)
+	select {
+	case <-h.started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the call was not dispatched")
+	}
 	p.send(&wire.Cancel{CallID: 2, Status: uint64(status.Cancelled)})
 	if e, ok := p.recv().(*wire.Error); !ok || e.CallID != 2 || status.Code(e.Status) != status.Cancelled {
 		t.Fatalf("got %#v", e)
@@ -68,6 +75,7 @@ func TestCancelAfterCallerHalf(t *testing.T) {
 // publish one later (5.4): locally refused, and a SchemaUpdate from such a
 // client closes the session.
 func TestNoLateClientSchema(t *testing.T) {
+	t.Parallel()
 	cli, _ := pair(t, memBinding(), Config{}, Config{Schema: testSchema("s")})
 	if _, err := cli.UpdateSchema(testSchema("late"), SchemaUpdateOptions{}); err == nil {
 		t.Fatal("UpdateSchema succeeded without a client schema in Hello")
@@ -84,6 +92,7 @@ func TestNoLateClientSchema(t *testing.T) {
 // counted until the callee has ended its own direction (4.2 rule 5); a
 // peer that never does is uncounted after ResetWait.
 func TestResetCountsUntilPeerEnd(t *testing.T) {
+	t.Parallel()
 	clk := testutil.NewFakeClock()
 	cc, sc := mem.Pipe(mem.Options{})
 	type res struct {
@@ -132,10 +141,8 @@ func TestResetCountsUntilPeerEnd(t *testing.T) {
 	if _, err := ls.ReadMessage(); err == nil {
 		t.Fatal("want the reset")
 	}
-	time.Sleep(20 * time.Millisecond)
-	if n := cli.Stats().PoolOpen; n != 1 {
-		t.Fatalf("pool open %d: the stream must stay counted until the peer ends its direction", n)
-	}
+	testutil.Never(t, 20*time.Millisecond, func() bool { return cli.Stats().PoolOpen != 1 },
+		"pool open %d: the stream must stay counted until the peer ends its direction", cli.Stats().PoolOpen)
 	clk.Advance(6 * time.Second)
 	testutil.Eventually(t, 5*time.Second, func() bool { return cli.Stats().PoolOpen == 0 }, "not uncounted after ResetWait")
 }

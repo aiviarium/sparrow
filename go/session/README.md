@@ -26,7 +26,9 @@ an optimistic start, whose `Welcome` is handled in the background; see `Welcomed
 `Config` holds this peer's schema, the params it imposes, the handler, and hooks: `Authenticate`,
 `AcceptClientSchema`, `SchemaByHash` (for `Delta` offers), `OfferLocation` (out-of-band offers),
 `FetchSchema` and `OnServerSchema` on the client, `OnPeerSchemaUpdate` (runs before `SchemaAck`),
-`OnAuthRefresh` / `OnAuthStatus`, `OnGoAway`, plus every timeout and a `Clock`.
+`OnAuthRefresh` / `OnAuthStatus`, `OnGoAway`, plus every timeout and a `Clock`: `HelloTimeout`,
+`SchemaAckTimeout`, `CancelGiveUp`, `CancelBroken`, `GracePeriod`, `LeaseIdle`, `Linger`, `ResetWait`
+and `GoAwayWait` (how long a GoAway being written may take before the transport closes anyway).
 
 ### Typed level
 
@@ -67,7 +69,8 @@ the context sends `Cancel(cancelled | deadline_exceeded)`. `CallOptions` choose 
 - Notifications reach a raw handler as a `ServerCall` with ID 0; forward them with `NotifyRaw`.
 - Schemas: `LocalSchema()` / `PeerSchema()` (`*schema.State`, with epochs), `PeerFacet(name)`,
   `UpdateSchema(newSchema, SchemaUpdateOptions{AckTimeout})` returning a `PendingUpdate` whose `Wait`
-  returns at the ack. `Config.OnPeerSchemaUpdate` lets a hub relay a node's update and ack it only after
+  returns at the ack; `Unacked(timeout)` returns the latest update still unacknowledged and gives the
+  peer at most timeout to ack it (a relaying hub joins an update already on its way). `Config.OnPeerSchemaUpdate` lets a hub relay a node's update and ack it only after
   its downstream sessions have (10.3). `MaxClientSchemaSize: -1` lifts the 64 KiB client-schema limit
   between a hub and its nodes (10.2).
 - Session facts: `Principal()`, `Hello()`, `Welcome()`, `SessionID()`, `PeerLimits()`,
@@ -150,5 +153,6 @@ go test ./session -run '^$' -fuzz FuzzServerMessages -fuzztime 60s -fuzzminimize
 
 The session tests run real sessions over the mem, WebSocket (`httptest`) and
 WebTransport (QUIC on localhost, self-signed certificate) bindings, a fake clock for the timers, raw
-scripted peers for protocol violations, and every behaviour scenario in `../../test-vectors/scenarios`
+scripted peers for protocol violations (timeouts are checked by advancing the fake clock, never by
+sleeping), and every behaviour scenario in `../../test-vectors/scenarios`
 (`TestScenarios`; set `SPARROW_VECTORS` to use another vector directory).

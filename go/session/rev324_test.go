@@ -22,6 +22,7 @@ import (
 // STOP_SENDING), so the opener can still write until it has seen the reset
 // and ended its own direction; the refused stream is never counted.
 func TestAcceptorResetSendingOnly(t *testing.T) {
+	t.Parallel()
 	scfg := Config{Schema: testSchema("s"), Handler: newTestHandlers().mux(tFacet)}
 	scfg.Params.Set(wire.ParamMaxStreams, 1)
 	p, sch, _ := rawClient(t, scfg, mem.Options{})
@@ -48,6 +49,7 @@ func TestAcceptorResetSendingOnly(t *testing.T) {
 // end, before the opener has ended its own direction (4.2 rule 5), and it
 // does not stop the opener's direction.
 func TestAcceptorResetUncountsAtOnce(t *testing.T) {
+	t.Parallel()
 	scfg := Config{Schema: testSchema("s"), Handler: newTestHandlers().mux(tFacet)}
 	scfg.Params.Set(wire.ParamMaxMessageSize, 16384)
 	p, sch, _ := rawClient(t, scfg, mem.Options{})
@@ -120,6 +122,7 @@ func (s *welcomeGateStream) WriteMessage(b []byte) error {
 // Welcome has returned; the server must not take that stream for one
 // opened before Welcome and fail the session with protocol_error.
 func TestLeasedStreamBeforeWelcomeWriteReturns(t *testing.T) {
+	t.Parallel()
 	cc, sc := mem.Pipe(mem.Options{})
 	g := &welcomeGate{Conn: sc, release: make(chan struct{})}
 	h := newTestHandlers()
@@ -155,6 +158,7 @@ func TestLeasedStreamBeforeWelcomeWriteReturns(t *testing.T) {
 // (End on the caller's behalf, 7.1); the documented CloseSend after the
 // writer then succeeds instead of reporting the call as ended.
 func TestCloseSendAfterCalleeFinished(t *testing.T) {
+	t.Parallel()
 	for _, b := range []binding{memBinding(), wsBinding()} {
 		t.Run(b.name, func(t *testing.T) {
 			cli, _ := stdPair(t, b, newTestHandlers(), nil)
@@ -216,10 +220,7 @@ func (s *responseGateStream) WriteMessage(b []byte) error {
 		// for another (it handled the next Request meanwhile).
 		target := s.g.reads.Load() + 1
 		s.g.waitFor.Store(target)
-		deadline := time.Now().Add(2 * time.Second)
-		for s.g.reads.Load() < target && time.Now().Before(deadline) {
-			time.Sleep(time.Millisecond)
-		}
+		testutil.WaitFor(2*time.Second, func() bool { return s.g.reads.Load() >= target })
 	}
 	return err
 }
@@ -229,6 +230,7 @@ func (s *responseGateStream) WriteMessage(b []byte) error {
 // previous one is within the limit (7.6): the callee must not still count
 // the first call while it finishes writing that Response.
 func TestCalleeUncountsBeforeFinalMessage(t *testing.T) {
+	t.Parallel()
 	cc, sc := mem.Pipe(mem.Options{NoLeases: true})
 	scfg := Config{Schema: testSchema("s"), Handler: newTestHandlers().mux(tFacet)}
 	scfg.Params.Set(wire.ParamMaxConcurrentCalls, 1)

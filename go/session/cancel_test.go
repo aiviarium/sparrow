@@ -24,6 +24,7 @@ func quiet(t *testing.T, sessions ...*Session) {
 }
 
 func TestCancelShapes(t *testing.T) {
+	t.Parallel()
 	forBindings(t, func(t *testing.T, b binding) {
 		h := newTestHandlers()
 		cli, srv := stdPair(t, b, h, nil)
@@ -134,6 +135,7 @@ func TestCancelShapes(t *testing.T) {
 // TestCalleeDeadline: the callee answers Error(deadline_exceeded) when the
 // deadline in the metadata passes (fake clock).
 func TestCalleeDeadline(t *testing.T) {
+	t.Parallel()
 	clk := testutil.NewFakeClock()
 	h := newTestHandlers()
 	cli, _ := stdPair(t, memBinding(), h, func(c, s *Config) {
@@ -164,6 +166,7 @@ func TestCalleeDeadline(t *testing.T) {
 // caller resets the leased stream, which fails the call and leaves the pool;
 // the call counts until the stream does not (7.5).
 func TestCancelGiveUpLeased(t *testing.T) {
+	t.Parallel()
 	clk := testutil.NewFakeClock()
 	h := newTestHandlers()
 	cli, srv := stdPair(t, memBinding(), h, func(c, s *Config) {
@@ -182,10 +185,7 @@ func TestCancelGiveUpLeased(t *testing.T) {
 	<-h.hangSeen
 	_ = cc.Cancel(status.Cancelled)
 	clk.Advance(4 * time.Second)
-	time.Sleep(20 * time.Millisecond)
-	if cc.Done() {
-		t.Fatal("gave up too early")
-	}
+	testutil.Never(t, 20*time.Millisecond, cc.Done, "gave up too early")
 	clk.Advance(2 * time.Second)
 	testutil.Eventually(t, 5*time.Second, cc.Done, "call not failed after give-up")
 	_, err = cc.RecvRaw(ctx)
@@ -206,6 +206,7 @@ func TestCancelGiveUpLeased(t *testing.T) {
 // TestCancelGiveUpShared: on the shared lane the call keeps counting and
 // after 30 s the session closes with GoAway(protocol_error).
 func TestCancelGiveUpShared(t *testing.T) {
+	t.Parallel()
 	clk := testutil.NewFakeClock()
 	h := newTestHandlers()
 	cli, srv := stdPair(t, memBinding(), h, func(c, s *Config) {
@@ -240,6 +241,7 @@ func TestCancelGiveUpShared(t *testing.T) {
 // TestCancelAnsweredLate: a late final message after give-up on the shared
 // lane releases the slot.
 func TestCancelAnsweredLate(t *testing.T) {
+	t.Parallel()
 	clk := testutil.NewFakeClock()
 	release := make(chan struct{})
 	m := NewMux()
@@ -255,10 +257,7 @@ func TestCancelAnsweredLate(t *testing.T) {
 	}
 	_ = cc.Cancel(status.Cancelled)
 	clk.Advance(6 * time.Second)
-	time.Sleep(20 * time.Millisecond)
-	if cli.Stats().OutgoingCalls != 1 {
-		t.Fatal("slot released too early")
-	}
+	testutil.Never(t, 20*time.Millisecond, func() bool { return cli.Stats().OutgoingCalls != 1 }, "slot released too early")
 	close(release)
 	testutil.Eventually(t, 5*time.Second, func() bool { return cli.Stats().OutgoingCalls == 0 }, "slot not released")
 	if cli.Stats().Closed {

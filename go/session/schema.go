@@ -111,6 +111,43 @@ func (u *PendingUpdate) Wait(ctx context.Context) error {
 	return u.s.waitEpoch(ctx, u.Epoch)
 }
 
+// Unacked returns the latest update this side sent that the peer has not
+// acknowledged yet, or nil, and gives the peer at most timeout (0: the
+// session default) from now to acknowledge it, like UpdateSchema: without
+// an ack in time the session closes with GoAway(schema_mismatch). A
+// relaying hub uses it when an update already on its way carries the
+// change it relays (10.3).
+func (s *Session) Unacked(timeout time.Duration) *PendingUpdate {
+	s.updMu.Lock()
+	defer s.updMu.Unlock()
+	s.mu.Lock()
+	if s.closed || s.local == nil || s.localAcked >= s.local.Epoch() {
+		s.mu.Unlock()
+		return nil
+	}
+	epoch := s.local.Epoch()
+	hash, _ := s.local.Hash()
+	s.mu.Unlock()
+	s.armAck(epoch, timeout)
+	return &PendingUpdate{Epoch: epoch, Hash: hash, s: s}
+}
+
+// armAck closes the session with GoAway(schema_mismatch) unless epoch is
+// acknowledged within timeout (0: the session default).
+func (s *Session) armAck(epoch uint64, timeout time.Duration) Timer {
+	if timeout <= 0 {
+		timeout = dur(s.cfg.SchemaAckTimeout, DefaultSchemaAckTimeout)
+	}
+	return s.clock.AfterFunc(timeout, func() {
+		s.mu.Lock()
+		late := s.localAcked < epoch && !s.closed
+		s.mu.Unlock()
+		if late {
+			s.fail(status.SchemaMismatch, "SchemaAck did not arrive in time")
+		}
+	})
+}
+
 // UpdateSchema publishes a new version of this side's schema (6.6): it
 // computes the delta, checks it as the peer will (compatibility, re-added
 // facets, validity), sends SchemaUpdate at the next epoch, and holds back
@@ -159,21 +196,13 @@ func (s *Session) UpdateSchema(nw *schema.Schema, o SchemaUpdateOptions) (*Pendi
 		}
 	}
 	s.mu.Unlock()
+	// Armed before the update is written, so the peer never sees an
+	// update whose timer is not running yet.
+	ackTimer := s.armAck(epoch, o.AckTimeout)
 	if err := s.shared.write((&wire.SchemaUpdate{Epoch: epoch, Hash: hash, Delta: raw}).AppendTo(nil)); err != nil {
+		ackTimer.Stop()
 		return nil, err
 	}
-	timeout := o.AckTimeout
-	if timeout <= 0 {
-		timeout = dur(s.cfg.SchemaAckTimeout, DefaultSchemaAckTimeout)
-	}
-	s.clock.AfterFunc(timeout, func() {
-		s.mu.Lock()
-		late := s.localAcked < epoch && !s.closed
-		s.mu.Unlock()
-		if late {
-			s.fail(status.SchemaMismatch, "SchemaAck did not arrive in time")
-		}
-	})
 	return &PendingUpdate{Epoch: epoch, Hash: hash, Delta: d, s: s}, nil
 }
 

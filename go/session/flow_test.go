@@ -17,6 +17,7 @@ import (
 // TestCreditBackPressure: a fast sender and a slow reader; the receiver
 // never buffers more than its credit plus one message (7.4).
 func TestCreditBackPressure(t *testing.T) {
+	t.Parallel()
 	forBindings(t, func(t *testing.T, b binding) {
 		h := newTestHandlers()
 		cli, _ := stdPair(t, b, h, nil)
@@ -72,6 +73,7 @@ func TestCreditBackPressure(t *testing.T) {
 // TestCreditViolation: a raw peer that ignores credit gets
 // Error(protocol_error) for that call; the session stays open.
 func TestCreditViolation(t *testing.T) {
+	t.Parallel()
 	m := NewMux()
 	m.HandleFunc(tFacet, mSum, func(ctx context.Context, c *ServerCall) (any, error) {
 		<-ctx.Done() // never reads its input
@@ -106,6 +108,7 @@ func TestCreditViolation(t *testing.T) {
 // TestConcurrencyLimit: a client waits for a slot when the server's
 // maxConcurrentCalls is reached.
 func TestConcurrencyLimit(t *testing.T) {
+	t.Parallel()
 	h := newTestHandlers()
 	cli, srv := stdPair(t, memBinding(), h, func(c, s *Config) {
 		s.Params.Set(wire.ParamMaxConcurrentCalls, 2)
@@ -148,6 +151,7 @@ func TestConcurrencyLimit(t *testing.T) {
 // TestConcurrencyLimitEnforced: a raw peer that goes beyond the limit gets
 // Error(resource_exhausted).
 func TestConcurrencyLimitEnforced(t *testing.T) {
+	t.Parallel()
 	h := newTestHandlers()
 	scfg := Config{Schema: testSchema("s"), Handler: h.mux(tFacet)}
 	scfg.Params.Set(wire.ParamMaxConcurrentCalls, 2)
@@ -171,6 +175,7 @@ func TestConcurrencyLimitEnforced(t *testing.T) {
 
 // TestLeaseReuse: sequential calls reuse one leased stream.
 func TestLeaseReuse(t *testing.T) {
+	t.Parallel()
 	cc, sc := mem.Pipe(mem.Options{})
 	h := newTestHandlers()
 	cli, srv := pairOn(t, cc, sc, Config{}, Config{Schema: testSchema("s"), Handler: h.mux(tFacet)})
@@ -198,11 +203,18 @@ func TestLeaseReuse(t *testing.T) {
 // TestLeaseShrink: idle streams are closed after LeaseIdle, keeping
 // KeepIdle; both sides stop counting them.
 func TestLeaseShrink(t *testing.T) {
+	t.Parallel()
 	for _, keep := range []int{-1, 2} {
 		clk := testutil.NewFakeClock()
 		cc, sc := mem.Pipe(mem.Options{})
 		h := newTestHandlers()
-		cli, srv := pairOn(t, cc, sc, Config{Clock: clk, KeepIdle: keep}, Config{Schema: testSchema("s"), Handler: h.mux(tFacet)})
+		// The idle timeout is out of the way: the client's clock jumps
+		// 32 s, which no Ping answered in real time could keep up with.
+		ccfg := Config{Clock: clk, KeepIdle: keep}
+		ccfg.Params.Set(wire.ParamIdleTimeoutMs, 3600000)
+		scfg := Config{Schema: testSchema("s"), Handler: h.mux(tFacet)}
+		scfg.Params.Set(wire.ParamIdleTimeoutMs, 3600000)
+		cli, srv := pairOn(t, cc, sc, ccfg, scfg)
 		ctx := tctx(t)
 		var calls []*ClientCall
 		for i := 0; i < 4; i++ {
@@ -239,6 +251,7 @@ func TestLeaseShrink(t *testing.T) {
 // TestPoolExhausted: with every allowed stream leased, calls fall back to
 // the shared lane (4.2 rule 6), or wait with WaitForLease.
 func TestPoolExhausted(t *testing.T) {
+	t.Parallel()
 	for _, wait := range []bool{false, true} {
 		h := newTestHandlers()
 		cli, srv := stdPair(t, memBinding(), h, func(c, s *Config) {
@@ -309,6 +322,7 @@ func TestPoolExhausted(t *testing.T) {
 // TestMaxStreamsEnforced: a peer that opens more leased streams than
 // allowed gets the extra ones reset with resource_exhausted.
 func TestMaxStreamsEnforced(t *testing.T) {
+	t.Parallel()
 	scfg := Config{Schema: testSchema("s"), Handler: newTestHandlers().mux(tFacet)}
 	scfg.Params.Set(wire.ParamMaxStreams, 1)
 	p, _, _ := rawClient(t, scfg, mem.Options{})
@@ -333,6 +347,7 @@ func TestMaxStreamsEnforced(t *testing.T) {
 // TestGoAwayDrain: GoAway lets running calls finish, refuses new ones and
 // then closes the session (5.6).
 func TestGoAwayDrain(t *testing.T) {
+	t.Parallel()
 	forBindings(t, func(t *testing.T, b binding) {
 		h := newTestHandlers()
 		cli, srv := stdPair(t, b, h, nil)
@@ -372,6 +387,7 @@ func TestGoAwayDrain(t *testing.T) {
 // TestGoAwayCrossingRequest: a Request that crosses GoAway is answered
 // with Error(going_away).
 func TestGoAwayCrossingRequest(t *testing.T) {
+	t.Parallel()
 	h := newTestHandlers()
 	scfg := Config{Schema: testSchema("s"), Handler: h.mux(tFacet)}
 	p, sch, _ := rawClient(t, scfg, mem.Options{})
@@ -397,23 +413,35 @@ func TestGoAwayCrossingRequest(t *testing.T) {
 // TestIdleTimeout: a peer that sends nothing is pinged at half the idle
 // timeout and dropped at the full timeout; two live peers stay connected.
 func TestIdleTimeout(t *testing.T) {
+	t.Parallel()
 	clk := testutil.NewFakeClock()
 	scfg := Config{Schema: testSchema("s"), Clock: clk}
 	p, sch, _ := rawClient(t, scfg, mem.Options{})
 	p.handshake(nil)
 	srv := <-sch
-	clk.Advance(16 * time.Second)
-	for {
-		m := <-p.in
-		if _, ok := m.(*wire.Ping); ok {
-			break
+	// The idle check re-arms itself each time it runs, in its own
+	// goroutine: the clock moves in steps, each once the next check is
+	// armed, so no check is skipped.
+	advance := func(d time.Duration) {
+		for step := 500 * time.Millisecond; d > 0; d -= step {
+			testutil.Eventually(t, 5*time.Second, func() bool { return clk.Pending() > 0 || srv.Stats().Closed }, "the idle check is not armed")
+			clk.Advance(step)
 		}
 	}
-	clk.Advance(8 * time.Second)
+	advance(16 * time.Second)
+	for pinged := false; !pinged; {
+		select {
+		case m := <-p.in:
+			_, pinged = m.(*wire.Ping)
+		case <-time.After(10 * time.Second):
+			t.Fatal("no Ping at half the idle timeout")
+		}
+	}
+	advance(8 * time.Second)
 	if srv.Stats().Closed {
 		t.Fatal("closed too early")
 	}
-	clk.Advance(8 * time.Second)
+	advance(8 * time.Second)
 	testutil.Eventually(t, 5*time.Second, func() bool { return srv.Stats().Closed }, "not closed")
 	mustCode(t, srv.Err(), status.Unavailable)
 
@@ -422,9 +450,15 @@ func TestIdleTimeout(t *testing.T) {
 	cli, srv2 := stdPair(t, memBinding(), newTestHandlers(), func(c, s *Config) {
 		c.Clock, s.Clock = clk2, clk2
 	})
+	pinging := func(s *Session) bool {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		return s.pingSent
+	}
 	for i := 0; i < 40; i++ {
 		clk2.Advance(2500 * time.Millisecond)
-		time.Sleep(3 * time.Millisecond)
+		// Each Ping sent is answered before the clock moves on.
+		testutil.Eventually(t, 5*time.Second, func() bool { return !pinging(cli) && !pinging(srv2) }, "a Ping is not answered")
 	}
 	if cli.Stats().Closed || srv2.Stats().Closed {
 		t.Fatalf("live sessions closed: %v %v", cli.Err(), srv2.Err())
@@ -434,6 +468,7 @@ func TestIdleTimeout(t *testing.T) {
 // TestNotificationsBestEffort: notifications beyond what the callee can
 // handle are dropped, not queued without bound, and never answered.
 func TestNotificationsBestEffort(t *testing.T) {
+	t.Parallel()
 	var mu sync.Mutex
 	got := 0
 	release := make(chan struct{})
@@ -457,14 +492,11 @@ func TestNotificationsBestEffort(t *testing.T) {
 		t.Fatal(err)
 	}
 	close(release)
-	time.Sleep(100 * time.Millisecond)
-	mu.Lock()
-	t.Logf("handled %d", got)
-	mu.Unlock()
-	time.Sleep(20 * time.Millisecond)
-	mu.Lock()
-	defer mu.Unlock()
-	if got != MaxNotificationHandlers {
-		t.Fatalf("handled %d notifications, want %d", got, MaxNotificationHandlers)
+	handled := func() int {
+		mu.Lock()
+		defer mu.Unlock()
+		return got
 	}
+	testutil.Eventually(t, 5*time.Second, func() bool { return handled() >= MaxNotificationHandlers }, "handled %d notifications, want %d", handled(), MaxNotificationHandlers)
+	testutil.Never(t, 20*time.Millisecond, func() bool { return handled() > MaxNotificationHandlers }, "handled %d notifications, want %d", handled(), MaxNotificationHandlers)
 }

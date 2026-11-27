@@ -303,7 +303,7 @@ func (s *Session) onRequest(l *lane, r *wire.Request, b []byte) {
 		awaiting := l.awaitCallerEnd != 0
 		s.mu.Unlock()
 		if awaiting {
-			s.fail(status.ProtocolError, "Request on a leased stream whose call has not ended")
+			s.fail(status.ProtocolError, "Request on a leased stream that is not idle (both halves of its last call finished, 7.1)")
 			return
 		}
 		if cur != nil {
@@ -311,7 +311,7 @@ func (s *Session) onRequest(l *lane, r *wire.Request, b []byte) {
 			busy := !cur.ended
 			cur.mu.Unlock()
 			if busy {
-				s.fail(status.ProtocolError, "Request on a leased stream whose call has not ended")
+				s.fail(status.ProtocolError, "Request on a leased stream that is not idle (both halves of its last call finished, 7.1)")
 				return
 			}
 		}

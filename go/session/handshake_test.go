@@ -32,6 +32,7 @@ func countingMux(h *testHandlers, n *atomic.Int64) Handler {
 }
 
 func TestOptimisticMatch(t *testing.T) {
+	t.Parallel()
 	forBindings(t, func(t *testing.T, b binding) {
 		h := newTestHandlers()
 		sc := testSchema("server")
@@ -59,6 +60,7 @@ func TestOptimisticMatch(t *testing.T) {
 }
 
 func TestOptimisticMismatch(t *testing.T) {
+	t.Parallel()
 	forBindings(t, func(t *testing.T, b binding) {
 		h := newTestHandlers()
 		var dispatched atomic.Int64
@@ -106,6 +108,7 @@ func TestOptimisticMismatch(t *testing.T) {
 }
 
 func TestOptimisticLimitsBelowDefaults(t *testing.T) {
+	t.Parallel()
 	cc, sc := mem.Pipe(mem.Options{})
 	scfg := Config{Schema: testSchema("server"), Handler: newTestHandlers().mux(tFacet)}
 	scfg.Params.Set(wire.ParamMaxConcurrentCalls, 10)
@@ -129,6 +132,7 @@ func TestOptimisticLimitsBelowDefaults(t *testing.T) {
 }
 
 func TestSchemaOffers(t *testing.T) {
+	t.Parallel()
 	old := testSchema("server")
 	nw := v2Schema()
 	h := newTestHandlers()
@@ -182,6 +186,7 @@ func TestSchemaOffers(t *testing.T) {
 }
 
 func TestHandshakeRejections(t *testing.T) {
+	t.Parallel()
 	sc := testSchema("server")
 	t.Run("unsupported-version", func(t *testing.T) {
 		p, _, ech := rawClient(t, Config{Schema: sc}, mem.Options{})
@@ -262,9 +267,10 @@ func TestHandshakeRejections(t *testing.T) {
 }
 
 func TestHelloTimeout(t *testing.T) {
+	t.Parallel()
 	clk := testutil.NewFakeClock()
 	_, _, ech := rawClient(t, Config{Schema: testSchema("s"), Clock: clk}, mem.Options{})
-	time.Sleep(10 * time.Millisecond)
+	testutil.Eventually(t, 5*time.Second, func() bool { return clk.HasTimer(DefaultHelloTimeout) }, "no Hello timer")
 	clk.Advance(9 * time.Second)
 	select {
 	case err := <-ech:
@@ -283,6 +289,7 @@ func TestHelloTimeout(t *testing.T) {
 // TestPreAuthLimit: the server buffers at most 64 KiB after Hello until the
 // credential is verified.
 func TestPreAuthLimit(t *testing.T) {
+	t.Parallel()
 	release := make(chan struct{})
 	defer close(release)
 	p, _, _ := rawClient(t, Config{Schema: testSchema("s"), Authenticate: func(ctx context.Context, h *wire.Hello) (string, error) {
@@ -309,6 +316,7 @@ func TestPreAuthLimit(t *testing.T) {
 // TestNotReady: a call on the shared lane before Ready gets not_ready; a
 // call on a leased stream before Ready waits for it (5.2).
 func TestNotReady(t *testing.T) {
+	t.Parallel()
 	h := newTestHandlers()
 	p, _, _ := rawClient(t, Config{Schema: testSchema("s"), Handler: h.mux(tFacet)}, mem.Options{})
 	p.send(hello(nil))
@@ -338,6 +346,7 @@ func TestNotReady(t *testing.T) {
 // TestLeaseBeforeWelcome: a client may not open leased streams before
 // Welcome.
 func TestLeaseBeforeWelcome(t *testing.T) {
+	t.Parallel()
 	release := make(chan struct{})
 	p, _, _ := rawClient(t, Config{Schema: testSchema("s"), Authenticate: func(ctx context.Context, h *wire.Hello) (string, error) {
 		<-release
@@ -357,6 +366,7 @@ func TestLeaseBeforeWelcome(t *testing.T) {
 // TestProtocolErrors: rule violations outside a call close the session
 // with GoAway(protocol_error).
 func TestProtocolErrors(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		msgs func(p *rawPeer)
@@ -396,6 +406,7 @@ func TestProtocolErrors(t *testing.T) {
 
 // TestAuthRefresh: AuthRefresh is answered with AuthStatus.
 func TestAuthRefresh(t *testing.T) {
+	t.Parallel()
 	got := make(chan *wire.AuthStatus, 1)
 	exp := cbor.Unix(1900000000)
 	cli, _ := pair(t, memBinding(), Config{OnAuthStatus: func(s *Session, m *wire.AuthStatus) { got <- m }},

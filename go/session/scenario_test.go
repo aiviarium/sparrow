@@ -234,6 +234,7 @@ type scenarioRun struct {
 }
 
 func TestScenarios(t *testing.T) {
+	t.Parallel()
 	files, _ := filepath.Glob(filepath.Join(vectorsDir(), "scenarios", "*.json"))
 	if len(files) == 0 {
 		t.Skip("no scenarios")
@@ -241,6 +242,7 @@ func TestScenarios(t *testing.T) {
 	sort.Strings(files)
 	for _, b := range allBindings() {
 		t.Run(b.name, func(t *testing.T) {
+			t.Parallel()
 			for _, f := range files {
 				raw, err := os.ReadFile(f)
 				if err != nil {
@@ -250,7 +252,10 @@ func TestScenarios(t *testing.T) {
 				if err := json.Unmarshal(raw, &sc); err != nil {
 					t.Fatal(err)
 				}
-				t.Run(sc.Name, func(t *testing.T) { runScenario(t, b, &sc) })
+				t.Run(sc.Name, func(t *testing.T) {
+					t.Parallel()
+					runScenario(t, b, &sc)
+				})
 			}
 		})
 	}
@@ -585,10 +590,7 @@ func (r *scenarioRun) expect(i int, st *scenarioStep) {
 		if want {
 			testutil.Eventually(t, 5*time.Second, ok, "step %d: call %d not dispatched", st.Step, st.CallID)
 		} else {
-			time.Sleep(20 * time.Millisecond)
-			if !ok() {
-				t.Fatalf("step %d: call %d dispatched", st.Step, st.CallID)
-			}
+			testutil.Never(t, 20*time.Millisecond, func() bool { return !ok() }, "step %d: call %d dispatched", st.Step, st.CallID)
 		}
 	case "call_ended":
 		<-r.srvDone

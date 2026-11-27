@@ -34,6 +34,7 @@ func earlyRefusal() *Mux {
 // which may arrive before the old call's End, is not refused, and the old
 // call's later input and End are ignored.
 func TestCalleeForgetsAtItsFinalMessage(t *testing.T) {
+	t.Parallel()
 	scfg := Config{Schema: testSchema("s"), Handler: earlyRefusal()}
 	scfg.Params.Set(wire.ParamMaxConcurrentCalls, 1)
 	p, sch, _ := rawClient(t, scfg, mem.Options{})
@@ -69,6 +70,7 @@ func TestCalleeForgetsAtItsFinalMessage(t *testing.T) {
 // since only then is the stream idle (7.1): a Request before the old call's
 // End is a protocol error, one after it is served.
 func TestForgottenCallKeepsStreamUntilCallerEnd(t *testing.T) {
+	t.Parallel()
 	for _, endFirst := range []bool{true, false} {
 		scfg := Config{Schema: testSchema("s"), Handler: earlyRefusal()}
 		p, _, _ := rawClient(t, scfg, mem.Options{})
@@ -103,6 +105,7 @@ func TestForgottenCallKeepsStreamUntilCallerEnd(t *testing.T) {
 // finished its half, but keeps counting the call until it has seen the
 // callee's final message; only then does the next call start.
 func TestCallerCountsUntilCalleesFinal(t *testing.T) {
+	t.Parallel()
 	h := newTestHandlers()
 	m := h.mux(tFacet)
 	held := make(chan *ServerCall, 1)
@@ -193,9 +196,11 @@ func rawServer(t *testing.T, ccfg Config) (*Session, *mem.Conn, transport.Stream
 // TestCallerKeepsResetCallCounted: after resetting a leased stream on an
 // unanswered Cancel, the caller counts the call as long as it counts the
 // stream (7.5, 4.2 rule 5): until the callee ends its direction, or for
-// ResetWait.
+// ResetWait (5 s, here on a fake clock).
 func TestCallerKeepsResetCallCounted(t *testing.T) {
-	cli, sc, _, _ := rawServer(t, Config{CancelGiveUp: 50 * time.Millisecond, ResetWait: 400 * time.Millisecond})
+	t.Parallel()
+	clk := testutil.NewFakeClock()
+	cli, sc, _, _ := rawServer(t, Config{Clock: clk})
 	ctx := tctx(t)
 	cc, err := cli.Call(ctx, tFacet, mBlock, nil, &CallOptions{Lane: LaneLeased})
 	if err != nil {
@@ -213,13 +218,17 @@ func TestCallerKeepsResetCallCounted(t *testing.T) {
 		}
 	}()
 	_ = cc.Cancel(status.Cancelled)
-	start := time.Now()
+	testutil.Eventually(t, 5*time.Second, func() bool { return clk.HasTimer(DefaultCancelGiveUp) }, "no give-up timer")
+	clk.Advance(DefaultCancelGiveUp)
 	testutil.Eventually(t, 5*time.Second, cc.Done, "the call did not fail after the unanswered Cancel")
+	testutil.Eventually(t, 5*time.Second, func() bool { return clk.HasTimer(DefaultResetWait) }, "no reset-wait timer")
 	if n := cli.Stats().OutgoingCalls; n != 1 {
 		t.Fatalf("the reset call stopped counting with its stream still counted (%d)", n)
 	}
-	testutil.Eventually(t, 5*time.Second, func() bool { return cli.Stats().OutgoingCalls == 0 }, "the call still counts after ResetWait")
-	if d := time.Since(start); d < 300*time.Millisecond {
-		t.Fatalf("uncounted after %v, before ResetWait", d)
+	clk.Advance(DefaultResetWait - time.Millisecond)
+	if n := cli.Stats().OutgoingCalls; n != 1 {
+		t.Fatalf("uncounted before ResetWait (%d)", n)
 	}
+	clk.Advance(time.Millisecond)
+	testutil.Eventually(t, 5*time.Second, func() bool { return cli.Stats().OutgoingCalls == 0 }, "the call still counts after ResetWait")
 }

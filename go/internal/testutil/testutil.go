@@ -120,6 +120,20 @@ func (c *FakeClock) Pending() int {
 	return n
 }
 
+// HasTimer reports whether a timer is pending that fires exactly d after
+// the current fake time: a test waits for it before advancing past it.
+func (c *FakeClock) HasTimer(d time.Duration) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	at := c.now.Add(d)
+	for _, t := range c.timers {
+		if !t.stopped && !t.fired && t.at.Equal(at) {
+			return true
+		}
+	}
+	return false
+}
+
 // Eventually polls cond until it holds or the timeout passes.
 func Eventually(t testing.TB, timeout time.Duration, cond func() bool, msg string, args ...any) {
 	t.Helper()
@@ -133,4 +147,33 @@ func Eventually(t testing.TB, timeout time.Duration, cond func() bool, msg strin
 	if !cond() {
 		t.Fatalf("condition not met within %v: "+msg, append([]any{timeout}, args...)...)
 	}
+}
+
+// Never polls cond for d and fails if it ever holds: an assertion that
+// something does not happen, which only a bounded wait can make.
+func Never(t testing.TB, d time.Duration, cond func() bool, msg string, args ...any) {
+	t.Helper()
+	deadline := time.Now().Add(d)
+	for {
+		if cond() {
+			t.Fatalf(msg, args...)
+		}
+		if !time.Now().Before(deadline) {
+			return
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+}
+
+// WaitFor polls cond until it holds or timeout passes and reports whether
+// it held; unlike Eventually it may run outside the test goroutine.
+func WaitFor(timeout time.Duration, cond func() bool) bool {
+	deadline := time.Now().Add(timeout)
+	for !cond() {
+		if !time.Now().Before(deadline) {
+			return false
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	return true
 }

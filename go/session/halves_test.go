@@ -8,6 +8,7 @@ import (
 )
 
 func TestHalves(t *testing.T) {
+	t.Parallel()
 	type step struct {
 		caller bool
 		kind   wire.Kind
@@ -65,6 +66,7 @@ func TestHalves(t *testing.T) {
 }
 
 func TestSchemaDepth(t *testing.T) {
+	t.Parallel()
 	r := schema.Named(schema.TypeUint)
 	for i := 0; i < 40; i++ {
 		r = schema.List(r)

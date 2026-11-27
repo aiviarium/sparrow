@@ -29,6 +29,7 @@ func streamForever(ctx context.Context, c *ServerCall) (any, error) {
 }
 
 func TestSchemaUpdateAckGating(t *testing.T) {
+	t.Parallel()
 	forBindings(t, func(t *testing.T, b binding) {
 		f16 := testFacet(tFacet, "test")
 		f17 := testFacet(17, "other")
@@ -77,14 +78,14 @@ func TestSchemaUpdateAckGating(t *testing.T) {
 			t.Fatal(err)
 		}
 		testutil.Eventually(t, 5*time.Second, func() bool { return hookCalls.Load() == 1 }, "update not received")
-		time.Sleep(30 * time.Millisecond)
+		// Facet 17 keeps flowing; items of facet 16 already on their way
+		// when the update was sent arrive meanwhile.
+		a17 := n17.Load()
+		testutil.Eventually(t, 5*time.Second, func() bool { return n17.Load() >= a17+5 }, "facet 17 was held back too")
 		a16, a17 := n16.Load(), n17.Load()
-		time.Sleep(100 * time.Millisecond)
+		testutil.Eventually(t, 5*time.Second, func() bool { return n17.Load() >= a17+20 }, "facet 17 was held back too")
 		if d := n16.Load() - a16; d > 0 {
 			t.Fatalf("facet 16 sent %d items before the ack", d)
-		}
-		if d := n17.Load() - a17; d < 5 {
-			t.Fatalf("facet 17 was held back too (%d items)", d)
 		}
 		// The client already applied the delta and may call the new method.
 		if cli.PeerSchema().Epoch() != 1 {
@@ -109,6 +110,7 @@ func TestSchemaUpdateAckGating(t *testing.T) {
 }
 
 func TestSchemaUpdateRemoveFacet(t *testing.T) {
+	t.Parallel()
 	h := newTestHandlers()
 	f16, f17 := testFacet(tFacet, "test"), testFacet(17, "other")
 	m := h.mux(16)
@@ -153,6 +155,7 @@ func TestSchemaUpdateRemoveFacet(t *testing.T) {
 }
 
 func TestSchemaAckTimeout(t *testing.T) {
+	t.Parallel()
 	clk := testutil.NewFakeClock()
 	block := make(chan struct{})
 	defer close(block)
@@ -171,6 +174,7 @@ func TestSchemaAckTimeout(t *testing.T) {
 }
 
 func TestSchemaUpdateBadHash(t *testing.T) {
+	t.Parallel()
 	// A raw server whose SchemaUpdate names the wrong hash.
 	cc, sc := mem.Pipe(mem.Options{})
 	sch := testSchema("s")
@@ -203,6 +207,7 @@ func TestSchemaUpdateBadHash(t *testing.T) {
 
 // TestClientSchemaUpdate: a client publishes a new facet; the server calls it.
 func TestClientSchemaUpdate(t *testing.T) {
+	t.Parallel()
 	h := newTestHandlers()
 	m := h.mux(20)
 	h.register(m, 21)
