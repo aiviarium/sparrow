@@ -483,6 +483,16 @@ func (e *env) waitNode(connected bool) {
 	}, "node work connected != %v", connected)
 }
 
+// nodeSession waits for the node's current session. A node that dials in
+// records its session only once its own handshake call returns, which can
+// be after the hub already lists its facets to clients.
+func nodeSession(t *testing.T, n *nd.Node) *session.Session {
+	t.Helper()
+	var s *session.Session
+	testutil.Eventually(t, 10*time.Second, func() bool { s = n.Session(); return s != nil }, "the node has no session")
+	return s
+}
+
 // waitFacet waits until a client lists the work facet.
 func waitFacet(t *testing.T, n *nd.Node) {
 	t.Helper()

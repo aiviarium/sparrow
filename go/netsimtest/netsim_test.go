@@ -138,7 +138,7 @@ func TestOneWayDeadLink(t *testing.T) {
 	cli := e.dial(wsURL(e.tcpAddr), aliceToken)
 	waitFacet(t, cli)
 	ctx := tctx(t)
-	first := w.n.Session()
+	first := nodeSession(t, w.n)
 	np.SetFaultsDir(netsim.FromTarget, netsim.Faults{BlackHole: true})
 	select {
 	case <-first.Done():
@@ -230,7 +230,7 @@ func TestNATRebinding(t *testing.T) {
 	cli := e.dial(wtURL(e.udpAddr), aliceToken)
 	waitFacet(t, cli)
 	ctx := tctx(t)
-	before := w.n.Session()
+	before := nodeSession(t, w.n)
 	cc, err := cli.Open(ctx, "work", "download", uint64(2<<20), nil)
 	if err != nil {
 		t.Fatal(err)
