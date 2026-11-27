@@ -67,15 +67,19 @@ type Session struct {
 	sessionID   []byte
 	welcomeDone bool // client: Welcome processed; server: Welcome sent
 	readyDone   bool // server: Ready received; client: Ready sent
-	welcomeCh   chan struct{}
-	readyCh     chan struct{}
-	helloCh     chan struct{}
-	hsErr       error
-	preAuth     [][]byte
-	preAuthLen  int
-	sentPreWel  int // client: bytes sent on the shared lane before Welcome
-	optimistic  bool
-	optReject   bool // client: optimistic start rejected
+	// welcomeSending is set on the server just before Welcome is written:
+	// from then on the client may have Welcome and open leased streams,
+	// possibly before the write returns.
+	welcomeSending bool
+	welcomeCh      chan struct{}
+	readyCh        chan struct{}
+	helloCh        chan struct{}
+	hsErr          error
+	preAuth        [][]byte
+	preAuthLen     int
+	sentPreWel     int // client: bytes sent on the shared lane before Welcome
+	optimistic     bool
+	optReject      bool // client: optimistic start rejected
 
 	calls    map[uint64]*call
 	nextID   uint64
@@ -625,6 +629,9 @@ func (s *Session) serverHandshake(ctx context.Context) error {
 
 	s.procMu.Lock()
 	defer s.procMu.Unlock()
+	s.mu.Lock()
+	s.welcomeSending = true
+	s.mu.Unlock()
 	if err := s.shared.write(w.AppendTo(nil)); err != nil {
 		return err
 	}

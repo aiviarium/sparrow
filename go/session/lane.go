@@ -446,7 +446,10 @@ func (s *Session) acceptLoop() {
 			return
 		}
 		s.mu.Lock()
-		if s.role == wire.Server && !s.welcomeDone {
+		// The client may open leased streams once it has Welcome, which can
+		// be before this side's write of it returns: only a stream that
+		// arrives before Welcome went out is a violation.
+		if s.role == wire.Server && !s.welcomeSending {
 			s.mu.Unlock()
 			st.Reset(status.ProtocolError)
 			s.fail(status.ProtocolError, "leased stream opened before Welcome")
