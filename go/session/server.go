@@ -328,9 +328,28 @@ func (s *Session) onRequest(l *lane, r *wire.Request, b []byte) {
 		c.codec, _ = codecFor(&s.codecMu, s.localCodecs, f)
 	}
 
+	// The call's context is ready before the call is published in s.calls,
+	// where the session's end may fail it at once.
+	var deadlineIn time.Duration
+	hasDeadline := false
+	ctx, cancel := context.WithCancelCause(s.ctx)
+	if ms, ok, err := r.Metadata.Deadline(); err == nil && ok {
+		d := time.Duration(ms) * time.Millisecond
+		c.typed.deadline = s.clock.Now().Add(d)
+		if _, real := s.clock.(RealClock); real {
+			var cancel2 context.CancelFunc
+			ctx, cancel2 = context.WithDeadlineCause(ctx, time.Now().Add(d), &Error{Code: status.DeadlineExceeded, Message: "deadline exceeded"})
+			inner := cancel
+			cancel = func(e error) { inner(e); cancel2() }
+		}
+		deadlineIn = d
+		hasDeadline = true
+	}
+	c.ctx, c.cancel = ctx, cancel
 	s.mu.Lock()
 	if _, dup := s.calls[r.CallID]; dup {
 		s.mu.Unlock()
+		cancel(nil)
 		s.fail(status.ProtocolError, "Request for a call ID that is open")
 		return
 	}
@@ -357,20 +376,16 @@ func (s *Session) onRequest(l *lane, r *wire.Request, b []byte) {
 	}
 	held := s.role == wire.Server && !s.readyDone
 	s.mu.Unlock()
-
-	ctx, cancel := context.WithCancelCause(s.ctx)
-	if ms, ok, err := r.Metadata.Deadline(); err == nil && ok {
-		d := time.Duration(ms) * time.Millisecond
-		c.typed.deadline = s.clock.Now().Add(d)
-		if _, real := s.clock.(RealClock); real {
-			var cancel2 context.CancelFunc
-			ctx, cancel2 = context.WithDeadlineCause(ctx, time.Now().Add(d), &Error{Code: status.DeadlineExceeded, Message: "deadline exceeded"})
-			inner := cancel
-			cancel = func(e error) { inner(e); cancel2() }
+	if hasDeadline {
+		tm := s.clock.AfterFunc(deadlineIn, c.deadlineExpired)
+		c.mu.Lock()
+		if c.removed {
+			tm.Stop() // ended meanwhile (the session closed)
+		} else {
+			c.deadlineT = tm
 		}
-		c.deadlineT = s.clock.AfterFunc(d, c.deadlineExpired)
+		c.mu.Unlock()
 	}
-	c.ctx, c.cancel = ctx, cancel
 	if reject != nil {
 		_ = c.sendError(reject)
 		return
