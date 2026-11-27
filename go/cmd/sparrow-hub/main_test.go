@@ -143,9 +143,14 @@ func (p *hubProc) stop() error {
 func (p *hubProc) admin(t *testing.T, url string, args ...string) string {
 	t.Helper()
 	all := append([]string{"-url", url, "-token", "admin-secret", "-cert-hash", p.addrs.CertHash}, args...)
-	out, err := exec.Command(bins["sparrow-admin"], all...).CombinedOutput()
+	// Only standard output is the result; standard error carries logs, such
+	// as quic-go's UDP buffer warning on hosts that cap socket buffers.
+	cmd := exec.Command(bins["sparrow-admin"], all...)
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
 	if err != nil {
-		t.Fatalf("sparrow-admin %v: %v\n%s", args, err, out)
+		t.Fatalf("sparrow-admin %v: %v\n%s%s", args, err, out, stderr.String())
 	}
 	return string(out)
 }
@@ -324,12 +329,15 @@ func TestBinary(t *testing.T) {
 	// watch prints the snapshot first.
 	w := exec.Command(bins["sparrow-admin"], "-url", p2.addrs.WebTransport, "-token", "admin-secret", "-cert-hash", p2.addrs.CertHash, "watch")
 	wf, _ := os.Create(filepath.Join(dir, "watch.out"))
+	ef, _ := os.Create(filepath.Join(dir, "watch.err"))
+	defer ef.Close()
 	w.Stdout = wf
-	w.Stderr = wf
+	w.Stderr = ef
 	if err := w.Start(); err != nil {
 		t.Fatal(err)
 	}
 	read := func() string { b, _ := os.ReadFile(wf.Name()); return string(b) }
+	readErr := func() string { b, _ := os.ReadFile(ef.Name()); return string(b) }
 	exited := make(chan error, 1)
 	go func() { exited <- w.Wait() }()
 	// The output is read when the wait ends (not when it starts), and a
@@ -339,12 +347,12 @@ func TestBinary(t *testing.T) {
 		select {
 		case err := <-exited:
 			if !strings.Contains(read(), `"node":"echo"`) {
-				t.Fatalf("watch exited (%v): %q", err, read())
+				t.Fatalf("watch exited (%v): %q\nstderr: %s", err, read(), readErr())
 			}
 			exited <- err
 		case <-deadline:
 			_ = w.Process.Kill()
-			t.Fatalf("watch output after 30 s: %q", read())
+			t.Fatalf("watch output after 30 s: %q\nstderr: %s", read(), readErr())
 		case <-time.After(20 * time.Millisecond):
 		}
 	}
@@ -352,7 +360,7 @@ func TestBinary(t *testing.T) {
 	<-exited
 	wf.Close()
 	if !strings.HasPrefix(read(), `{"snapshot"`) {
-		t.Fatalf("watch: %s", read())
+		t.Fatalf("watch: %s\nstderr: %s", read(), readErr())
 	}
 	// The nodes stop while the hub still runs, so their GoAway is answered
 	// (a node whose hub is gone waits out the WebTransport linger).
