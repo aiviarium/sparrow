@@ -230,8 +230,11 @@ func (h *Hub) Close(timeout time.Duration) {
 			s.GoAway(status.GoingAway, "hub shutting down", nil)
 		}
 	}
+	var sups []*supervisor
 	for _, n := range nodes {
-		n.stopLink()
+		if s := n.stopLink(); s != nil {
+			sups = append(sups, s)
+		}
 	}
 	deadline := time.Now().Add(timeout)
 	for _, v := range vs {
@@ -243,8 +246,8 @@ func (h *Hub) Close(timeout time.Duration) {
 			}
 		}
 	}
-	for _, n := range nodes {
-		n.waitStopped(time.Until(deadline) + time.Second)
+	for _, s := range sups {
+		s.wait(time.Until(deadline) + 6*time.Second) // spawned processes exit (killed after 5 s)
 	}
 	h.stop()
 	h.wg.Wait()
@@ -329,7 +332,6 @@ func (h *Hub) ServeConn(ctx context.Context, conn transport.Conn) {
 	v.setSession(s)
 	if dialIn != nil {
 		l := &link{n: dialIn, sess: s, v: v, kind: linkDialIn, cred: dialCred, credName: dialIn.credentialName()}
-		v.link = l
 		h.attach(dialIn, l)
 	} else {
 		go v.refresh(0)

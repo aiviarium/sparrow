@@ -2,7 +2,7 @@
 
 Nov 26, 2026 · Christoph Feuerer
 
-> Snapshot of the live draft, revision 305, exported for this repository. The live document is the source of truth; diagrams are not included here.
+> Snapshot of the live draft, revision 316, exported for this repository. The live document is the source of truth; diagrams are not included here.
 
 ## 1. Overview
 
@@ -138,7 +138,7 @@ A session uses one **shared lane** for control messages and small, long-lived ca
 2. **Start.** The caller leases an idle stream by sending a `Request` on it. If none is idle and fewer than the peer's `maxStreams` are open, it opens a new one. A peer that receives more leased streams than it allowed resets the extra ones with `resource_exhausted`. The opener counts a stream as open until both directions have finished or been reset, and the peer closes its direction only after it has seen the opener close, so both sides always count the same streams.
 3. **Release.** The call ends as defined in section 7.1, after both peers have finished their halves, including any byte data. The stream is then idle and back in the pool. No message marks the release: each direction is ordered, so both peers see the same boundary.
 4. **Shrink.** The opener SHOULD close streams that stay idle for about 30 s, by finishing its direction, and SHOULD keep one or two idle streams to avoid reopening. The peer then finishes its own direction.
-5. **Abort.** Resetting a leased stream fails the call on it and removes the stream from the pool. Peers do this only when a `Cancel` goes unanswered (section 7.5) or the stream is broken.
+5. **Abort.** Resetting a leased stream fails the call on it and removes the stream from the pool. Peers do this only when a `Cancel` goes unanswered (section 7.5) or the stream is broken. A peer that sees a reset closes its own direction too, and each side counts the stream as open until it has both sent and seen the end of each direction, so the opener never opens a replacement the acceptor would still count. A call on a stream refused with `resource_exhausted` fails with that status.
 6. **Pool exhausted.** When all `maxStreams` streams are leased, the caller either waits for one to be released or sends the call on the shared lane. Any call may fall back to the shared lane, including one with byte data, so a full pool never blocks progress.
 
 ### 4.3 Where a call goes
@@ -217,9 +217,9 @@ The first two messages belong to the web profile; the core begins at the transpo
 
 Rules for the server:
 
-- `Hello` MUST arrive within 10 s of the transport opening, or the server closes the connection.
-- The client MUST NOT open leased streams before `Welcome` arrives. Until the credential is verified, the server buffers at most 64 KiB of shared-lane data after `Hello` and closes the session if the client sends more, so unauthenticated peers cannot make it hold much memory. On a failed check it closes the session with `unauthenticated`.
-- The server MUST NOT dispatch a call before it has received `Ready`. Calls sent on the shared lane after `Ready` arrive in order. Calls on leased streams can arrive first; the server holds them until `Ready` arrives, up to `maxConcurrentCalls`.
+- `Hello` MUST arrive within 10 s of the transport opening, or the server closes the connection with `deadline_exceeded`.
+- The client MUST NOT open leased streams before `Welcome` arrives. Until the credential is verified, the server buffers at most 64 KiB of shared-lane data after `Hello` and closes the session with `GoAway(resource_exhausted)` if the client sends more, so unauthenticated peers cannot make it hold much memory. On a failed check it closes the session with `unauthenticated`.
+- The server MUST NOT dispatch a call before it has received `Ready`. Calls sent on the shared lane after `Ready` arrive in order. Calls on leased streams can arrive first; the server holds them until `Ready` arrives, up to `maxConcurrentCalls`. A call on the shared lane before `Ready` is answered with `Error(not_ready)`, and a `Ready` naming a hash other than the one offered closes the session with `GoAway(schema_mismatch)`.
 
 If a session that did not start optimistically closes before `Welcome` arrives, no call was dispatched, and the client MAY retry all of them. In every other case, calls still open at the close fail with `unavailable`; the client retries only those whose method is flagged idempotent.
 
@@ -231,7 +231,7 @@ A client with a cached schema can send `Hello`, `Ready` and its first calls in o
 - Until `Welcome` arrives, it sends only on the shared lane, at most 64 KiB after `Hello`, and stays within the default `params`.
 - It SHOULD send only calls to methods flagged idempotent this way: if the connection drops, the client cannot tell whether they ran.
 - If the server's schema hash differs, the server MUST NOT dispatch any call from the session. It sends `Welcome`, so the client can update its cache, then `GoAway(schema_mismatch)` with `retry_after_ms` 0, and closes. The client reconnects and resends its calls; none of them ran.
-- If the server's limits are below the defaults, it does the same with `GoAway(failed_precondition)`. The client caches `Welcome.params` next to the schema and does not start optimistically against a server whose cached limits are below the defaults.
+- If the server's limits are below the defaults, it does the same with `GoAway(failed_precondition)`, again dispatching nothing. The client caches `Welcome.params` next to the schema and does not start optimistically against a server whose cached limits are below the defaults.
 - After two rejected optimistic starts in a row, the client stops trying them for that server until its cached schema or limits change.
 - Otherwise the session continues as a normal one.
 
@@ -283,7 +283,7 @@ params = {
 
 Each peer's `params` are the limits it imposes on the other, like QUIC transport parameters: `Hello.params` bind the server and `Welcome.params` bind the client. A missing key means the default. `maxStreams` defaults to 16 in `Welcome` (streams the client may open) and 4 in `Hello` (streams the server may open). Both peers use the smaller `idleTimeoutMs`. Unknown keys are ignored. `maxMessageSize`, `maxInlineBytes`, `sharedCredit` and `leaseCredit` MUST be at least 16384 and `maxConcurrentCalls` at least 1; a peer that receives a smaller value closes the session with `GoAway(invalid_argument)`.
 
-The client schema is always sent inline and is small for typical clients. The server parses it only after verifying the credential, and MAY reject one larger than 64 KiB or with type references nested deeper than 32 levels with `GoAway(invalid_argument)`.
+The client schema is always sent inline and is small for typical clients. A client that sends no client schema cannot publish one later in the session. The server parses it only after verifying the credential, and MAY reject one larger than 64 KiB or with type references nested deeper than 32 levels with `GoAway(invalid_argument)`.
 
 If no version matches, the server sends `GoAway(unsupported_version)` with its versions in the `versions` field. If the credential is rejected, it sends `GoAway(unauthenticated)`.
 
@@ -306,11 +306,11 @@ Authentication during a session:
 - `AuthRefresh` MUST carry a credential for the same principal and login session as the original one. Otherwise the server closes the session with `GoAway(unauthenticated)`, so a session can never switch users.
 - When the principal's permissions change, the server ends open calls that are no longer allowed with `Error(permission_denied)`, and sends a `SchemaUpdate` if the visible schema changes.
 
-A peer SHOULD send `Ping` when the shared lane has been idle for half of `idleTimeoutMs`. A peer that receives nothing for `idleTimeoutMs` closes the session.
+A peer SHOULD send `Ping` when it has received nothing for half of `idleTimeoutMs`. A peer that receives nothing for `idleTimeoutMs` closes the session with `GoAway(unavailable)`.
 
 ### 5.6 Shutdown
 
-`GoAway` starts a graceful shutdown. Once it has been sent or received, neither peer opens new calls; a `Request` that crosses it is answered with `Error(going_away)`. Calls already running continue until they finish or a grace period (RECOMMENDED 30 s) ends, and then the transport is closed. `retry_after_ms` tells the client when to reconnect, which lets a server drain before a deploy.
+`GoAway` starts a graceful shutdown. Once it has been sent or received, neither peer opens new calls; a `Request` that crosses it is answered with `Error(going_away)`. Calls already running continue until they finish or a grace period (RECOMMENDED 30 s) ends, and then the transport is closed: the closing peer finishes its direction of the shared lane and waits for the peer's finish, or 2 s, before closing the transport, so messages in flight are not lost. `retry_after_ms` tells the client when to reconnect, which lets a server drain before a deploy.
 
 `GoAway` carries only core status codes, normally `going_away` for a drain. The transport close repeats it as section 8 describes. An abrupt close with no `GoAway` is treated as `unavailable`. The client SHOULD reconnect with exponential backoff and jitter, starting around 500 ms and capped around 30 s.
 
@@ -514,7 +514,7 @@ Every call has a call ID chosen by the caller, whether it runs on the shared lan
 - `End`, `Error` and `Cancel` also close every byte token their sender opened in the call. Data not yet marked `fin` is cut off, and the receiver discards any later `Bytes` for the call. A referenced token that was cut off or never sent reaches the application as data_loss.
 - The call **ends** when both halves are finished. Both peers then forget its ID, and a leased stream it ran on is idle again.
 - If the callee finishes first while input is still arriving, it MUST keep reading and discarding that input until the caller's half is finished. When the callee's final message arrives, the caller MUST send `End` (or `Cancel`) next, with no further `Item` or `Bytes`.
-- Messages for an unknown or ended call ID are ignored. A `Request` naming a facet or method the callee does not have is answered with `Error(unimplemented)`; a notification naming one is dropped.
+- Messages for an unknown or ended call ID are ignored. A `Request` naming a facet or method the callee does not have is answered with `Error(unimplemented)`; a notification naming one is dropped. The callee remembers the flags of every method it has published in the session and decides from them whether the caller's half is still open; for a method it never published it assumes no flags. A call-ID-0 `Request` for a method without flag 0x2 is dropped, and a `Request` with another ID for a method with flag 0x2 is answered with `Error(invalid_argument)`.
 
 ### 7.2 Call messages
 
@@ -538,7 +538,7 @@ Every call has a call ID chosen by the caller, whether it runs on the shared lan
 | 32 | `deadline` | uint | Milliseconds the caller will wait. The callee answers `Error(deadline_exceeded)` when it passes. |
 | 33 | `trace` | bytes | W3C `traceparent` packed into 26 bytes: version (1), trace ID (16), parent ID (8), flags (1). |
 | 34 | `(reserved)` | — | Reserved. (Rule 1 of section 6.6 already prevents a peer from using IDs its partner has not acknowledged.) |
-| 35 | `credit` | uint | Initial credit in bytes the caller grants for the callee's half, replacing the default. |
+| 35 | `credit` | uint | Initial credit in bytes the caller grants for the callee's half, replacing the default. Any value is allowed; 0 makes the callee wait for a `Credit`. |
 | 36 | `context` | bytes | Hub Profile: opaque call context issued by a hub (section 10.6). |
 | 37 | `principal` | string | Hub Profile: the principal a forwarded call acts for (section 10.6). |
 
@@ -572,7 +572,7 @@ Every call is flow-controlled with credit, per direction, on every stream.
 
 ### 7.5 Cancellation and deadlines
 
-- The caller cancels with `Cancel(status)`, normally `cancelled`. `Cancel` finishes the caller's half and closes its byte tokens.
+- The caller cancels with `Cancel(status)`, normally `cancelled`. `Cancel` may be sent while the callee's half is open. It finishes the caller's half if that was still open, closes its byte tokens, and asks the callee to stop.
 - The callee SHOULD stop work and MUST answer with a final message, normally `Error(cancelled)`, unless it has already sent one. The call then ends as in section 7.1, so a leased stream returns to the pool in a clean state.
 - If no final message arrives within about 5 s, the caller gives up. On a leased stream it resets the stream (section 4.2), which also tells the callee. On the shared lane it keeps counting the call toward `maxConcurrentCalls` until the final message arrives; if none arrives within 30 s, the peer is broken and the caller closes the session with `GoAway(protocol_error)`.
 - When a `deadline` passes, the callee sends `Error(deadline_exceeded)`. The caller MAY also send `Cancel(deadline_exceeded)` when its own timer fires.

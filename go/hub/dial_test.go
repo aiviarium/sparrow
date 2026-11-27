@@ -156,3 +156,71 @@ func TestHubDialsNode(t *testing.T) {
 		})
 	}
 }
+
+// TestDialedNodeSupersede: a changed Dial (here the credential) dials the
+// node again; the new session supersedes the old one, which gets
+// GoAway(going_away) only once the new one is in place (hub-admin 2.2).
+func TestDialedNodeSupersede(t *testing.T) {
+	f := newFixture(t, nil)
+	n := nd.New(nd.Options{ID: "remote", Logger: testLogger(t)})
+	rec := &recorder{}
+	if _, err := n.Add(tctx(t), rec.facet("remote")); err != nil {
+		t.Fatal(err)
+	}
+	ln := &listeningNode{n: n}
+	*ln = *serveNodeAny(t, n, "old-secret", "new-secret")
+	f.secret("cred-old", "old-secret")
+	f.secret("cred-new", "new-secret")
+	grants := policy(grant("user:alice", "remote", "use"))
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"remote": dialConfig(ln.url, ln.pin, "cred-old")}, Extensions: grants})
+	waitNode(t, f.h, "remote", true)
+	first := n.Session()
+	cli := f.client("websocket", aliceToken)
+	waitFacet(t, cli, "remote")
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"remote": dialConfig(ln.url, ln.pin, "cred-new")}, Extensions: grants})
+	select {
+	case <-first.Done():
+	case <-time.After(10 * time.Second):
+		t.Fatal("old session not superseded")
+	}
+	if g := first.GoAwayReceived(); g == nil || status.Code(g.Status) != status.GoingAway {
+		t.Fatalf("old session got %v", g)
+	}
+	waitNode(t, f.h, "remote", true)
+	if v, err := cli.Call(tctx(t), "remote", "ping", nil); err != nil || v != "pong" {
+		t.Fatalf("%v %v", v, err)
+	}
+}
+
+// serveNodeAny serves a node over WebTransport accepting any of creds.
+func serveNodeAny(t *testing.T, n *nd.Node, creds ...string) *listeningNode {
+	cert, _, err := webtransport.SelfSigned("127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ln := &listeningNode{n: n}
+	leaf, _ := x509.ParseCertificate(cert.Certificate[0])
+	ln.pin = PinFor(leaf)
+	srv := webtransport.NewServer(webtransport.ServerOptions{TLSConfig: &tls.Config{Certificates: []tls.Certificate{cert}}, CheckOrigin: func(*http.Request) bool { return true }})
+	mux := http.NewServeMux()
+	mux.Handle("/node", srv.Handler(func(c *webtransport.Conn, _ *http.Request) {
+		_ = n.Serve(context.Background(), c, func(a *wire.Auth) error {
+			got, _ := credentialBytes(nilSafe(a))
+			for _, c := range creds {
+				if string(got) == c {
+					return nil
+				}
+			}
+			return &session.Error{Code: status.Unauthenticated, Message: "bad hub credential"}
+		})
+	}))
+	srv.WT.H3.Handler = mux
+	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	go func() { _ = srv.Serve(pc) }()
+	t.Cleanup(func() { _ = srv.Close() })
+	ln.url = fmt.Sprintf("https://127.0.0.1:%d/node", pc.LocalAddr().(*net.UDPAddr).Port)
+	return ln
+}

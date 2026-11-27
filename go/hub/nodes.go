@@ -17,7 +17,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"syscall"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -227,6 +227,7 @@ func sameIDs(a, b []uint64) bool {
 func (h *Hub) attach(n *node, l *link) {
 	n.switching.Lock()
 	h.mu.Lock()
+	l.v.link = l
 	if h.nodes[n.id] != n || h.closed {
 		h.mu.Unlock()
 		n.switching.Unlock()
@@ -480,10 +481,18 @@ func (h *Hub) reconfigure(n *node, old *admin.NodeConfig) {
 	case !nc.IsEnabled():
 		n.stopLink()
 		n.setState(admin.Disabled, "")
+	case nc.Start == nil:
+		// Dial-in: a node the hub used to start or dial, or whose kind
+		// changed, must dial in again (a changed credential is handled by
+		// the revalidation in Apply).
+		if old.Start != nil || old.IsPeer() != nc.IsPeer() || !old.IsEnabled() {
+			n.stopLink()
+			n.setState(admin.Offline, "waiting for the node to dial in")
+		}
 	case !old.IsEnabled() || startChanged:
-		// A spawned node is stopped before its new process starts; a
-		// dialed node is dialed again and the new session supersedes the
-		// old one (the old one closes when it is stopped).
+		// A spawned node is stopped before its new process starts (10.7);
+		// a dialed node is dialed again and the new session supersedes the
+		// old one, which stays open until then (hub-admin 2.2).
 		n.restart()
 	}
 }
@@ -606,7 +615,7 @@ func (n *node) ensureStarted() {
 }
 
 // stopLink stops the node's supervisor and ends its sessions.
-func (n *node) stopLink() {
+func (n *node) stopLink() *supervisor {
 	h := n.h
 	h.mu.Lock()
 	sup := n.sup
@@ -624,15 +633,7 @@ func (n *node) stopLink() {
 	if l != nil {
 		l.sess.GoAway(status.GoingAway, "node removed, disabled or reconfigured", nil)
 	}
-}
-
-func (n *node) waitStopped(d time.Duration) {
-	n.h.mu.Lock()
-	sup := n.sup
-	n.h.mu.Unlock()
-	if sup != nil {
-		sup.wait(d)
-	}
+	return sup
 }
 
 // restart stops the current supervisor (waiting for a spawned process to
@@ -646,9 +647,14 @@ func (n *node) restart() {
 		h.mu.Unlock()
 		return
 	}
-	s := &supervisor{n: n, done: make(chan struct{})}
+	s := &supervisor{n: n, done: make(chan struct{}), handEnd: make(chan struct{})}
 	s.ctx, s.cancel = context.WithCancel(h.ctx)
 	n.sup = s
+	handoff := old != nil && cfg.Start.Dial != nil && n.link != nil && n.link.kind == linkDial
+	if handoff {
+		old.handoff.Store(true)
+		s.prev = old
+	}
 	if old != nil && n.link != nil && n.link.kind == linkSpawn {
 		// The old process is being stopped: new calls wait for the new
 		// one (10.7).
@@ -657,7 +663,9 @@ func (n *node) restart() {
 	}
 	h.mu.Unlock()
 	go func() {
-		if old != nil {
+		if old != nil && handoff {
+			old.cancel() // its session stays until the new one supersedes it
+		} else if old != nil {
 			old.stop()
 			old.wait(30 * time.Second) // never run a node twice (10.7)
 		}
@@ -681,6 +689,18 @@ type supervisor struct {
 	failed bool
 	mu     sync.Mutex
 	sess   *session.Session
+	// handoff: a new dial supervisor took over; the current session ends
+	// when the new one supersedes it (or after a minute).
+	handoff  atomic.Bool
+	handEnd  chan struct{} // closed when the successor's first dial failed
+	handOnce sync.Once
+	prev     *supervisor // the supervisor this one takes over from
+}
+
+// endHandoff lets a handed-off session close: its successor could not
+// connect.
+func (s *supervisor) endHandoff() {
+	s.handOnce.Do(func() { close(s.handEnd) })
 }
 
 func (s *supervisor) stop() {
@@ -797,7 +817,7 @@ func (s *supervisor) spawnOnce(sp *admin.Spawn) (clean bool, err error) {
 		env = append(env, k+"="+val)
 	}
 	cmd.Env = env
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	ownProcessGroup(cmd)
 	var stderr io.WriteCloser
 	if h.o.SpawnStderr != nil {
 		cmd.Stderr = h.o.SpawnStderr
@@ -841,7 +861,6 @@ func (s *supervisor) spawnOnce(sp *admin.Spawn) (clean bool, err error) {
 	v.setSession(sess)
 	s.setSession(sess)
 	l := &link{n: n, sess: sess, v: v, kind: linkSpawn}
-	v.link = l
 	h.attach(n, l)
 	select {
 	case <-sess.Done():
@@ -867,7 +886,7 @@ func killAfter(cmd *exec.Cmd, exited chan error, d time.Duration) error {
 		return err
 	case <-time.After(d):
 		if cmd.Process != nil {
-			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+			killProcessGroup(cmd)
 			_ = cmd.Process.Kill()
 		}
 		return <-exited
@@ -926,6 +945,9 @@ func (s *supervisor) runDial(d *admin.Dial) {
 		if err != nil {
 			msg = err.Error()
 			h.log.Warn("dialing a node failed", "node", n.id, "url", d.URL, "err", err)
+			if s.prev != nil {
+				s.prev.endHandoff() // the old session does not wait any longer
+			}
 		} else {
 			attempt = 0
 		}
@@ -974,11 +996,17 @@ func (s *supervisor) dialOnce(d *admin.Dial) error {
 	v.setSession(sess)
 	s.setSession(sess)
 	l := &link{n: n, sess: sess, v: v, kind: linkDial}
-	v.link = l
 	h.attach(n, l)
 	select {
 	case <-sess.Done():
 	case <-s.ctx.Done():
+		if s.handoff.Load() {
+			select {
+			case <-sess.Done():
+			case <-s.handEnd:
+			case <-time.After(time.Minute):
+			}
+		}
 		sess.GoAway(status.GoingAway, "node link stopped by the hub", nil)
 		select {
 		case <-sess.Done():

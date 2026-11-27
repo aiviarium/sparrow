@@ -271,3 +271,45 @@ func pinnedClient(hash []byte) *http.Client {
 		},
 	}}}
 }
+
+// TestRunInProcess runs the program's Run in this process: plain-ws
+// WebSocket plus WebTransport, a spawned node, and shutdown on cancel.
+func TestRunInProcess(t *testing.T) {
+	dir := t.TempDir()
+	cfg := &Config{WebTransport: "127.0.0.1:0", WebSocket: "127.0.0.1:0", WebSocketPlain: true, SelfSigned: true, DataDir: dir}
+	cfg.Bootstrap = append(cfg.Bootstrap, struct {
+		Principal      string `json:"principal"`
+		Credential     string `json:"credential"`
+		CredentialFile string `json:"credentialFile"`
+	}{Principal: "user:admin", Credential: "adm"})
+	ctx, cancel := context.WithCancel(context.Background())
+	ready := make(chan Addrs, 1)
+	done := make(chan error, 1)
+	go func() { done <- Run(ctx, cfg, newLogger("error"), func(a Addrs) { ready <- a }) }()
+	var a Addrs
+	select {
+	case a = <-ready:
+	case err := <-done:
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(a.WebSocket, "ws://") || !strings.HasPrefix(a.WebTransport, "https://") || len(a.Pin) != 64 {
+		t.Fatalf("%+v", a)
+	}
+	p := &hubProc{t: t, addrs: a, log: &bytes.Buffer{}}
+	c := p.client(t, a.WebSocket, "adm", nil)
+	if c.Session().PeerFacet("sparrow.hub.admin") == nil {
+		t.Fatal("no admin facet")
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(20 * time.Second):
+		t.Fatal("Run did not return")
+	}
+	if g := c.Session(); g != nil {
+		<-g.Done()
+	}
+}
