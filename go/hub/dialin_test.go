@@ -181,14 +181,14 @@ func TestOneLinkDirection(t *testing.T) {
 		t.Fatal(err)
 	}
 	waitNode(t, f.h, "acme", true)
-	// Now the hub starts node acme itself; its old credential may not be
-	// used to dial in (10.2).
+	// Now the hub starts node acme itself; only a node configured to dial
+	// in has a dial-in credential, so the old one is unknown (10.2).
 	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": spawnEcho("acme")}})
 	if s := n.Session(); s != nil {
 		<-s.Done()
 	}
 	_, err = dialInNode(t, f, "websocket", "acme", "cred-one", rec.facet("acme"))
-	mustCode(t, err, status.FailedPrecondition)
+	mustCode(t, err, status.Unauthenticated)
 	// A document with both directions, or neither, is invalid.
 	c, _ := f.adminClient("websocket")
 	snap, _ := c.Get(tctx(t))

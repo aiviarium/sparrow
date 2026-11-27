@@ -183,11 +183,16 @@ func facetDoc(t *testing.T, name string, id uint64) []byte {
 }
 
 func TestValidate(t *testing.T) {
-	secrets := map[string]bool{"s1": true, "s2": true, "dial": true}
+	secrets := map[string]bool{"s1": true, "s2": true, "dial": true, "same-as-s1": true}
+	values := map[string]string{"s1": "v1", "s2": "v2", "dial": "v3", "same-as-s1": "v1"}
 	charts := &schema.Facet{Name: "acme.charts"}
 	other := &schema.Facet{Name: "other"}
 	env := ValidateEnv{
 		SecretExists: func(n string) bool { return secrets[n] },
+		SecretValue: func(n string) ([]byte, bool) {
+			v, ok := values[n]
+			return []byte(v), ok
+		},
 		StoredFacet: func(k []byte) *schema.Facet {
 			switch string(k) {
 			case "charts":
@@ -221,8 +226,8 @@ func TestValidate(t *testing.T) {
 		}, Extensions: map[string][]byte{"ok": {0}}}, nil},
 		{"grammar and reserved", &Config{Nodes: map[string]*NodeConfig{
 			"A":         {Credential: ptr("s1")},
-			"sparrow":   {Credential: ptr("s1")},
-			"sparrow.x": {Credential: ptr("s1")},
+			"sparrow":   {Credential: ptr("s2")},
+			"sparrow.x": {Credential: ptr("dial")},
 		}}, [][]string{{"nodes", "A"}, {"nodes", "sparrow"}, {"nodes", "sparrow.x"}}},
 		{"directions", &Config{Nodes: map[string]*NodeConfig{
 			"both":    {Credential: ptr("s1"), Start: &Start{Spawn: &Spawn{Command: []string{"x"}}}},
@@ -230,10 +235,21 @@ func TestValidate(t *testing.T) {
 		}}, [][]string{{"nodes", "both"}, {"nodes", "neither"}}},
 		{"missing secrets", &Config{Nodes: map[string]*NodeConfig{
 			"a": {Credential: ptr("nope")},
-			"b": {Start: &Start{Spawn: &Spawn{Command: []string{"x"}, Env: map[string]EnvValue{"K": {Secret: true, Value: "nope"}, "1bad": {Value: "x"}}}}},
+			"b": {Start: &Start{Spawn: &Spawn{Command: []string{"x"}, Env: map[string]EnvValue{"K": {Secret: true, Value: "nope"}, "A=B": {Value: "x"}, "1ok": {Value: "x"}}}}},
 			"c": {Start: &Start{Dial: &Dial{URL: "http://h", Pin: []byte{1}, Credential: "nope2"}}},
-		}}, [][]string{{"nodes", "a", "credential"}, {"nodes", "b", "start", "spawn", "env", "1bad"}, {"nodes", "b", "start", "spawn", "env", "K"},
+		}}, [][]string{{"nodes", "a", "credential"}, {"nodes", "b", "start", "spawn", "env", "A=B"}, {"nodes", "b", "start", "spawn", "env", "K", "secret"},
 			{"nodes", "c", "start", "dial", "url"}, {"nodes", "c", "start", "dial", "pin"}, {"nodes", "c", "start", "dial", "credential"}}},
+		{"spawn programs and env names", &Config{Nodes: map[string]*NodeConfig{
+			"a": {Start: &Start{Spawn: &Spawn{Command: []string{}}}},
+			"b": {Start: &Start{Spawn: &Spawn{Command: []string{"", "arg"}, Env: map[string]EnvValue{"": {Value: "x"}, "N\x00UL": {Value: "x"}, "ok.name-1": {Value: "x"}}}}},
+		}}, [][]string{{"nodes", "a", "start", "spawn", "command"}, {"nodes", "b", "start", "spawn", "command", "0"},
+			{"nodes", "b", "start", "spawn", "env", ""}, {"nodes", "b", "start", "spawn", "env", "N\x00UL"}}},
+		{"dial-in credentials with the same value", &Config{Nodes: map[string]*NodeConfig{
+			"a": {Credential: ptr("s1")},
+			"b": {Credential: ptr("s1")},
+			"c": {Credential: ptr("s2")},
+			"d": {Credential: ptr("same-as-s1")},
+		}}, [][]string{{"nodes", "b", "credential"}, {"nodes", "d", "credential"}}},
 		{"replayable credential", &Config{Nodes: map[string]*NodeConfig{
 			"a": {Credential: ptr("s1")},
 			"b": {Start: &Start{Dial: &Dial{URL: "https://h", Pin: pin, Credential: "s1"}}},
@@ -312,7 +328,7 @@ func code(err error) status.Code { return session.Code(err) }
 func doc(ids ...string) *Config {
 	c := EmptyConfig()
 	for _, id := range ids {
-		c.Nodes[id] = &NodeConfig{Credential: ptr("cred")}
+		c.Nodes[id] = &NodeConfig{Start: &Start{Spawn: &Spawn{Command: []string{"node-" + id}, Env: map[string]EnvValue{"CRED": {Secret: true, Value: "cred"}}}}}
 	}
 	return c
 }
@@ -351,7 +367,7 @@ func TestManagerRevisions(t *testing.T) {
 		t.Fatalf("first event %+v", e)
 	}
 	// Invalid: failed_precondition with problems.
-	_, err := m.Commit(&CommitRequest{Base: 0, Config: doc("x")})
+	_, err := m.Commit(&CommitRequest{Base: 0, Config: &Config{Nodes: map[string]*NodeConfig{"x": {Credential: ptr("cred")}}}})
 	if code(err) != status.FailedPrecondition {
 		t.Fatalf("got %v", err)
 	}

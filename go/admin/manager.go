@@ -261,6 +261,7 @@ func (m *Manager) StoredFacet(key []byte) *schema.Facet {
 func (m *Manager) env() ValidateEnv {
 	return ValidateEnv{
 		SecretExists: func(n string) bool { _, ok := m.SecretValue(n); return ok },
+		SecretValue:  m.SecretValue,
 		StoredFacet:  m.StoredFacet,
 		Extension:    m.o.Extension,
 		OtherKind:    m.o.OtherKind,

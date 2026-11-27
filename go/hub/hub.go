@@ -35,6 +35,12 @@ import (
 	"github.com/aiviarium/sparrow-rpc/go/wire"
 )
 
+// Relay acknowledgement limits (10.3).
+const (
+	DefaultRelayAckTimeout     = 5 * time.Second
+	DefaultPeerRelayAckTimeout = 2 * time.Second
+)
+
 // Credential maps a bearer token to a principal and its groups.
 type Credential struct {
 	Token     string
@@ -67,11 +73,6 @@ type Options struct {
 	// StartTimeout bounds how long a call waits for a node that is not
 	// connected (10.7); default 10 s.
 	StartTimeout time.Duration
-	// AcceptUnknownInterfaces lists facets whose implements claim names an
-	// interface the hub does not know (built in, or given in the
-	// ref.interfaces extension) instead of refusing them. Such claims are
-	// unverified and never chosen as defaults.
-	AcceptUnknownInterfaces bool
 	// AdminFacetID fixes the facet ID of sparrow.hub.admin (0 allocates
 	// one from the facet-ID table, normally 16).
 	AdminFacetID uint64
@@ -83,14 +84,17 @@ type Options struct {
 	// SpawnStderr receives the standard error of spawned nodes (default:
 	// the logger, line by line).
 	SpawnStderr io.Writer
-	Logger          *slog.Logger
+	Logger      *slog.Logger
 	// CredentialCheckInterval is how often dial-in credentials are
 	// re-validated (10.2: at least every 60 s); default 30 s.
 	CredentialCheckInterval time.Duration
 	// RelayAckTimeout is the time each downstream session gets to ack a
-	// node's relayed SchemaUpdate (10.3: half of the hub's own 10 s);
-	// default 5 s, and half of it again for updates from a peer hub.
+	// node's relayed SchemaUpdate, or the change a superseding session of
+	// a node brings (10.3); default 5 s.
 	RelayAckTimeout time.Duration
+	// PeerRelayAckTimeout is the same for an update relayed from a peer
+	// hub (10.3); default 2 s.
+	PeerRelayAckTimeout time.Duration
 }
 
 // Hub is a running hub.
@@ -111,7 +115,6 @@ type Hub struct {
 	viewers   map[*viewer]struct{}
 	policy    *hubPolicy
 	ifaces    map[string]*schema.Interface // interface hash -> interface
-	credSeen  map[string]string            // dial-in credential value -> node ID ever accepted
 	calls     map[*activeCall]struct{}
 	contexts  map[string]*callContext
 	adminID   uint64
@@ -147,10 +150,13 @@ func New(o Options) (*Hub, error) {
 		o.CredentialCheckInterval = 30 * time.Second
 	}
 	if o.RelayAckTimeout <= 0 {
-		o.RelayAckTimeout = 5 * time.Second
+		o.RelayAckTimeout = DefaultRelayAckTimeout
+	}
+	if o.PeerRelayAckTimeout <= 0 {
+		o.PeerRelayAckTimeout = DefaultPeerRelayAckTimeout
 	}
 	h := &Hub{o: o, log: o.Logger, clock: o.Clock, nodes: map[string]*node{}, viewers: map[*viewer]struct{}{},
-		ifaces: map[string]*schema.Interface{}, credSeen: map[string]string{}, calls: map[*activeCall]struct{}{},
+		ifaces: map[string]*schema.Interface{}, calls: map[*activeCall]struct{}{},
 		contexts: map[string]*callContext{}}
 	if h.log == nil {
 		h.log = slog.New(slog.DiscardHandler)
@@ -417,17 +423,10 @@ func (h *Hub) nodeForCredential(cred []byte) (*node, error) {
 			if !n.cfg.IsEnabled() {
 				return nil, &session.Error{Code: status.FailedPrecondition, Message: "node " + id + " is disabled"}
 			}
-			h.credSeen[string(cred)] = id
 			return n, nil
 		}
 	}
-	// A credential that belonged to a node the hub now starts or dials:
-	// exactly one link direction per node (10.2).
-	if id, ok := h.credSeen[string(cred)]; ok {
-		if n := h.nodes[id]; n != nil && n.cfg.Start != nil {
-			return nil, &session.Error{Code: status.FailedPrecondition, Message: "node " + id + " is started or dialed by the hub; it may not dial in"}
-		}
-	}
+	// Only a node configured to dial in has a dial-in credential (10.2).
 	return nil, &session.Error{Code: status.Unauthenticated, Message: "unknown link credential"}
 }
 

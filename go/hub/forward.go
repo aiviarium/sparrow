@@ -93,6 +93,12 @@ func (sh *sessHandler) ServeCall(ctx context.Context, c *session.ServerCall) {
 		h.serveOwn(ctx, v, c, actors, cc, lf)
 		return
 	}
+	if n.cfg.IsPeer() && hasPrefix(forwardActor(actors).Principal, "peer:") {
+		// A call acting for a peer's principal never goes on to another
+		// peer (10.8).
+		deny(status.PermissionDenied, "a call acting for "+forwardActor(actors).Principal+" is not forwarded to another peer hub (10.8)")
+		return
+	}
 	if c.Notification() {
 		h.forwardNotification(v, c, actors, n, lf)
 		return
@@ -127,6 +133,11 @@ func (h *Hub) actingPrincipals(v *viewer, c *session.ServerCall) ([]Actor, *call
 		return []Actor{self, cc.actor}, cc, nil
 	case viewPeer:
 		self := Actor{Principal: names.NodePrincipal(v.node.id)}
+		if _, has := c.Metadata()[wire.SigilKey(wire.KeyContext)]; has {
+			// Contexts are issued per node link; a peer never carries one
+			// (10.8).
+			return nil, nil, errors.New("a call from a peer hub may not carry a context (10.8)")
+		}
 		p, ok, err := c.Metadata().Principal()
 		if err != nil {
 			return nil, nil, errors.New("malformed principal")
@@ -236,19 +247,26 @@ func (h *Hub) forward(ctx context.Context, start time.Time, v *viewer, c *sessio
 		nc.deadline = h.clock.Now().Add(left)
 	}
 	md.SetCredit(c.CallerCredit())
-	key := make([]byte, 16)
-	_, _ = rand.Read(key)
-	nc.key = string(key)
-	md.SetContext(key)
+	toPeer := n.cfg.IsPeer()
+	if !toPeer {
+		// A peer hub gets no context: it could not use one, and refuses
+		// a call that carries one (10.8).
+		key := make([]byte, 16)
+		_, _ = rand.Read(key)
+		nc.key = string(key)
+		md.SetContext(key)
+		h.mu.Lock()
+		h.contexts[nc.key] = nc
+		h.mu.Unlock()
+	}
 	md.SetPrincipal(act.Principal)
-	h.mu.Lock()
-	h.contexts[nc.key] = nc
-	h.mu.Unlock()
 	_ = start
 	octx := context.WithoutCancel(ctx)
 	out, err := l.sess.OpenRaw(octx, session.ForwardRequest(c, local, md), &session.CallOptions{ManualCredit: true})
 	if err != nil {
-		h.endContext(nc)
+		if !toPeer {
+			h.endContext(nc)
+		}
 		code := session.Code(err)
 		if code != status.MessageTooLarge {
 			code = status.Unavailable
@@ -260,7 +278,9 @@ func (h *Hub) forward(ctx context.Context, start time.Time, v *viewer, c *sessio
 	h.track(a)
 	_ = session.Relay(ctx, c, out)
 	h.untrack(a)
-	h.endContext(nc)
+	if !toPeer {
+		h.endContext(nc)
+	}
 }
 
 // endContext starts the grace period of a context (10.6): it stays valid

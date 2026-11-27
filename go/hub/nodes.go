@@ -160,8 +160,10 @@ func (h *Hub) checkNodeFacetsLocked(n *node, sc *schema.Schema) ([]nodeFacet, er
 				if err := schema.VerifyImplements(f, iface); err != nil {
 					return nil, &session.Error{Code: status.SchemaMismatch, Message: fmt.Sprintf("facet %q: %v", f.Name, err)}
 				}
-			} else if !h.o.AcceptUnknownInterfaces {
-				return nil, &session.Error{Code: status.SchemaMismatch, Message: fmt.Sprintf("facet %q claims interface %x, which this hub does not know and cannot verify", f.Name, f.Implements)}
+			} else {
+				// A claim to an interface the hub holds no document for is
+				// refused like an incompatible update (10.3).
+				return nil, &session.Error{Code: status.SchemaMismatch, Message: fmt.Sprintf("facet %q claims interface %x, for which this hub holds no interface document", f.Name, f.Implements)}
 			}
 		}
 		out = append(out, nf)
@@ -251,7 +253,7 @@ func (h *Hub) attach(n *node, l *link) {
 	l.mu.Unlock()
 	h.mu.Unlock()
 	if changed {
-		h.refreshAll(h.o.RelayAckTimeout)
+		h.refreshAll(h.relayTimeout(n)) // the same limits as for an update (10.3)
 	}
 	h.mu.Lock()
 	old := n.link
@@ -327,13 +329,18 @@ func (h *Hub) nodeSchemaUpdate(v *viewer, u *session.PeerSchemaUpdate) error {
 	l.mu.Unlock()
 	h.mu.Unlock()
 	if changed {
-		t := h.o.RelayAckTimeout
-		if n.cfg.IsPeer() {
-			t /= 2 // a peer hub relays further with half of its time (10.3)
-		}
-		h.refreshAll(t)
+		h.refreshAll(h.relayTimeout(n))
 	}
 	return nil
+}
+
+// relayTimeout is the time each downstream session gets to ack a change
+// from node n (10.3): 5 s for a node's, 2 s for one a peer hub relays.
+func (h *Hub) relayTimeout(n *node) time.Duration {
+	if n.cfg.IsPeer() {
+		return h.o.PeerRelayAckTimeout
+	}
+	return h.o.RelayAckTimeout
 }
 
 // waitLink returns the node's routed session, waiting up to timeout and

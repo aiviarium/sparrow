@@ -227,8 +227,17 @@ func (n *Node) config() session.Config {
 	if n.opts.Session != nil {
 		n.opts.Session(&cfg)
 	}
+	if cfg.SchemaAckTimeout < MinHubAckTimeout {
+		// A node gives its hub at least 10 s to ack, so the hub's limits
+		// for its downstream sessions run out first (10.3).
+		cfg.SchemaAckTimeout = MinHubAckTimeout
+	}
 	return cfg
 }
+
+// MinHubAckTimeout is the least time a node gives its hub to acknowledge a
+// SchemaUpdate (10.3).
+const MinHubAckTimeout = 10 * time.Second
 
 // Connect runs the client side of a session on conn (the node is the
 // Sparrow client) and returns once it is ready. trusted marks the link as

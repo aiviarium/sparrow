@@ -155,4 +155,3 @@ func (m *Manager) serveWatch(ctx context.Context, c *session.ServerCall) (any, e
 		}
 	}
 }
-

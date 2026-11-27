@@ -11,17 +11,22 @@ import (
 //
 //	{
 //	  "nodes": {
-//	    "echo":   {"spawn": {"command": ["echo-node"], "env": {"A": "literal", "B": {"secret": "name"}}, "dir": "/x"}},
-//	    "remote": {"dial": {"url": "https://...", "pin": "<hex>", "credential": "secret-name"}},
+//	    "echo":   {"start": {"spawn": {"command": ["echo-node"], "env": {"A": {"literal": "x"}, "B": {"secret": "name"}}, "dir": "/x"}}},
+//	    "remote": {"start": {"dial": {"url": "https://...", "pin": "<hex>", "credential": "secret-name"}}},
 //	    "acme":   {"credential": "secret-name", "facets": ["<hex key>"], "peer": false, "enabled": true,
 //	               "extensions": {"key": "<hex CBOR>"}},
-//	    "w":      {"other": {"kind": "wasm", "params": "<hex CBOR>"}}
+//	    "w":      {"start": {"other": {"kind": "wasm", "params": "<hex CBOR>"}}}
 //	  },
 //	  "defaults":   {"<hex interface hash>": "facet.name"},
 //	  "extensions": {"key": "<hex CBOR>"}
 //	}
 //
-// Byte strings are lowercase hex.
+// Struct fields are keys named as in the interface (hub-admin 5.1), a
+// union is an object with its variant name as the only key, and byte
+// strings (values and map keys) are lowercase hex; Problem.path follows
+// this form. For convenience the reader also accepts the start variant
+// directly in the node ({"spawn": ...}) and an environment literal as a
+// plain string.
 
 type jsonConfig struct {
 	Nodes      map[string]*jsonNode `json:"nodes"`
@@ -29,7 +34,14 @@ type jsonConfig struct {
 	Extensions map[string]string    `json:"extensions,omitempty"`
 }
 
+type jsonStart struct {
+	Spawn *jsonSpawn `json:"spawn,omitempty"`
+	Dial  *jsonDial  `json:"dial,omitempty"`
+	Other *jsonOther `json:"other,omitempty"`
+}
+
 type jsonNode struct {
+	Start      *jsonStart        `json:"start,omitempty"`
 	Spawn      *jsonSpawn        `json:"spawn,omitempty"`
 	Dial       *jsonDial         `json:"dial,omitempty"`
 	Other      *jsonOther        `json:"other,omitempty"`
@@ -98,6 +110,7 @@ func (c *Config) MarshalJSON() ([]byte, error) {
 			jn.Facets = append(jn.Facets, hex.EncodeToString(f))
 		}
 		if s := n.Start; s != nil {
+			jn.Start = &jsonStart{}
 			switch {
 			case s.Spawn != nil:
 				js := &jsonSpawn{Command: s.Spawn.Command, Dir: s.Spawn.Dir}
@@ -108,16 +121,16 @@ func (c *Config) MarshalJSON() ([]byte, error) {
 						if v.Secret {
 							b, _ = json.Marshal(map[string]string{"secret": v.Value})
 						} else {
-							b, _ = json.Marshal(v.Value)
+							b, _ = json.Marshal(map[string]string{"literal": v.Value})
 						}
 						js.Env[k] = b
 					}
 				}
-				jn.Spawn = js
+				jn.Start.Spawn = js
 			case s.Dial != nil:
-				jn.Dial = &jsonDial{URL: s.Dial.URL, Pin: hex.EncodeToString(s.Dial.Pin), Credential: s.Dial.Credential}
+				jn.Start.Dial = &jsonDial{URL: s.Dial.URL, Pin: hex.EncodeToString(s.Dial.Pin), Credential: s.Dial.Credential}
 			case s.Other != nil:
-				jn.Other = &jsonOther{Kind: s.Other.Kind, Params: hex.EncodeToString(s.Other.Params)}
+				jn.Start.Other = &jsonOther{Kind: s.Other.Kind, Params: hex.EncodeToString(s.Other.Params)}
 			}
 		}
 		j.Nodes[id] = jn
@@ -168,6 +181,15 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			n.Facets = append(n.Facets, k)
 		}
 		starts := 0
+		if js := jn.Start; js != nil {
+			if jn.Spawn != nil || jn.Dial != nil || jn.Other != nil {
+				return fmt.Errorf("node %s: start given twice", id)
+			}
+			jn.Spawn, jn.Dial, jn.Other = js.Spawn, js.Dial, js.Other
+			if js.Spawn == nil && js.Dial == nil && js.Other == nil {
+				return fmt.Errorf("node %s: start needs one of spawn, dial and other", id)
+			}
+		}
 		if jn.Spawn != nil {
 			starts++
 			sp := &Spawn{Command: jn.Spawn.Command, Dir: jn.Spawn.Dir}
@@ -179,13 +201,17 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 						sp.Env[k] = EnvValue{Value: lit}
 						continue
 					}
-					var sec struct {
-						Secret string `json:"secret"`
+					var u map[string]string
+					if err := json.Unmarshal(raw, &u); err != nil || len(u) != 1 {
+						return fmt.Errorf("node %s env %s: {\"literal\": value} or {\"secret\": name}", id, k)
 					}
-					if err := json.Unmarshal(raw, &sec); err != nil || sec.Secret == "" {
-						return fmt.Errorf("node %s env %s: a string or {\"secret\": name}", id, k)
+					if v, ok := u["literal"]; ok {
+						sp.Env[k] = EnvValue{Value: v}
+					} else if v, ok := u["secret"]; ok {
+						sp.Env[k] = EnvValue{Secret: true, Value: v}
+					} else {
+						return fmt.Errorf("node %s env %s: {\"literal\": value} or {\"secret\": name}", id, k)
 					}
-					sp.Env[k] = EnvValue{Secret: true, Value: sec.Secret}
 				}
 			}
 			n.Start = &Start{Spawn: sp}

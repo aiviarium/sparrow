@@ -145,10 +145,10 @@ func appendStruct(dst []byte, fields ...[]byte) []byte {
 	return dst
 }
 
-func text(s string) []byte    { return cbor.AppendText(nil, s) }
-func bstr(b []byte) []byte    { return cbor.AppendBytes(nil, b) }
-func uintv(v uint64) []byte   { return cbor.AppendUint(nil, v) }
-func boolv(v bool) []byte     { return cbor.AppendBool(nil, v) }
+func text(s string) []byte  { return cbor.AppendText(nil, s) }
+func bstr(b []byte) []byte  { return cbor.AppendBytes(nil, b) }
+func uintv(v uint64) []byte { return cbor.AppendUint(nil, v) }
+func boolv(v bool) []byte   { return cbor.AppendBool(nil, v) }
 func optText(s *string) []byte {
 	if s == nil {
 		return nil

@@ -1,10 +1,12 @@
 # Spec issues: resolution log
 
-Questions raised while writing the test vectors, and how the spec author resolved them. The current
-spec is `spec/core.md`, revision 305, with the companion `spec/hub-admin.md`, revision 18. Items
-26–36 are decisions taken since revision 183, and items O1–O5, raised while applying them, were
-decided in core revision 305 and hub-admin revision 18. Every item is **resolved**; the vectors, the
-JavaScript verifier and the Go library follow each decision.
+Questions raised while writing the test vectors and the Go reference implementation, and how the
+spec author resolved them. The current spec is `spec/core.md`, revision 324, with the companion
+`spec/hub-admin.md`, revision 25. Items P1–P16, raised by the Go hub (phase 3), were decided in core
+revision 324 and hub-admin revision 25; items 26–36 are decisions taken since revision 183, and
+items O1–O5, raised while applying them, were decided in core revision 305 and hub-admin revision 18.
+Every item is **resolved**; the vectors, the JavaScript verifier and the Go library follow each
+decision.
 
 The concept called "part" up to revision 183 is called "facet" since then. The vectors, the
 generator, the verifier and the Go conformance tests now use "facet" for it everywhere: vector names
@@ -13,6 +15,27 @@ generator, the verifier and the Go conformance tests now use "facet" for it ever
 `facet_owner_table`, `facet_web_keys`) and error codes (`facets_not_sorted`, `facet1_mismatch`,
 `reserved_facet_id`, …). No CBOR byte changed: the error texts inside `unimplemented/*` messages keep
 the word "part". The table rows below for older revisions keep the names of their time.
+
+## Raised against core revision 316 and hub-admin revision 18 (resolved in core revision 324, hub-admin revision 25)
+
+| # | Question | Decision | Go / vectors |
+| --- | --- | --- | --- |
+| P1 | Does a reset abort both directions of a leased stream, and when does the acceptor stop counting a stream it reset? | "A reset aborts only the resetting side's sending direction (QUIC `RESET_STREAM`, never `STOP_SENDING`)"; "an acceptor that starts a reset stops counting it as soon as it has sent its end" (4.2 rule 5) | `session` resets only the sending direction and drains the peer's; `TestAcceptorResetSendingOnly`, `TestAcceptorResetUncountsAtOnce` |
+| P2 | What does a server do with a `SchemaUpdate` from a client that sent no client schema? | "a `SchemaUpdate` from it closes the session with `GoAway(schema_mismatch)`" (5.4) | `TestNoLateClientSchema` |
+| P3 | Which code refuses a dial-in with a credential of a node the hub starts or dials? | "only a node configured to dial in has a dial-in credential; any other credential is refused with `GoAway(unauthenticated)`" (10.2) | the hub no longer remembers old credentials; `TestOneLinkDirection` |
+| P4 | May a hub accept an `implements` claim to an interface it does not know? | No: a claim "to an interface it holds no document for" is treated "like an incompatible update"; "How a hub obtains interface documents is its configuration" (10.3) | `AcceptUnknownInterfaces` removed; `ref.interfaces` stays; `TestUnknownInterfaceRefused` |
+| P5 | How long does each downstream session get to ack a relayed update? | "5 s to ack an update from a node, and 2 s to ack one the hub relays from a peer hub"; "A node gives its hub at least 10 s" (10.3) | `Options.RelayAckTimeout`, `PeerRelayAckTimeout`; `node.MinHubAckTimeout`; `TestRelayAckLimits` |
+| P6 | Do those limits apply to the change a superseding session brings? | "The same limits apply to the change a superseding session brings" (10.3) | `TestRelayAckLimits` |
+| P7 | What exactly happens at the end of a context's grace period? | The hub "answers the node with `Error(permission_denied)` and sends `Cancel` for the forwarded call" (10.6) | `TestContextGraceCancelsNested` |
+| P8 | Which code refuses peer principals, and may a peer send a context? | `Error(permission_denied)` for a named principal starting with `peer:` and for "a call from a peer that carries a `context`"; "A hub never forwards a call acting for a `peer:` principal to another peer" (10.8) | the hub sends no context to a peer; `TestPeerPrincipalRules` |
+| P9 | Are configured facets still used after a node has published? | "Once a node has published a schema, configured facets are no longer used for it" (10.7) | `TestConfiguredFacetsIgnoredAfterPublish` |
+| P10 | Notifications to a node that is offline or starting? | "are dropped" (10.7) | `TestNotificationToOfflineNodeDropped` |
+| P11 | What "equal" means for the no-op commit | "byte-for-byte equal to the applied one in canonical encoding" (hub-admin 2) | `TestNoOpCommitIsCanonicalByteEquality` |
+| P12 | May a hub start a spawned node lazily? | "A hub MAY instead start a spawned node on its first call" (hub-admin 2.2) | node extension `ref.lazy` |
+| P13 | When does the old session of a re-dialed node end? | "when the new one is ready or the first new attempt fails, whichever comes first" (hub-admin 2.2) | unchanged |
+| P14 | What follows the watch `Snapshot`, and which nodes are reported after a commit? | "followed by one `NodeEvent` for each configured node"; "After each applied revision the hub sends a `NodeEvent` for every configured node, changed or not" (hub-admin 4) | `TestWatchReportsEveryNode` |
+| P15 | How deep does `Problem.path` go? | "following the JSON form, so a union variant's name is a key, with list positions as decimal strings and byte-string map keys as lowercase hex" (hub-admin 5.1) | `admin/value/problems` now ends in `["start", "dial", "pin"]`; the JSON form writes `{"start": {"spawn": ...}}` and `{"literal": ...}` |
+| P16 | Further validation rules | "no two dial-in nodes name secrets with the same value"; "every `Spawn` program is non-empty and every environment variable name is non-empty and contains no `=` or NUL" (hub-admin 3) | `TestValidate` |
 
 ## Raised against revision 302 (resolved in core revision 305, hub-admin revision 18)
 

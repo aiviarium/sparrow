@@ -2,10 +2,10 @@ package session
 
 import (
 	"bytes"
-	"errors"
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"

@@ -21,6 +21,9 @@ var ErrUnsupported = errors.New("not supported by this hub")
 // stores. Nil hooks mean "nothing exists" and "nothing is supported".
 type ValidateEnv struct {
 	SecretExists func(name string) bool
+	// SecretValue returns a stored secret's value, to check that no two
+	// dial-in nodes present the same credential; nil skips that check.
+	SecretValue func(name string) ([]byte, bool)
 	// StoredFacet returns the stored facet with this key, or nil.
 	StoredFacet func(key []byte) *schema.Facet
 	// Extension checks one extension: node is "" for the document's own
@@ -39,17 +42,10 @@ func IsReservedNodeID(id string) bool { return id == "sparrow" || strings.HasPre
 // (section 2.1).
 func ValidSecretName(name string) bool { return names.IsNodeID(name) }
 
+// isEnvName reports whether s may name an environment variable (section
+// 3): non-empty, without '=' or NUL.
 func isEnvName(s string) bool {
-	if s == "" {
-		return false
-	}
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if !(c == '_' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || i > 0 && c >= '0' && c <= '9') {
-			return false
-		}
-	}
-	return true
+	return s != "" && !strings.ContainsAny(s, "=\x00")
 }
 
 // Validate checks a document against every rule of section 3 and returns
@@ -68,10 +64,13 @@ func Validate(c *Config, env ValidateEnv) []Problem {
 	// present (NodeConfig.credential) must never overlap.
 	presented := map[string]string{}
 	accepted := map[string]string{}
+	acceptedValue := map[string]string{} // secret value -> first dial-in node
 	for _, id := range c.NodeIDs() {
 		n := c.Nodes[id]
 		if n.Credential != nil {
-			accepted[*n.Credential] = id
+			if _, ok := accepted[*n.Credential]; !ok {
+				accepted[*n.Credential] = id
+			}
 		}
 		if n.Start != nil && n.Start.Dial != nil {
 			presented[n.Start.Dial.Credential] = id
@@ -93,6 +92,19 @@ func Validate(c *Config, env ValidateEnv) []Problem {
 		}
 		if n.Credential != nil {
 			secret(*n.Credential, append(np, "credential")...)
+			// No two dial-in nodes present the same credential (section 3):
+			// the credential alone names the node (Hub Profile 10.2).
+			if first := accepted[*n.Credential]; first != id {
+				add(fmt.Sprintf("dial-in node %q already uses secret %q", first, *n.Credential), append(np, "credential")...)
+			} else if env.SecretValue != nil {
+				if v, ok := env.SecretValue(*n.Credential); ok {
+					if other, dup := acceptedValue[string(v)]; dup {
+						add(fmt.Sprintf("secret %q has the same value as the credential of dial-in node %q", *n.Credential, other), append(np, "credential")...)
+					} else {
+						acceptedValue[string(v)] = id
+					}
+				}
+			}
 			if other, ok := presented[*n.Credential]; ok {
 				add(fmt.Sprintf("secret %q is also the credential the hub presents to node %q", *n.Credential, other), append(np, "credential")...)
 			}
@@ -102,20 +114,23 @@ func Validate(c *Config, env ValidateEnv) []Problem {
 			switch {
 			case s.Spawn != nil:
 				p := append(sp, "spawn")
-				if len(s.Spawn.Command) == 0 || s.Spawn.Command[0] == "" {
+				switch {
+				case len(s.Spawn.Command) == 0:
 					add("command needs at least the program", append(p, "command")...)
+				case s.Spawn.Command[0] == "":
+					add("the program is empty", append(p, "command", "0")...)
 				}
 				for _, k := range sortedKeys(s.Spawn.Env) {
 					v := s.Spawn.Env[k]
 					ep := append(p, "env", k)
 					if !isEnvName(k) {
-						add("not a valid environment variable name", ep...)
+						add("an environment variable name is non-empty and contains no '=' or NUL", ep...)
 					}
 					switch {
 					case v.UnknownTag != 0:
 						add(fmt.Sprintf("unknown EnvValue variant %d", v.UnknownTag), ep...)
 					case v.Secret:
-						secret(v.Value, ep...)
+						secret(v.Value, append(ep, "secret")...)
 					}
 				}
 			case s.Dial != nil:

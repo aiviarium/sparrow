@@ -75,9 +75,6 @@ type Config struct {
 	Web bool `json:"web"`
 	// StartTimeoutMs bounds how long calls wait for a node (default 10000).
 	StartTimeoutMs uint64 `json:"startTimeoutMs"`
-	// AcceptUnknownInterfaces lists facets claiming interfaces the hub
-	// cannot verify (see hub.Options).
-	AcceptUnknownInterfaces bool `json:"acceptUnknownInterfaces"`
 	// AllowedOrigins are the Origins accepted besides the hub's own (and
 	// requests without one); ["*"] allows every origin.
 	AllowedOrigins []string `json:"allowedOrigins"`
@@ -216,8 +213,7 @@ func Run(ctx context.Context, c *Config, log *slog.Logger, ready func(Addrs)) er
 	if err != nil {
 		return err
 	}
-	o := hub.Options{Store: store, SchemaName: c.SchemaName, Web: c.Web, Logger: log,
-		AcceptUnknownInterfaces: c.AcceptUnknownInterfaces, StartTimeout: time.Duration(c.StartTimeoutMs) * time.Millisecond}
+	o := hub.Options{Store: store, SchemaName: c.SchemaName, Web: c.Web, Logger: log, StartTimeout: time.Duration(c.StartTimeoutMs) * time.Millisecond}
 	for _, b := range c.Bootstrap {
 		o.Bootstrap = append(o.Bootstrap, hub.Credential{Principal: b.Principal, Token: b.Credential})
 	}

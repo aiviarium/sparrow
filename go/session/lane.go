@@ -83,6 +83,14 @@ func (l *lane) readLoop() {
 			s.handleShared(l, b)
 			s.procMu.Unlock()
 		} else {
+			s.mu.Lock()
+			drop := l.broken
+			s.mu.Unlock()
+			if drop {
+				// This side reset the stream: what the peer sent before it
+				// saw the reset is discarded until its direction ends.
+				continue
+			}
 			s.handleLeased(l, b)
 		}
 		if s.isClosed() && l.shared {
@@ -101,7 +109,6 @@ func (l *lane) readEnded(err error) {
 	if awaiting {
 		// This side reset the stream; the peer has now ended its own
 		// direction, so both sides have sent and seen both ends.
-		l.st.Reset(status.Cancelled)
 		s.laneClosed(l)
 		return
 	}
@@ -141,7 +148,9 @@ func (l *lane) readEnded(err error) {
 		if c != nil {
 			c.failLocal(&Error{Code: re.Code, Message: "stream reset", Remote: re.Remote})
 		}
-		l.st.Reset(re.Code)
+		// The peer reset its direction: end ours too (4.2 rule 5), never
+		// with STOP_SENDING.
+		resetWrite(l.st, re.Code)
 		s.laneClosed(l)
 		return
 	}
@@ -174,7 +183,7 @@ func (l *lane) readEnded(err error) {
 	}
 	if needClose {
 		if c != nil || err != io.EOF {
-			l.st.Reset(status.Unavailable)
+			resetWrite(l.st, status.Unavailable)
 		} else {
 			_ = l.st.CloseWrite()
 		}
@@ -214,23 +223,27 @@ func (s *Session) laneBroken(l *lane, err error) {
 }
 
 // resetLane resets a leased stream, fails its call and removes it from the
-// pool (4.2 rule 5). On a stream this side opened only the sending
-// direction is aborted where the binding allows it: the stream stays
-// counted until the peer, having seen the reset, ends its own direction
-// (or ResetWait passes), so a replacement stream never reaches a peer that
-// still counts this one. A stream the peer opened is aborted in both
-// directions and uncounted at once.
+// pool (4.2 rule 5). A reset aborts only this side's sending direction
+// (QUIC RESET_STREAM, never STOP_SENDING) where the binding allows it, and
+// the session keeps reading, discarding what the peer sent, until the peer
+// ends its own direction too. A stream this side opened stays counted
+// until then (or until ResetWait passes), so a replacement stream never
+// reaches a peer that still counts this one. On a stream the peer opened
+// this side stops counting as soon as it has sent its end: QUIC does not
+// order streams, so the peer's replacement may arrive before the old
+// stream's end.
 func (s *Session) resetLane(l *lane, code status.Code, failCall bool) {
-	wr, canHalf := l.st.(transport.WriteResetter)
+	_, canHalf := l.st.(transport.WriteResetter)
 	s.mu.Lock()
 	c := l.current
 	already := l.broken && l.readClosed && l.writeClosed
+	wasWriteClosed := l.writeClosed
 	l.broken, l.writeClosed = true, true
 	l.current = nil
-	half := l.opened && canHalf && !already && !l.readClosed
-	if half {
+	half := canHalf && !already && !l.readClosed
+	if half && l.opened {
 		l.awaitEnd = true
-	} else {
+	} else if !half {
 		l.readClosed = true
 	}
 	if l.opened {
@@ -238,18 +251,19 @@ func (s *Session) resetLane(l *lane, code status.Code, failCall bool) {
 	}
 	s.mu.Unlock()
 	switch {
-	case half:
-		wr.ResetWrite(code)
-	case !already:
+	case half && !wasWriteClosed:
+		resetWrite(l.st, code)
+	case !half && !already:
 		l.st.Reset(code)
 	}
 	if c != nil && failCall {
 		c.failLocal(&Error{Code: code, Message: "stream reset"})
 	}
-	if half {
+	if half && l.opened {
 		wait := dur(s.cfg.ResetWait, DefaultResetWait)
 		s.clock.AfterFunc(wait, func() {
-			l.st.Reset(code)
+			// The peer did not end its direction in time: stop counting
+			// the stream (the reader keeps discarding until it ends).
 			s.laneClosed(l)
 		})
 		return
@@ -260,6 +274,16 @@ func (s *Session) resetLane(l *lane, code status.Code, failCall bool) {
 		return
 	}
 	s.laneClosed(l)
+}
+
+// resetWrite aborts the sending direction of a stream only, where the
+// binding allows it (4.2 rule 5).
+func resetWrite(st transport.Stream, code status.Code) {
+	if wr, ok := st.(transport.WriteResetter); ok {
+		wr.ResetWrite(code)
+		return
+	}
+	st.Reset(code)
 }
 
 // pool is this side's leased streams (4.2): it only leases streams it
@@ -430,7 +454,10 @@ func (s *Session) acceptLoop() {
 		}
 		if uint64(s.inLeased) >= s.localLimits.MaxStreams {
 			s.mu.Unlock()
-			st.Reset(status.ResourceExhausted)
+			// Only the sending direction (4.2 rule 5); what the peer sent
+			// is read and discarded until it ends its direction.
+			resetWrite(st, status.ResourceExhausted)
+			go drainStream(st)
 			s.logf("reset an extra leased stream (maxStreams %d)", s.localLimits.MaxStreams)
 			continue
 		}
@@ -438,5 +465,14 @@ func (s *Session) acceptLoop() {
 		l := &lane{s: s, st: st, counted: true}
 		s.mu.Unlock()
 		go l.readLoop()
+	}
+}
+
+// drainStream reads and discards a stream until the peer ends it.
+func drainStream(st transport.Stream) {
+	for {
+		if _, err := st.ReadMessage(); err != nil {
+			return
+		}
 	}
 }
