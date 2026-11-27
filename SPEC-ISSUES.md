@@ -1,13 +1,13 @@
 # Spec issues: resolution log
 
 Questions raised while writing the test vectors and the Go reference implementation, and how the
-spec author resolved them. The current spec is `spec/core.md`, revision 381, with the companion
+spec author resolved them. The current spec is `spec/core.md`, revision 394, with the companion
 `spec/hub-admin.md`, revision 41; the scope change S1–S7 below came with core 347 and hub-admin 35,
 its follow-ups S8–S16 with core 360–377 and hub-admin 36–38, and S17–S21 with core 381 and
 hub-admin 41. Items P1–P16, raised by the Go hub (phase 3), were decided in core
 revision 324 and hub-admin revision 25; items 26–36 are decisions taken since revision 183, and
 items O1–O5, raised while applying them, were decided in core revision 305 and hub-admin revision 18.
-Every item is **resolved**; Q1–Q3, raised against core 381, were decided in core 387, and Q4 in core 388, as the implementation reads them; the vectors, the JavaScript verifier and the Go library follow each
+R1–R4 (the pipe binding, requested for Heron, and three decisions taken while adding the TypeScript implementation) came with core 394. Every item is **resolved** unless it is listed under "Open"; Q1–Q3, raised against core 381, were decided in core 387, and Q4 in core 388, as the implementation reads them; the vectors, the JavaScript verifier and the Go library follow each
 decision.
 
 The concept called "part" up to revision 183 is called "facet" since then. The vectors, the
@@ -60,13 +60,28 @@ Follow-ups in core revision 381 and hub-admin revision 41:
 | S20 | "a hub that receives one [`AuthRefresh`] on a link to a node or peer closes that session with `GoAway(unauthenticated)`" | core 5.5 | already so; `TestAuthRefreshOnNodeLink` |
 | S21 | Link variants named `dial` and `credential` in the CDDL comments; a credential clash "is reported at each node after the first in node-ID order" | hub-admin 3 | already so; a validation case in `admin.TestValidate` |
 
-## Raised against core revision 387 (open)
+## Core revision 394: the pipe binding and three decisions
+
+| # | Change | Spec | Go / TS / vectors |
+| --- | --- | --- | --- |
+| R1 | The pipe binding of S3, deleted by S8, comes back as section 4.7 (transport selection is 4.8 again): "a single ordered byte stream between peers on one machine", varint length prefixes with no stream header, shared lane only, "The side that sends `Hello` is the client. A started process is the client"; `maxMessageSize` applies to the prefix, "a receiver rejects a longer message before reading its body". Optional; "a hub never starts processes". Requested by Heron, whose extension host speaks Sparrow to the extension processes it starts | core 4, 4.7 | Go `transport/pipe` (reviewed against the current transport interfaces: `wire.FrameReader`, close semantics, `Spawn` reaps the child), the session tests run on it (`pipeBinding`), `netsimtest` pipe faults; TS `ts/src/transport/pipe.ts`; Go↔TS interop over it |
+| R2 | "Sigil names MUST be unique within a facet or interface. An enum value's sigil is named after its enum, `<enum name>.<value name>` (for example `Color.green`), so two enums can both have a value `none`; language bindings MAY show the value name alone" | core 6.5 | Go `node.FacetBuilder.Enum` and TS `FacetBuilder.enum` name value sigils `<Enum>.<value>`; Go `schema`, TS `schema`, the generator and verify-js refuse a second sigil of the same name (`duplicate_sigil_name`); the TS value codec shows enum values by value name and takes the value name, the full sigil name or the sigil (Go's `value` uses sigil numbers). Vectors: `acme.charts` names its values `Kind.line` and `Kind.bar` (new facet and schema hashes), new `schema/delta-invalid-duplicate-sigil-name` and `interface/invalid-duplicate-sigil-name`. `sparrow.web` has no sigils and is unchanged; for `sparrow.hub.admin` see Q5 |
+| R3 | 6.6 rule 1 (hold messages that use IDs of an unacknowledged epoch): "This holds for responses too, even on a call whose request already used those IDs" | core 6.6 | Both already held every callee message (Response, Item, Progress, End, Error with an error sigil or details) of a call to a facet the unacknowledged epoch added or changed; now tested where the request itself used the new IDs: Go `TestSchemaUpdateHoldsAnswersToNewIDs` (every binding), TS `session.test.ts` ("6.6 rule 1") |
+| R4 | `timestamp`: "integer when there is no fraction; implementations keep at least millisecond precision" | core 6.3 | Both send integer seconds when there is no fraction (Go `cbor.AppendTime` now also for a float `cbor.Time` such as 2.0, `cbor.FromTime` for `time.Time`, which no longer overflows `UnixNano` outside 1678–2262). TS reads a timestamp into a `Date` as `Math.round(seconds * 1000)`, nearest millisecond with halves up (it truncated, so 1.001 s became 1000 ms); Go's `cbor.Time.UnixMilli` rounds the same way, checked against one table in both test suites. Both value codecs refuse NaN and infinite timestamps; TS also refuses times outside `Date`'s range (±8.64e12 s), which Go accepts |
+
+## Open
+
+| # | Question | Current reading |
+| --- | --- | --- |
+| Q5 | hub-admin 5 names the enum value sigils of `RevisionState` and `NodeState` bare (`pending`, `connected`, ...), while core 394 says an enum value's sigil "is named after its enum, `<enum name>.<value name>`". Does the admin interface rename them (`RevisionState.pending`, ...), which changes its interface hash, in a later hub-admin revision? | Unchanged: the companion defines the interface document and its hash, and the names are unique. Validators check uniqueness only, not the naming pattern; the TS codec shows a bare sigil name as it is |
+
+## Raised against core revision 387 (decided in core revision 388)
 
 | # | Question | Current reading in the Go hub |
 | --- | --- | --- |
 | Q4 | 9.2: "`exp` MUST be within 60 s of issue" and "A ticket without `iat` is refused". Does "within" also bound `exp` from below, so that a ticket whose `exp` is before its `iat` is refused? (Found by fuzzing: such a ticket, and one whose `exp - iat` overflowed 64 bits, passed the check.) | `iat <= exp <= iat + 60`, compared without overflow; anything else is refused like an `exp` too far after `iat` (`web.Tickets.Parse`, `FuzzTicket`) |
 
-## Raised against core revision 381 (open)
+## Raised against core revision 381 (decided in core revision 387)
 
 | # | Question | Current reading in the Go hub |
 | --- | --- | --- |
@@ -179,9 +194,3 @@ Also decided here, without a spec change: "waits until every session that sees i
 | A13, A14 | `trace` format; Ping and AuthStatus field types | 26 bytes; uint and timestamp (5.5, 7.2) |
 | A15 | Status for a drain | `going_away` (5.6) |
 | B16–B27 | Signed bytes, certificate rules, URL hashes, credit counting, trailing nulls, varints, deltas, ID ranges, End flags, annotations, `params` keys | Settled in 3.4, 4.1, 6.1, 6.3, 6.4, 6.6, 7.4, 9.1 and 9.5 |
-
-## Reinstated: the pipe binding
-
-| # | Change | Spec | Go / vectors |
-| --- | --- | --- | --- |
-| R1 | The pipe binding of S3 comes back as section 4.7 (transport selection is 4.8 again): one ordered byte stream, varint length prefixes, no stream header, the started process is the client. It is optional and local: a hub still never starts processes. Requested by Heron, whose extension host speaks Sparrow to the extension processes it starts | core 4, 4.7 | `transport/pipe` restored as before S8; the session tests run on it too (`pipeBinding` in `allBindings`); TS binding in `ts/` |

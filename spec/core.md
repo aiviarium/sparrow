@@ -2,7 +2,7 @@
 
 Nov 26, 2026 · Christoph Feuerer
 
-> Snapshot of the live draft, revision 388, exported for this repository. The live document is the source of truth; diagrams are not included here.
+> Snapshot of the live draft, revision 394, exported for this repository. The live document is the source of truth; diagrams are not included here.
 
 ## 1. Overview
 
@@ -114,7 +114,7 @@ The core spec defines no other tags. Profiles MAY register more.
 
 ## 4. Streams and transport bindings
 
-A session uses one **shared lane** for control messages and small, long-lived calls, plus a pool of **leased streams** that calls take one at a time and give back. The number of streams follows peak concurrency rather than the number of calls, and large transfers do not share a stream with other calls. Servers MUST support both network bindings; clients MUST support WebTransport and SHOULD support WebSocket. The pipe binding (section 4.7) is for peers on one machine and is optional.
+A session uses one **shared lane** for control messages and small, long-lived calls, plus a pool of **leased streams** that calls take one at a time and give back. The number of streams follows peak concurrency rather than the number of calls, and large transfers do not share a stream with other calls. Servers MUST support both network bindings; clients MUST support WebTransport and SHOULD support WebSocket. The pipe binding (section 4.7) is optional and only for peers on one machine.
 
 ### 4.1 Two kinds of stream
 
@@ -185,11 +185,11 @@ Used when WebTransport is unavailable, for example on networks that block UDP. A
 
 ### 4.7 Pipe binding
 
-For a single ordered byte stream, such as a child process's standard input and output, a unix socket or an SSH channel. A supervisor can use it to talk to a process it starts, for example a tool that runs plugins as child processes; a hub itself never starts processes (section 10.2).
+For a single ordered byte stream between peers on one machine, such as a child process's standard input and output, a unix socket or an SSH channel. A supervisor can use it to talk to processes it starts, for example a tool that runs extensions as child processes. The binding is optional; a hub never starts processes (section 10.2).
 
-- The side that speaks first with `Hello` is the Sparrow client. A started process is the client, on its standard input and output.
-- There is a shared lane and nothing else: each message is preceded by its length as a QUIC variable-length integer (shortest form when sending, any valid form when receiving), with no stream header. Every call runs as on the shared lane, with `sharedCredit`. `maxStreams` does not apply.
-- `maxMessageSize` applies to the length in the prefix; a receiver rejects a longer message before reading it.
+- The side that sends `Hello` is the client. A started process is the client, on its standard input and output.
+- There is only a shared lane: each message is preceded by its length as a QUIC variable-length integer (shortest form when sending, any valid form when receiving), with no stream header. Every call runs as on the shared lane, with `sharedCredit`; `maxStreams` does not apply.
+- `maxMessageSize` applies to the length in the prefix: a receiver rejects a longer message before reading its body.
 - Closing the byte stream ends the session. Status and reason travel only in `GoAway`.
 - Standard error, where there is one, is not part of the protocol.
 
@@ -378,7 +378,7 @@ Built-in types:
 | 5 | `float64` | float |
 | 6 | `string` | text string |
 | 7 | `bytes` | byte string |
-| 8 | `timestamp` | tag 1 + integer or float seconds |
+| 8 | `timestamp` | tag 1 + integer or float seconds (integer when there is no fraction; implementations keep at least millisecond precision) |
 | 9 | `uuid` | tag 37 + 16-byte byte string |
 | 10 | `dynamic` | `[type_id, value]`, where `type_id` is a built-in or a named type of the same facet |
 | 11 | `symbol` | sigil (uint) or text string |
@@ -442,7 +442,7 @@ Flags 0x8 and 0x10 say whether each half of a call is finished by `End` (section
 sigil-def = [id: uint, name: tstr, kind: uint, annotations]  ; kind: 0 enum value, 1 error code, 2 symbol
 ```
 
-Every enum value, error code and interned symbol is a sigil. Enum values MUST be kind-0 sigils and error codes other than the core ones MUST be kind-1 sigils.
+Every enum value, error code and interned symbol is a sigil. Enum values MUST be kind-0 sigils and error codes other than the core ones MUST be kind-1 sigils. Sigil names MUST be unique within a facet or interface. An enum value's sigil is named after its enum, `<enum name>.<value name>` (for example `Color.green`), so two enums can both have a value `none`; language bindings MAY show the value name alone.
 
 An **interface** is a contract that several facets can implement, such as an extension point every chart plugin provides. A facet implements at most one interface; a node that implements several publishes one facet for each.
 
@@ -473,7 +473,7 @@ delta-op =
 
 Rules for live updates:
 
-1. The owner MUST NOT send any message that uses a facet or ID added in epoch N, whether a request, response, item or error detail, until it has received `SchemaAck` for N. Such messages wait in a queue. If the ack has not arrived within 10 s, the owner closes the session with `GoAway(schema_mismatch)`. The receiver MUST send `SchemaAck` as soon as it has applied the delta and checked the hash (a hub relaying a node's facets acks as section 10.3 describes); downloading modules, writing snapshots and other follow-up work happen afterwards.
+1. The owner MUST NOT send any message that uses a facet or ID added in epoch N, whether a request, response, item or error detail, until it has received `SchemaAck` for N. This holds for responses too, even on a call whose request already used those IDs. Such messages wait in a queue. If the ack has not arrived within 10 s, the owner closes the session with `GoAway(schema_mismatch)`. The receiver MUST send `SchemaAck` as soon as it has applied the delta and checked the hash (a hub relaying a node's facets acks as section 10.3 describes); downloading modules, writing snapshots and other follow-up work happen afterwards.
 2. A replacing facet MUST be a compatible change of the facet it replaces (section 6.7); a receiver MAY verify this, and a hub MUST verify it for facets it receives from nodes, and every top-level ID it drops MUST appear in its `retired`. Methods that disappear, with their facet or alone, reject new calls with `unimplemented`; calls already running finish, and receivers keep the old definitions until those calls end.
 3. After applying a delta, the receiver MUST check that every facet is valid (every reference resolves within its facet, references inside tombstones excepted; no reserved or retired ID is defined; no facet ID outside the rules of section 6.1; no float anywhere) and that the new schema hash matches the one in `SchemaUpdate`. On any failure it closes the session with `GoAway(schema_mismatch)`, and the next connection fetches the full schema.
 

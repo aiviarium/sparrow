@@ -16,7 +16,7 @@ program (section "Hub" below); phase 4 the Web Profile server (section "Web Prof
 | `websign` | Module signing (9.5): key IDs, signature inputs, certificates, revocation lists, web-module entries, the acceptance verdict, semver precedence and rollback records. |
 | `names` | Name grammars: facet names, node IDs, module ids, imported names, principals (6.1, 9.4, 10.2-10.8). |
 | `adminiface` | The `sparrow.hub.admin` v1 interface (`../spec/hub-admin.md`): `Interface()`, `Facet(id)`, `InterfaceHash()`, type, method and sigil IDs. |
-| `session`, `transport/...`, `node`, `examples/echo-node` | Phase 2: see `session/README.md`. `examples/echo-node` dials in to a hub (`-hub`) or waits to be dialed (`-listen`). |
+| `session`, `transport/...`, `node`, `examples/echo-node` | Phase 2: see `session/README.md`. The bindings are `transport/webtransport`, `transport/websocket`, `transport/pipe` (4.7: a process the program starts, or its own standard input and output; the hub does not use it) and `transport/mem` (tests). `examples/echo-node` dials in to a hub (`-hub`) or waits to be dialed (`-listen`). |
 | `admin` | `sparrow.hub.admin` v1: the document (CBOR and JSON forms), validation, revisions, confirmation and rollback, stored secrets, watch, persistence in a data directory, the facet handler and a client. |
 | `hub` | The Hub Profile (core section 10): node links (nodes dial in, or the hub dials them; it never starts nodes), composition, authorization, forwarding, call contexts, offline nodes, federation. |
 | `web` | The Web Profile (core section 9): `/sparrow/connect`, tickets, schema and module resources, the `web.*` annotations, and a client that follows the browser rules (signatures, rollback, revocation, snapshots). |

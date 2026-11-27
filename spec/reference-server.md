@@ -14,7 +14,7 @@ The reference server is a Go program, `sparrow-hub`, that implements the core pr
 | `value` | Schema-driven encoding of values |
 | `websign` | Module signatures, certificates, revocation (Web Profile 9.5) |
 | `session` | One Sparrow session over any binding: handshake, control messages, calls, credit, leases, schema updates |
-| `transport` | Bindings: WebTransport (quic-go, webtransport-go), WebSocket *(implementation: and an in-memory binding for tests)* |
+| `transport` | Bindings: WebTransport (quic-go, webtransport-go), WebSocket *(implementation: also the pipe binding of core 4.7, a library feature the hub does not use, and an in-memory binding for tests)* |
 | `node` | A small library for writing nodes and clients: publish facets, serve methods, call others |
 | `hub` | Composition, forwarding, call contexts, authorization, node links, offline nodes, federation |
 | `admin` | The `sparrow.hub.admin` facet, persistence and reconciliation |
