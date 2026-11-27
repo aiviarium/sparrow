@@ -15,13 +15,24 @@
 //	    GoAway(going_away) and exits 0 if the child exited 0 and every
 //	    check of its own passed.
 //
+//	sparrow-interop decode
+//	    Differential checks: reads lines "<what> <hex>" from standard input
+//	    and answers each with one line, "ok <hex>", "ok <n>" or "err". what
+//	    is cbor (validate, then the Core Deterministic Encoding), message
+//	    (wire.Decode, then the message encoded again), schema (decode and
+//	    validate a schema document, then its canonical encoding) or
+//	    timestamp (a tag-1 value as the value codec reads it, in whole
+//	    milliseconds, cbor.Time.UnixMilli).
+//
 // Diagnostics go to standard error. Both facets are defined exactly as in
 // ts/test/fixture/interop.mjs.
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -58,6 +69,9 @@ func main() {
 	case "client":
 		role = "client"
 		err = runClient()
+	case "decode":
+		role = "decode"
+		err = runDecode(os.Stdin, os.Stdout)
 	case "server":
 		role = "server"
 		if len(os.Args) < 3 {
@@ -825,4 +839,56 @@ func runServer(args []string) error {
 	<-s.Done()
 	logf("the client passed; session closed: %v", s.Err())
 	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Differential decoding
+// ---------------------------------------------------------------------------
+
+func runDecode(in io.Reader, out io.Writer) error {
+	sc := bufio.NewScanner(in)
+	sc.Buffer(make([]byte, 0, 1<<20), 16<<20)
+	w := bufio.NewWriter(out)
+	defer w.Flush()
+	tsCodec, err := value.New(&schema.Facet{ID: 16, Name: "x", Version: "1.0.0", Types: []schema.TypeDef{}, Services: []schema.Service{},
+		Sigils: []schema.Sigil{}, Retired: []schema.Retired{}, Annotations: schema.Annotations{}})
+	if err != nil {
+		return err
+	}
+	for sc.Scan() {
+		what, h, _ := strings.Cut(sc.Text(), " ")
+		b, err := hex.DecodeString(h)
+		if err != nil {
+			return fmt.Errorf("bad input line %q", sc.Text())
+		}
+		res := "err"
+		switch what {
+		case "cbor":
+			if c, err := cbor.Canonical(b, cbor.Options{}); err == nil {
+				res = "ok " + hex.EncodeToString(c)
+			}
+		case "message":
+			if m, err := wire.Decode(b); err == nil {
+				res = "ok " + hex.EncodeToString(wire.Encode(m))
+			}
+		case "schema":
+			if s, err := schema.DecodeSchema(b); err == nil && s.Validate() == nil {
+				if c, err := s.CanonicalBytes(); err == nil {
+					res = "ok " + hex.EncodeToString(c)
+				}
+			}
+		case "timestamp":
+			if v, err := tsCodec.Decode(schema.Named(schema.TypeTimestamp), b); err == nil {
+				if ms, ok := v.(cbor.Time).UnixMilli(); ok {
+					res = fmt.Sprintf("ok %d", ms)
+				}
+			}
+		default:
+			return fmt.Errorf("unknown input kind %q", what)
+		}
+		if _, err := fmt.Fprintln(w, res); err != nil {
+			return err
+		}
+	}
+	return sc.Err()
 }

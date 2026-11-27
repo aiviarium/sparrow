@@ -147,5 +147,11 @@ jobs:
         run: npm ci
       - name: Type-check sources and tests
         run: npm run typecheck
-      - name: Test (vectors, scenarios, sessions, bindings, Go interop)
+      - name: Test (vectors, scenarios, sessions, bindings, faults, fuzzing, Go interop and differential)
         run: npm test
+      - name: Longer fuzz and Go differential run
+        if: matrix.node-version == '22'
+        env:
+          SPARROW_FUZZ_ITERS: '50000'
+          SPARROW_FUZZ_SEED: ${{ github.run_number }}
+        run: npx vitest run test/fuzz.test.ts test/interop.test.ts

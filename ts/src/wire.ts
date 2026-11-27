@@ -10,6 +10,7 @@
 import {
   CborError,
   MAJOR_TEXT,
+  MAJOR_NEG,
   MAJOR_UINT,
   Reader,
   Tag,
@@ -106,8 +107,21 @@ export class FrameDecoder {
     return this.buffered;
   }
 
-  /** Adds received bytes and returns the messages now complete. Throws TooLargeError or FramingError. */
+  /**
+   * A framing error found after the messages the last push returned: the
+   * stream is unusable from there on. Deliver those messages, then fail.
+   */
+  error?: TooLargeError | FramingError;
+
+  /**
+   * Adds received bytes and returns the messages now complete. A bad frame
+   * (TooLargeError, FramingError; the length is checked before any of the
+   * body is buffered) is thrown at once when no message precedes it in this
+   * push; otherwise the messages before it are returned and the error is
+   * left in error (and thrown by every later push).
+   */
   push(chunk: Uint8Array): Uint8Array[] {
+    if (this.error) throw this.error;
     if (chunk.length) {
       this.chunks.push(chunk);
       this.buffered += chunk.length;
@@ -119,11 +133,19 @@ export class FrameDecoder {
       const v = decodeVarint(head);
       if (!v) break;
       const n = v.value;
-      if (n === 0) throw new FramingError('empty frame');
-      if (typeof n === 'bigint' || n > this.maxMessageSize) throw new TooLargeError(n, this.maxMessageSize);
-      if (this.buffered < v.length + n) break;
+      let bad: TooLargeError | FramingError | undefined;
+      if (n === 0) bad = new FramingError('empty frame');
+      else if (typeof n === 'bigint' || n > this.maxMessageSize) bad = new TooLargeError(n, this.maxMessageSize);
+      if (bad) {
+        this.error = bad;
+        this.chunks = [];
+        this.buffered = 0;
+        if (!out.length) throw bad;
+        break;
+      }
+      if (this.buffered < v.length + (n as number)) break;
       this.take(v.length);
-      out.push(this.take(n));
+      out.push(this.take(n as number));
     }
     return out;
   }
@@ -878,6 +900,14 @@ class Fields {
   time(): number {
     const t = this.r.tag();
     if (t !== TAG_EPOCH_TIME) throw new CborError('expected tag 1');
+    const m = this.r.peekMajor();
+    if (m === MAJOR_UINT || m === MAJOR_NEG) {
+      // Integer seconds are held as a number: beyond 2^53 - 1 they would change (SPEC-ISSUES Q6).
+      const at = this.r.off;
+      const v = this.r.int();
+      if (typeof v === 'bigint') throw new CborError(`integer ${v} is too large`, at);
+      return v;
+    }
     return this.r.float();
   }
   offer(): SchemaOffer {

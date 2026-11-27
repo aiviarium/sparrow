@@ -152,7 +152,10 @@ class Run {
     this.cli.start({
       message: (b) => this.inbox.push(b),
       error: () => {},
-      close: () => this.inbox.push(null),
+      close: () => {
+        this.inbox.push(null);
+        void this.cli.close(Status.ok, ''); // finish this side too, so the server's close need not linger
+      },
     });
     this.srvDone = Session.accept(this.srvConn, {
       schema: this.hostSchema,

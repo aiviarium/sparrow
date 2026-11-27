@@ -63,6 +63,10 @@ class PipeConn implements Conn {
         if (this.notified) return;
         h.message(m);
       }
+      if (this.fd.error && !this.failed && !this.notified) {
+        this.failed = true;
+        h.error(this.fd.error);
+      }
     });
     const ended = () => {
       if (this.readEnded) return;
@@ -96,6 +100,7 @@ class PipeConn implements Conn {
       this.sendClosed = true;
       // Finish this side's direction once what was written is flushed; a
       // peer that reads nothing cannot hold it past the linger.
+      // When the peer has already gone (its direction ended), nothing waits for the flush.
       let t: ReturnType<typeof setTimeout> | undefined;
       await new Promise<void>((res) => {
         try {
@@ -103,7 +108,8 @@ class PipeConn implements Conn {
         } catch {
           res();
         }
-        t = setTimeout(res, this.opts.lingerMs ?? 2000);
+        if (this.readEnded) res();
+        else t = setTimeout(res, this.opts.lingerMs ?? 2000);
       });
       clearTimeout(t);
       if (code !== Status.protocol_error && !this.readEnded) {
