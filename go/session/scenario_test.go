@@ -372,7 +372,7 @@ func (r *scenarioRun) handshake(host *schema.Schema) {
 func (r *scenarioRun) send(lane string, b []byte) {
 	s := r.stream(lane)
 	if err := s.WriteMessage(b); err != nil {
-		if errors.Is(err, transport.ErrClosed) && r.closes() {
+		if (errors.Is(err, transport.ErrClosed) || errors.Is(err, io.ErrClosedPipe)) && r.closes() {
 			// The server may close before a message the script sends in
 			// the same flight is written (it then never reads it).
 			return
