@@ -92,7 +92,11 @@ func FuzzClientHandshake(f *testing.F) {
 			cfg.Schema = testSchema("client")
 		}
 		cc, sc := mem.Pipe(mem.Options{NoLeases: m&4 != 0})
+		msgs := splitFrames(append([]byte(nil), data...)) // the fuzzer reuses data
+		served := make(chan struct{})
+		defer func() { <-served }()
 		go func() {
+			defer close(served)
 			lane, err := sc.SharedLane(context.Background())
 			if err != nil {
 				return
@@ -104,7 +108,7 @@ func FuzzClientHandshake(f *testing.F) {
 					}
 				}
 			}()
-			for _, msg := range splitFrames(data) {
+			for _, msg := range msgs {
 				if lane.WriteMessage(msg) != nil {
 					break
 				}

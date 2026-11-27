@@ -126,9 +126,6 @@ type Session struct {
 // sending Hello and Ready; Welcome is then handled in the background.
 func NewClient(ctx context.Context, conn transport.Conn, cfg Config) (*Session, error) {
 	s := newSession(conn, cfg, wire.Client)
-	s.hs = hsAwaitWelcome
-	s.nextID = 2
-	s.peerLimits = wire.DefaultLimits(wire.Server)
 	if cfg.Schema != nil {
 		st, err := schema.NewState(cfg.Schema.Canonical())
 		if err != nil {
@@ -181,10 +178,14 @@ func NewClient(ctx context.Context, conn transport.Conn, cfg Config) (*Session, 
 		if err != nil {
 			return nil, err
 		}
+		s.mu.Lock()
 		s.setPeerLocked(ps)
 		s.optimistic = true
+		s.mu.Unlock()
 	}
+	s.mu.Lock()
 	s.hello = hello
+	s.mu.Unlock()
 	if err := s.shared.write(hello.AppendTo(nil)); err != nil {
 		s.terminate(status.Unavailable, "cannot send Hello", false)
 		return nil, err
@@ -229,9 +230,6 @@ func NewClient(ctx context.Context, conn transport.Conn, cfg Config) (*Session, 
 // schema, sends Welcome and returns once Ready has arrived.
 func NewServer(ctx context.Context, conn transport.Conn, cfg Config) (*Session, error) {
 	s := newSession(conn, cfg, wire.Server)
-	s.hs = hsAwaitHello
-	s.nextID = 1
-	s.peerLimits = wire.DefaultLimits(wire.Client)
 	sc := cfg.Schema
 	if sc == nil {
 		sc = &schema.Schema{Format: schema.Format, Name: "", Version: "", Facets: []schema.Facet{}, Annotations: schema.Annotations{}}
@@ -318,6 +316,14 @@ func newSession(conn transport.Conn, cfg Config, role wire.Role) *Session {
 		peerCodecs:    map[*schema.Facet]*value.Codec{},
 		notifySem:     make(chan struct{}, MaxNotificationHandlers),
 		ackQ:          make(chan func(), 64),
+	}
+	// The role's starting state is set before the goroutines below start:
+	// a connection that is already gone ends the session at once, and
+	// terminate reads it.
+	if role == wire.Client {
+		s.hs, s.nextID, s.peerLimits = hsAwaitWelcome, 2, wire.DefaultLimits(wire.Server)
+	} else {
+		s.hs, s.nextID, s.peerLimits = hsAwaitHello, 1, wire.DefaultLimits(wire.Client)
 	}
 	if s.log == nil {
 		s.log = slog.New(slog.DiscardHandler)

@@ -35,10 +35,10 @@ const (
 	workCred   = "work-cred"
 )
 
-// fastQUIC detects a dead link within a second (quic-go defaults to 30 s): both
+// fastQUIC detects a dead link within 0.7 s (quic-go defaults to 30 s): both
 // ends must set it, as the idle timeout is the smaller of the two.
 func fastQUIC() *quic.Config {
-	return &quic.Config{MaxIdleTimeout: time.Second, KeepAlivePeriod: 200 * time.Millisecond,
+	return &quic.Config{MaxIdleTimeout: 700 * time.Millisecond, KeepAlivePeriod: 150 * time.Millisecond,
 		HandshakeIdleTimeout: 500 * time.Millisecond}
 }
 
