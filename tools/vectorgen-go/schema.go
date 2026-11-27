@@ -492,6 +492,7 @@ func validateDefs(where string, types, services, sigils, ret []any) (*defs, *del
 			return derr("dangling_reference", "%s references type %d, not defined in this facet", at, id)
 		}
 	}
+	enumOf := map[int64]int64{} // kind-0 sigil -> the enum listing it
 	for _, t := range types {
 		td := t.([]any)
 		at := fmt.Sprintf("%s: type %d", where, num(td[1]))
@@ -512,6 +513,11 @@ func validateDefs(where string, types, services, sigils, ret []any) (*defs, *del
 				if k, ok := d.sigils[sid]; !ok || k != 0 {
 					return nil, derr("dangling_reference", "%s lists sigil %d, not a kind-0 sigil of this facet", at, sid)
 				}
+				// A kind-0 sigil is a value of exactly one enum (6.5).
+				if other, ok := enumOf[sid]; ok {
+					return nil, derr("sigil_in_two_enums", "%s lists sigil %d, a value of type %d too", at, sid, other)
+				}
+				enumOf[sid] = num(td[1])
 			}
 		case 3:
 			if e := checkRef(td[3], at, false); e != nil {

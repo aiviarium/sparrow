@@ -56,6 +56,7 @@ const (
 	CodeReservedTypeID        Code = "reserved_type_id"
 	CodeInvalidNotification   Code = "invalid_notification"
 	CodeDuplicateSigilName    Code = "duplicate_sigil_name"
+	CodeSigilInTwoEnums       Code = "sigil_in_two_enums"
 )
 
 func errorf(code Code, f string, args ...any) *Error {

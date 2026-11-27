@@ -442,7 +442,7 @@ Flags 0x8 and 0x10 say whether each half of a call is finished by `End` (section
 sigil-def = [id: uint, name: tstr, kind: uint, annotations]  ; kind: 0 enum value, 1 error code, 2 symbol
 ```
 
-Every enum value, error code and interned symbol is a sigil. Enum values MUST be kind-0 sigils and error codes other than the core ones MUST be kind-1 sigils. Sigil names MUST be unique within a facet or interface. An enum value's sigil is named after its enum, `<enum name>.<value name>` (for example `Color.green`), so two enums can both have a value `none`; language bindings MAY show the value name alone.
+Every enum value, error code and interned symbol is a sigil. Enum values MUST be kind-0 sigils and error codes other than the core ones MUST be kind-1 sigils. Sigil names MUST be unique within a facet or interface. An enum value's sigil is named after its enum, `<enum name>.<value name>` (for example `Color.green`), so two enums can both have a value `none`; language bindings MAY show the value name alone. A kind-0 sigil is a value of exactly one enum.
 
 An **interface** is a contract that several facets can implement, such as an extension point every chart plugin provides. A facet implements at most one interface; a node that implements several publishes one facet for each.
 

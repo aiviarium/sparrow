@@ -150,7 +150,8 @@ NETSIM_SEED=123 go test ./netsimtest -run TestLossyWebTransport -v
 - A message that counts zero bytes of credit (an empty `Bytes` chunk, `End`) is never held back
   (`CreditWindow.CanSendCounted`) and never a credit violation.
 - `node.FacetBuilder.Enum` names value sigils `<Enum>.<value>`; validation refuses two sigils of one
-  name in a facet or interface (`duplicate_sigil_name`, core 6.5).
+  name in a facet or interface (`duplicate_sigil_name`, core 6.5) and a kind-0 sigil listed by two
+  enums (`sigil_in_two_enums`).
 - Timestamps (`cbor.Time`) are written as integer seconds whenever there is no fraction, also for
   a float `Time` such as 2.0; `cbor.FromTime` converts a `time.Time`, `Time.Time` and
   `Time.UnixMilli` convert back (`UnixMilli` rounds to the nearest millisecond, halves up, as the

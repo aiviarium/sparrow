@@ -860,6 +860,7 @@ function validateDefs(where: string, types: TypeDef[], services: Service[], sigi
     }
     throw err('bad_type_ref', at);
   };
+  const enumOf = new Map<number, number>(); // kind-0 sigil -> the enum listing it
   for (const t of types) {
     const at = `${where}: type ${t.id}`;
     if (t.kind === 'struct' || t.kind === 'union') {
@@ -877,6 +878,10 @@ function validateDefs(where: string, types: TypeDef[], services: Service[], sigi
         seen.add(v);
         const s = ix.sigils.get(v);
         if (!s || s.kind !== SigilKind.enumValue) throw err('dangling_reference', `${at} lists sigil ${v}, not a kind-0 sigil of this facet`);
+        // A kind-0 sigil is a value of exactly one enum (6.5).
+        const other = enumOf.get(v);
+        if (other !== undefined) throw err('sigil_in_two_enums', `${at} lists sigil ${v}, a value of type ${other} too`);
+        enumOf.set(v, t.id);
       }
     } else {
       checkRef(t.target, at, false);

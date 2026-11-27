@@ -113,6 +113,7 @@ export class Codec {
   private symbols = new Map<string, number>();
   private symbolNames = new Map<number, string>();
   private sigilNames = new Map<number, string>();
+  private valueNames = new Map<number, string>();
   private typeNames = new Map<string, number>();
 
   /** The facet must be valid (it is validated here). */
@@ -127,7 +128,16 @@ export class Codec {
         this.symbolNames.set(s.id, s.name);
       }
     }
-    for (const t of facet.types) this.typeNames.set(t.name, t.id);
+    for (const t of facet.types) {
+      this.typeNames.set(t.name, t.id);
+      // A kind-0 sigil is a value of exactly one enum (6.5), so its value name is unique to it.
+      if (t.kind !== 'enum') continue;
+      const prefix = `${t.name}.`;
+      for (const s of t.values) {
+        const n = this.sigilNames.get(s);
+        if (n !== undefined) this.valueNames.set(s, n.length > prefix.length && n.startsWith(prefix) ? n.slice(prefix.length) : n);
+      }
+    }
   }
 
   /** Resolves a type name (a named type of the facet or a built-in name) to its TypeId. */
@@ -140,14 +150,6 @@ export class Codec {
 
   sigilName(id: number): string | undefined {
     return this.sigilNames.get(id);
-  }
-
-  /** The name an enum value is shown as: its sigil name without the `<enum name>.` prefix. */
-  private enumValueName(td: { name: string }, s: number): string | undefined {
-    const n = this.sigilNames.get(s);
-    if (n === undefined) return undefined;
-    const prefix = `${td.name}.`;
-    return n.length > prefix.length && n.startsWith(prefix) ? n.slice(prefix.length) : n;
   }
 
   /**
@@ -359,7 +361,7 @@ export class Codec {
         if (typeof v === 'number') s = td.values.includes(v) ? v : undefined;
         else if (typeof v === 'string') {
           s = td.values.find((x) => this.sigilNames.get(x) === v); // the full sigil name
-          if (s === undefined) s = td.values.find((x) => this.enumValueName(td, x) === v);
+          if (s === undefined) s = td.values.find((x) => this.valueNames.get(x) === v);
         }
         if (s === undefined) throw new ValueError(path, `${describe(v)} is not a value of enum ${td.name}`);
         w.uint(s);
@@ -564,7 +566,7 @@ export class Codec {
         return this.dec(r, td.target, path, depth + 1, inDyn);
       case 'enum': {
         const s = this.wrap(path, () => r.uintNumber());
-        if (td.values.includes(s)) return this.enumValueName(td, s) ?? s;
+        if (td.values.includes(s)) return this.valueNames.get(s) ?? s;
         return s;
       }
       case 'union': {

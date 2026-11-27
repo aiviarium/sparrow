@@ -213,11 +213,16 @@ function validateDefs(where, types, services, sigils, retired) {
       default: throw new DeltaError('bad_type_ref', at);
     }
   };
+  const enumOf = new Map(); // kind-0 sigil -> the enum listing it: exactly one (6.5)
   for (const t of types) {
     const at = `${where} type ${t[1]}`;
     if (t[0] === 0 || t[0] === 2) for (const f of t[3]) { if (!(f[3] & REMOVED)) ref(f[2], at, false); }
     else if (t[0] === 1) {
-      for (const v of t[3]) if (d.sigils.get(v) !== 0) throw new DeltaError('dangling_reference', `${at} -> sigil ${v}`);
+      for (const v of t[3]) {
+        if (d.sigils.get(v) !== 0) throw new DeltaError('dangling_reference', `${at} -> sigil ${v}`);
+        if (enumOf.has(v)) throw new DeltaError('sigil_in_two_enums', `${at} -> sigil ${v}, a value of type ${enumOf.get(v)} too`);
+        enumOf.set(v, t[1]);
+      }
     } else if (t[0] === 3) ref(t[3], at, false);
   }
   for (const m of d.methods.values()) {

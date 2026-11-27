@@ -209,6 +209,7 @@ func validateDefs(where string, types []TypeDef, services []Service, sigils []Si
 		}
 		return errorf(CodeBadTypeRef, "%s", at)
 	}
+	enumOf := map[uint64]uint64{} // kind-0 sigil -> the enum listing it
 	for i := range types {
 		t := &types[i]
 		at := fmt.Sprintf("%s: type %d", where, t.ID)
@@ -238,6 +239,11 @@ func validateDefs(where string, types []TypeDef, services []Service, sigils []Si
 				if s := ix.sigils[v]; s == nil || s.Kind != SigilEnumValue {
 					return nil, errorf(CodeDanglingReference, "%s lists sigil %d, not a kind-0 sigil of this facet", at, v)
 				}
+				// A kind-0 sigil is a value of exactly one enum (6.5).
+				if other, ok := enumOf[v]; ok {
+					return nil, errorf(CodeSigilInTwoEnums, "%s lists sigil %d, a value of type %d too", at, v, other)
+				}
+				enumOf[v] = t.ID
 			}
 		case KindAlias:
 			if err := checkRef(t.Target, at, false); err != nil {

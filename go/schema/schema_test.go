@@ -116,6 +116,9 @@ func TestValidateFacet(t *testing.T) {
 		{"bad sigil kind", func(f *Facet) { f.Sigils[3].Kind = 3 }, CodeBadSigilKind},
 		{"duplicate sigil name", func(f *Facet) { f.Sigils[3].Name = "Color.red" }, CodeDuplicateSigilName},
 		{"duplicate sigil name across kinds", func(f *Facet) { f.Sigils[0].Name = "note.updated" }, CodeDuplicateSigilName},
+		{"sigil in two enums", func(f *Facet) {
+			f.Types = append(f.Types, TypeDef{Kind: KindEnum, ID: 73, Name: "Shade", Values: []uint64{71}})
+		}, CodeSigilInTwoEnums},
 		{"stream in a field", func(f *Facet) { f.Types[0].Fields[1].Type = Stream(Named(6)) }, CodeStreamMisplaced},
 		{"stream in an alias", func(f *Facet) { f.Types[6].Target = Stream(Named(6)) }, CodeStreamMisplaced},
 		{"stream of stream", func(f *Facet) {

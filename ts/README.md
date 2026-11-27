@@ -225,7 +225,8 @@ Also: `encodeSchema`/`decodeSchema` (and for facets, interfaces, deltas), `canon
 `validateFacet`, `validateInterface`, `checkCompatible` (6.7), `conforms` / `verifyImplements` (6.5),
 `SchemaState` (`create`, `apply(delta)`, `applyUpdate(epoch, hash, delta)`, `hash`, `epoch`,
 `removedFacetIds()`), `diff(old, new)`, `webFacet()`. Errors are `SchemaError` with the vectors'
-vocabulary in `code` (`incompatible_change`, `facets_not_sorted`, `duplicate_sigil_name`, ...).
+vocabulary in `code` (`incompatible_change`, `facets_not_sorted`, `duplicate_sigil_name`,
+`sigil_in_two_enums`, ...).
 
 ### Values (schema-driven, 3.4)
 

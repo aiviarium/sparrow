@@ -65,6 +65,17 @@ describe('enum sigil names (core 6.5)', () => {
       expect((e as SchemaError).code).toBe('duplicate_sigil_name');
     }
   });
+
+  it('refuses a kind-0 sigil listed by two enums', () => {
+    const { f, mode } = facet();
+    f.types.push({ kind: 'enum', id: 90, name: 'Other', values: [mode.values.fast], annotations: {} });
+    try {
+      validateFacet(f);
+      throw new Error('accepted');
+    } catch (e) {
+      expect((e as SchemaError).code).toBe('sigil_in_two_enums');
+    }
+  });
 });
 
 // The same table as timestampMillis in go/cbor/cbor_test.go: float seconds and

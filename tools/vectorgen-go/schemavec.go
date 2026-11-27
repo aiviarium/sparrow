@@ -677,6 +677,10 @@ func schemaVectors() O {
 				p[pTypes] = append(p[pTypes].([]any), enumDef(76, "Shade", list(84), nil))
 				p[pSigils] = append(p[pSigils].([]any), sigil(84, "Color.red", 0, nil))
 			})}}},
+		{"schema/delta-invalid-sigil-in-two-enums", "Replace facet 16 with 1.2.0 that adds an enum Shade (type 76) whose one value is sigil 70, already the value Color.red of enum Color. A kind-0 sigil is a value of exactly one enum (6.5).",
+			"schema/delta-1-replace-facet", "sigil_in_two_enums", r.a, []any{[]any{0, mod(func(p []any) {
+				p[pTypes] = append(p[pTypes].([]any), enumDef(76, "Shade", list(70), nil))
+			})}}},
 		{"schema/delta-invalid-readd-renamed", "Facet 17 was removed in epoch 2. Bringing ID 17 back with a different name ('acme.maps') is not allowed (section 6.1).",
 			"schema/delta-2-new-major", "removed_facet_mismatch", r.b, []any{[]any{0, chartsFacet(chartsOpts{id: facetCharts, name: "acme.maps", version: "1.0.0", noExtras: true})}}},
 	}
