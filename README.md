@@ -8,7 +8,7 @@ server is Go and the primary client is a browser.
 
 **Status: draft.** The spec is a working draft and will change; so will the vectors.
 
-**License: TBD.** No license has been chosen yet.
+Dual-licensed under MIT (`LICENSE-MIT`) or Apache-2.0 (`LICENSE-APACHE`), at your option.
 
 ## Repository layout
 
