@@ -476,8 +476,8 @@ func (t Time) Seconds() float64 {
 }
 
 // UnixMilli returns the time in whole milliseconds: seconds*1000 (one
-// float64 multiplication) rounded to the nearest integer, halves up
-// (towards later times), exactly as JavaScript's Math.round, which the
+// float64 multiplication) rounded to the nearest integer, halves toward the
+// later time (core 6.3), exactly as JavaScript's Math.round, which the
 // TypeScript implementation uses to make a Date. ok is false for a float
 // that is not finite or a time outside the int64 range of milliseconds.
 func (t Time) UnixMilli() (ms int64, ok bool) {

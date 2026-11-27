@@ -443,7 +443,7 @@ func FuzzValidate(f *testing.F) {
 
 // timestampMillis is shared with the TypeScript tests
 // (ts/test/value.test.ts): seconds as float64, and the millisecond both
-// implementations round them to (seconds*1000, nearest, halves up).
+// implementations round them to (seconds*1000, nearest, halves toward the later time).
 var timestampMillis = []struct {
 	sec float64
 	ms  int64

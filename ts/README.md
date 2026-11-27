@@ -238,7 +238,7 @@ vocabulary in `code` (`incompatible_change`, `facets_not_sorted`, `duplicate_sig
 | `float32`, `float64` | `number` (always encoded as a float, shortest exact width; float32 rounded) | `bigint` |
 | `string` | `string` | |
 | `bytes` | `Uint8Array` | |
-| `timestamp` | `Date` (tag 1; sent as integer seconds when there is no fraction, else float seconds; received float seconds are rounded to the nearest millisecond, halves up, as Go's `cbor.Time.UnixMilli`; NaN, infinities and times beyond `Date`'s ±8.64e12 s are refused) | epoch seconds as a `number` or `bigint` |
+| `timestamp` | `Date` (tag 1; sent as integer seconds when there is no fraction, else float seconds; received float seconds are rounded to the nearest millisecond, halves toward the later time (6.3), as Go's `cbor.Time.UnixMilli`; NaN, infinities and times beyond `Date`'s ±8.64e12 s are refused) | epoch seconds as a `number` or `bigint` |
 | `uuid` | `string`, lowercase `8-4-4-4-12` | `Uint8Array` of 16 bytes |
 | `dynamic` | `{ type: TypeId, value }` | `type` as a type name or built-in name |
 | `symbol` | `string` (a kind-2 sigil decodes to its name; another sigil to its number) | a sigil `number` |
@@ -328,10 +328,10 @@ are cut to 1024 bytes.
 
 | File | What |
 | --- | --- |
-| `test/vectors.test.ts` | Every vector of `encoding`, `framing`, `handshake`, `calls`, `credit`, `schema`, `status` and `admin` (238 of 303, printed as "vector coverage"); `signing.json` (55, Web Profile) and `hub.json` (10, Hub Profile) are skipped as out of scope. Also every message of every scenario. |
+| `test/vectors.test.ts` | Every vector of `encoding`, `framing`, `handshake`, `calls`, `credit`, `schema`, `status` and `admin` (254 of 319, printed as "vector coverage"); `signing.json` (55, Web Profile) and `hub.json` (10, Hub Profile) are skipped as out of scope. Also every message of every scenario. |
 | `test/scenarios.test.ts` | All 14 behaviour scenarios of `test-vectors/scenarios`, run against a real server session by a scripted raw client (shared lane only, so `stream_idle` / `streams_open` do not apply). |
 | `test/session.test.ts`, `test/rawpeer.test.ts` | Sessions over the in-memory binding: the interop suite TS to TS, handshake failures, optimistic start, GoAway, limits, schema updates and rule 1 of 6.6, byte streams beyond the credit window, credit 0, protocol violations by raw peers; timeouts (idle and Ping, unanswered Cancel, schema ack, deadlines, linger) on a fake clock (`test/helpers/clock.ts`). |
-| `test/value.test.ts` | Enum value names and duplicate sigil names (6.5), timestamps (the rounding table shared with `go/cbor`). |
+| `test/value.test.ts` | Enum value names, duplicate sigil names and sigils listed by two enums (6.5), the integer bounds of values (3.1), timestamps (the rounding table shared with `go/cbor`). |
 | `test/pipe.test.ts`, `test/websocket.test.ts` | The bindings: in-process streams, a child process on its stdio, a `ws` server. |
 | `test/pipefaults.test.ts` | The pipe binding with writes cut into 1-7 bytes, stalls, the stream ending mid-message and at every point of the handshake, a child process killed in the middle of a call and of a download: calls end with `unavailable`, no session counts a call. |
 | `test/fuzz.test.ts` | Property tests of every decoder (CBOR, messages, framing, schemas, facets, interfaces, deltas, values, the handshake of both roles) on the vectors' bytes and seeded mutations: only the library's error types, round trips, nothing held beyond the input. `SPARROW_FUZZ_ITERS` (default 2000), `SPARROW_FUZZ_SEED`; crashers stay in `test/helpers/fuzz.ts`. |

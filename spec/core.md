@@ -378,7 +378,7 @@ Built-in types:
 | 5 | `float64` | float |
 | 6 | `string` | text string |
 | 7 | `bytes` | byte string |
-| 8 | `timestamp` | tag 1 + integer or float seconds (integer when there is no fraction; implementations keep at least millisecond precision) |
+| 8 | `timestamp` | tag 1 + integer or float seconds (integer when there is no fraction; implementations keep at least millisecond precision; one that keeps exactly milliseconds rounds to the nearest, halves toward the later time) |
 | 9 | `uuid` | tag 37 + 16-byte byte string |
 | 10 | `dynamic` | `[type_id, value]`, where `type_id` is a built-in or a named type of the same facet |
 | 11 | `symbol` | sigil (uint) or text string |

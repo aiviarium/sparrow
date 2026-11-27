@@ -154,7 +154,8 @@ NETSIM_SEED=123 go test ./netsimtest -run TestLossyWebTransport -v
   enums (`sigil_in_two_enums`).
 - Timestamps (`cbor.Time`) are written as integer seconds whenever there is no fraction, also for
   a float `Time` such as 2.0; `cbor.FromTime` converts a `time.Time`, `Time.Time` and
-  `Time.UnixMilli` convert back (`UnixMilli` rounds to the nearest millisecond, halves up, as the
+  `Time.UnixMilli` convert back (`UnixMilli` rounds to the nearest millisecond, halves toward the
+  later time, as core 6.3 asks of an implementation that keeps exactly milliseconds and as the
   TypeScript implementation does). The value codec refuses NaN and infinite timestamps.
 - `transport/pipe`: `Spawn` reaps the child it starts (killed `Options.KillAfter` after the
   connection ended if it has not exited; `Conn.Wait` returns its exit status); `Close` finishes this

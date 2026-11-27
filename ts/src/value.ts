@@ -10,8 +10,8 @@
 //   string              string
 //   bytes               Uint8Array
 //   timestamp           Date, to the millisecond: float seconds are rounded to the nearest
-//                       millisecond, halves up (Math.round(seconds * 1000)), as Go's
-//                       cbor.Time.UnixMilli; NaN, infinities and times outside Date's range
+//                       millisecond, halves toward the later time (core 6.3:
+//                       Math.round(seconds * 1000)), as Go's cbor.Time.UnixMilli; NaN, infinities and times outside Date's range
 //                       (±8.64e12 s) are refused. Encoders also take a number (or bigint) of
 //                       epoch seconds; integer seconds are sent as an integer (core 6.3)
 //   uuid                string "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" (encoders also take 16 bytes)

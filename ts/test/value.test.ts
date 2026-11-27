@@ -103,7 +103,7 @@ function f64(x: number): string {
 
 describe('timestamps (core 6.3)', () => {
   const c = new Codec(facet().f);
-  it('rounds float seconds to the nearest millisecond, halves up, as Go', () => {
+  it('rounds float seconds to the nearest millisecond, halves toward the later time, as Go', () => {
     for (const [s, ms] of timestampMillis) {
       const d = c.decode(T.timestamp, unhex(`c1fb${f64(s)}`)) as Date;
       expect([s, d.getTime()]).toEqual([s, ms]);
