@@ -81,13 +81,17 @@ type Session struct {
 	optimistic     bool
 	optReject      bool // client: optimistic start rejected
 
-	calls    map[uint64]*call
-	nextID   uint64
-	outOpen  int
-	outSig   chan struct{}
-	inOpen   int
-	inLeased int
-	pool     pool
+	calls   map[uint64]*call
+	nextID  uint64
+	outOpen int
+	outSig  chan struct{}
+	inOpen  int
+	// inCallerOpen counts incoming calls whose caller's half is open,
+	// counted or not; more than twice maxConcurrentCalls closes the
+	// session (7.6).
+	inCallerOpen int
+	inLeased     int
+	pool         pool
 
 	local         *schema.State
 	localAcked    uint64
@@ -443,7 +447,8 @@ func (s *Session) GoAwayReceived() *wire.GoAway {
 type Stats struct {
 	OpenCalls      int // calls this side has open, both roles
 	OutgoingCalls  int // counted toward the peer's maxConcurrentCalls
-	IncomingCalls  int
+	IncomingCalls  int // counted toward this side's maxConcurrentCalls
+	CallerHalfOpen int // incoming calls whose caller's half is still open
 	PoolOpen       int // leased streams this side opened, still counted
 	PoolIdle       int
 	PeerLeased     int // leased streams the peer opened, still counted
@@ -458,7 +463,7 @@ type Stats struct {
 // Stats returns a snapshot.
 func (s *Session) Stats() Stats {
 	s.mu.Lock()
-	st := Stats{OpenCalls: len(s.calls), OutgoingCalls: s.outOpen, IncomingCalls: s.inOpen,
+	st := Stats{OpenCalls: len(s.calls), OutgoingCalls: s.outOpen, IncomingCalls: s.inOpen, CallerHalfOpen: s.inCallerOpen,
 		PoolOpen: s.pool.open, PoolIdle: len(s.pool.idle), PeerLeased: s.inLeased,
 		LocalAcked: s.localAcked, Draining: s.draining, Closed: s.closed}
 	if s.local != nil {

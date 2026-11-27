@@ -69,7 +69,8 @@ type call struct {
 	autoAnswer     bool
 	cancelRecv     bool
 	cancelRecvCode status.Code
-	counted        bool // counts toward maxConcurrentCalls
+	counted        bool // counts toward maxConcurrentCalls (7.6)
+	callerOpen     bool // callee: the caller's half is open (s.mu; the 2x bound of 7.6)
 	giveUpT        Timer
 	brokenT        Timer
 	deadlineT      Timer
@@ -168,6 +169,9 @@ func (c *call) deliver(m *Msg) {
 	var finishes bool
 	if fromCaller {
 		finishes = c.h.callerMsg(k)
+		if finishes {
+			c.s.callerHalfDone(c)
+		}
 	} else {
 		finishes = c.h.calleeMsg(k)
 	}
@@ -336,20 +340,19 @@ func (c *call) send(ctx context.Context, k wire.Kind, b []byte, n uint64, gate b
 			c.cancelSent = true
 		}
 		c.h.callerMsg(k)
-	} else {
-		c.h.calleeMsg(k)
+	} else if c.h.calleeMsg(k) {
+		// The callee counts a call only until it has sent its own final
+		// message, whether or not the caller's half is still open (7.6),
+		// and stops before the message goes out: the caller frees its slot
+		// once it has seen the message (and finished its own half) and may
+		// start the next call at once, which can arrive before the old
+		// call's End and must not find this one still counted.
+		c.s.uncountCall(c)
 	}
 	ended := false
 	if c.h.ended() && !c.ended {
 		c.ended = true
 		ended = true
-		if !c.caller {
-			// The callee stops counting the call before its final message
-			// goes out: the caller frees its slot as soon as it reads that
-			// message and may start the next call at once, which must not
-			// find this one still counted (7.6).
-			c.s.uncountCall(c)
-		}
 	}
 	c.broadcastLocked()
 	c.mu.Unlock()
@@ -594,6 +597,21 @@ func (s *Session) endCall(c *call) {
 	}
 }
 
+// callerHalfDone records on the callee side that the caller's half of an
+// incoming call is finished (c.mu held).
+func (s *Session) callerHalfDone(c *call) {
+	s.mu.Lock()
+	s.callerHalfDoneLocked(c)
+	s.mu.Unlock()
+}
+
+func (s *Session) callerHalfDoneLocked(c *call) {
+	if c.callerOpen {
+		c.callerOpen = false
+		s.inCallerOpen--
+	}
+}
+
 // uncountCall frees the call's concurrency slot (c.mu held).
 func (s *Session) uncountCall(c *call) {
 	s.mu.Lock()
@@ -629,6 +647,7 @@ func (s *Session) forgetLocked(c *call) bool {
 		delete(s.calls, c.id)
 	}
 	s.uncountCallLocked(c)
+	s.callerHalfDoneLocked(c)
 	if c.ln != nil && !c.ln.shared && c.ln.current == c {
 		s.releaseLaneLocked(c.ln)
 	}

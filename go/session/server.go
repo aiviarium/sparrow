@@ -357,6 +357,19 @@ func (s *Session) onRequest(l *lane, r *wire.Request, b []byte) {
 	if leased {
 		l.current = c
 	}
+	if !c.h.callerDone {
+		c.callerOpen = true
+		s.inCallerOpen++
+		if max := localL.MaxConcurrentCalls; uint64(s.inCallerOpen) > 2*max {
+			// The caller keeps far more calls open than it may count: its
+			// halves never end (7.6). The session goes, not just the call.
+			n := s.inCallerOpen
+			s.mu.Unlock()
+			cancel(nil)
+			s.fail(status.ResourceExhausted, fmt.Sprintf("%d calls with the caller's half open, more than twice maxConcurrentCalls (%d)", n, max))
+			return
+		}
+	}
 	var reject *Error
 	switch {
 	case s.role == wire.Server && !s.readyDone && l.shared:

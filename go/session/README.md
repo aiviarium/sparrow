@@ -105,8 +105,12 @@ most its credit plus one message.
   the peer has ended its own direction too (it does so as soon as it sees the reset), up to
   `ResetWait` (5 s), so a replacement never reaches a peer that still counts the old stream (4.2 rule 5).
   An acceptor stops counting a stream before it sends its end, and a callee stops counting a call
-  toward `maxConcurrentCalls` before its final message goes out, so the peer's next stream or call,
-  started the moment it sees that end, is never refused.
+  toward `maxConcurrentCalls` before its final message goes out, even while the caller's half is
+  still open, so the peer's next stream or call, started the moment it sees that end, is never
+  refused (7.6). A caller counts a call until it has both sent its own last message and seen the
+  callee's (a cancelled call stays counted until the callee answers). A callee closes a session
+  that keeps more than twice `maxConcurrentCalls` calls with the caller's half open (refused ones
+  included) with `GoAway(resource_exhausted)`; `Stats().CallerHalfOpen` counts them.
 - **Schema gating** (6.6 rule 1): after `UpdateSchema`, every later callee message of a call to a facet
   the delta adds or replaces waits for `SchemaAck`; calls to other facets are not held. Core `Error`s
   without details never wait.
