@@ -93,30 +93,6 @@ func (m *Manager) Handler() session.Handler {
 	h(adminiface.MethodListSecrets, func(ctx context.Context, in []byte) ([]byte, error) {
 		return EncodeStrings(m.ListSecrets()), nil
 	})
-	h(adminiface.MethodPutFacet, func(ctx context.Context, in []byte) ([]byte, error) {
-		doc, err := DecodeBytes(in)
-		if err != nil {
-			return nil, badInput(err)
-		}
-		key, err := m.PutFacet(doc)
-		if err != nil {
-			return nil, err
-		}
-		return cbor.AppendBytes(nil, key), nil
-	})
-	h(adminiface.MethodDeleteFacet, func(ctx context.Context, in []byte) ([]byte, error) {
-		key, err := DecodeBytes(in)
-		if err != nil {
-			return nil, badInput(err)
-		}
-		if err := m.DeleteFacet(key); err != nil {
-			return nil, err
-		}
-		return cbor.Null, nil
-	})
-	h(adminiface.MethodListFacets, func(ctx context.Context, in []byte) ([]byte, error) {
-		return EncodeBytesList(m.ListFacets()), nil
-	})
 	mux[adminiface.MethodWatch] = session.HandlerFunc(m.serveWatch)
 	return mux
 }

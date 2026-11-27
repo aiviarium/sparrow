@@ -14,9 +14,6 @@
 //	set-secret NAME VALUE|@FILE|-    store a secret (- reads standard input)
 //	delete-secret NAME
 //	list-secrets
-//	put-facet FILE                   store a facet document (CBOR) and print its key
-//	delete-facet KEY                 (hex)
-//	list-facets
 //	watch                            print events as JSON lines until interrupted
 //
 // Documents use the JSON form of admin.Config; a top-level "policy" list of
@@ -232,38 +229,6 @@ func run(args []string, stdin io.Reader, stdout io.Writer) error {
 			return err
 		}
 		return out.Encode(ns)
-	case "put-facet":
-		if err := need(1); err != nil {
-			return err
-		}
-		b, err := os.ReadFile(cargs[0])
-		if err != nil {
-			return err
-		}
-		k, err := c.PutFacet(ctx, cbor.StripSelfDescribed(b))
-		if err != nil {
-			return err
-		}
-		return out.Encode(map[string]string{"key": hex.EncodeToString(k)})
-	case "delete-facet":
-		if err := need(1); err != nil {
-			return err
-		}
-		k, err := hex.DecodeString(cargs[0])
-		if err != nil {
-			return err
-		}
-		return c.DeleteFacet(ctx, k)
-	case "list-facets":
-		ks, err := c.ListFacets(ctx)
-		if err != nil {
-			return err
-		}
-		hs := make([]string, 0, len(ks))
-		for _, k := range ks {
-			hs = append(hs, hex.EncodeToString(k))
-		}
-		return out.Encode(hs)
 	case "watch":
 		w, err := c.Watch(ctx)
 		if err != nil {

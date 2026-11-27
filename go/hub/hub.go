@@ -10,7 +10,6 @@
 package hub
 
 import (
-	"bytes"
 	"context"
 	"crypto/subtle"
 	"errors"
@@ -95,9 +94,6 @@ type Options struct {
 	// Session adjusts the configuration of every session the hub runs.
 	Session func(*session.Config)
 	Logger  *slog.Logger
-	// CredentialCheckInterval is how often dial-in credentials are
-	// re-validated (10.2: at least every 60 s); default 30 s.
-	CredentialCheckInterval time.Duration
 	// RelayAckTimeout is the time each downstream session gets to ack a
 	// node's relayed SchemaUpdate, or the change a superseding session of
 	// a node brings (10.3); default 5 s.
@@ -158,9 +154,6 @@ func New(o Options) (*Hub, error) {
 	if o.ConnectTimeout <= 0 {
 		o.ConnectTimeout = 10 * time.Second
 	}
-	if o.CredentialCheckInterval <= 0 {
-		o.CredentialCheckInterval = 30 * time.Second
-	}
 	if o.RelayAckTimeout <= 0 {
 		o.RelayAckTimeout = DefaultRelayAckTimeout
 	}
@@ -219,8 +212,6 @@ func New(o Options) (*Hub, error) {
 	}
 	h.admH = h.adm.Handler()
 	h.adm.Start(h)
-	h.wg.Add(1)
-	go h.credentialLoop()
 	return h, nil
 }
 
@@ -263,7 +254,7 @@ func (h *Hub) Close(timeout time.Duration) {
 	}
 	var dls []*dialer
 	for _, n := range nodes {
-		if d := n.stopLink(); d != nil {
+		if d := n.stopDial(); d != nil {
 			dls = append(dls, d)
 		}
 	}
@@ -626,7 +617,9 @@ func (h *Hub) nodeForCredential(cred []byte) (*node, error) {
 		v, ok := h.adm.SecretValue(name)
 		if ok && subtle.ConstantTimeCompare(v, cred) == 1 {
 			if !n.cfg.IsEnabled() {
-				return nil, &session.Error{Code: status.FailedPrecondition, Message: "node " + id + " is disabled"}
+				// A disabled node's credential is refused like any unknown
+				// one (10.2).
+				return nil, &session.Error{Code: status.Unauthenticated, Message: "node " + id + " is disabled"}
 			}
 			return n, nil
 		}
@@ -642,49 +635,6 @@ func sortedNodeIDs(m map[string]*node) []string {
 	}
 	sort.Strings(ids)
 	return ids
-}
-
-// credentialLoop re-validates dial-in credentials (10.2: at least every
-// 60 s); Apply also does it at once on every change.
-func (h *Hub) credentialLoop() {
-	defer h.wg.Done()
-	t := time.NewTicker(h.o.CredentialCheckInterval)
-	defer t.Stop()
-	for {
-		select {
-		case <-h.ctx.Done():
-			return
-		case <-t.C:
-			h.revalidateCredentials()
-		}
-	}
-}
-
-// revalidateCredentials closes every dial-in session whose credential is
-// no longer the configured one, with GoAway(unauthenticated).
-func (h *Hub) revalidateCredentials() {
-	h.mu.Lock()
-	var bad []*link
-	for v := range h.viewers {
-		l := v.link
-		if l == nil || l.kind != linkDialIn {
-			continue
-		}
-		n := h.nodes[l.n.id]
-		ok := n == l.n && n.credentialName() != "" && n.credentialName() == l.credName
-		if ok {
-			val, found := h.adm.SecretValue(l.credName)
-			ok = found && bytes.Equal(val, l.cred)
-		}
-		if !ok {
-			bad = append(bad, l)
-		}
-	}
-	h.mu.Unlock()
-	for _, l := range bad {
-		h.log.Info("dial-in credential revoked or changed", "node", l.n.id)
-		l.sess.Close(status.Unauthenticated, "the link credential was revoked or changed")
-	}
 }
 
 // ---------------------------------------------------------------------------

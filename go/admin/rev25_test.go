@@ -33,20 +33,22 @@ func TestNoOpCommitIsCanonicalByteEquality(t *testing.T) {
 	}
 }
 
-// TestJSONForm: the JSON form names struct fields as in the interface and
-// writes byte strings as hex; a node with the old "start" key is refused.
+// TestJSONForm: the JSON form names struct fields as in the interface, a
+// union as an object keyed by its variant name, and writes byte strings as
+// hex; unknown keys (such as the old "dial" or "start" at node level) and
+// a link with no or two variants are refused.
 func TestJSONForm(t *testing.T) {
 	pin := make([]byte, 32)
 	pin[0] = 0xab
 	c := &Config{Nodes: map[string]*NodeConfig{
-		"echo":    {Dial: &Dial{URL: "https://h:1/sparrow/wt", Pin: pin, Credential: "s"}},
-		"inbound": {Credential: ptr("t"), Enabled: ptr(false)},
+		"echo":    {Link: Dialed(Dial{URL: "https://h:1/sparrow/wt", Pin: pin, Credential: "s"})},
+		"inbound": {Link: DialIn("t"), Enabled: ptr(false)},
 	}}
 	b, err := c.MarshalJSON()
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"nodes":{"echo":{"dial":{"url":"https://h:1/sparrow/wt","pin":"ab` + strings.Repeat("00", 31) + `","credential":"s"}},"inbound":{"credential":"t","enabled":false}}}`
+	want := `{"nodes":{"echo":{"link":{"dial":{"url":"https://h:1/sparrow/wt","pin":"ab` + strings.Repeat("00", 31) + `","credential":"s"}}},"inbound":{"link":{"credential":"t"},"enabled":false}}}`
 	if string(b) != want {
 		t.Fatalf("got %s", b)
 	}
@@ -54,8 +56,15 @@ func TestJSONForm(t *testing.T) {
 	if err := back.UnmarshalJSON(b); err != nil || !back.Equal(c) {
 		t.Fatalf("round trip: %v", err)
 	}
-	var bad Config
-	if err := bad.UnmarshalJSON([]byte(`{"nodes":{"echo":{"start":{"dial":{"url":"https://h","pin":"","credential":"c"}}}}}`)); err == nil {
-		t.Fatal("a start key was accepted")
+	for _, bad := range []string{
+		`{"nodes":{"echo":{"dial":{"url":"https://h","pin":"","credential":"c"}}}}`,
+		`{"nodes":{"echo":{"link":{"credential":"c"},"start":{}}}}`,
+		`{"nodes":{"echo":{"link":{}}}}`,
+		`{"nodes":{"echo":{"link":{"credential":"c","dial":{"url":"https://h","pin":"","credential":"c"}}}}}`,
+	} {
+		var x Config
+		if err := x.UnmarshalJSON([]byte(bad)); err == nil {
+			t.Fatalf("accepted %s", bad)
+		}
 	}
 }

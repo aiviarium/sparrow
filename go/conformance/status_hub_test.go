@@ -170,7 +170,7 @@ func TestHub(t *testing.T) {
 			t.Fatal("payload not copied byte for byte")
 		}
 		if wire.CallerOf(fwd.CallID) != wire.Server {
-			t.Fatal("hub call IDs on a pipe link are odd")
+			t.Fatal("hub call IDs on the link of a node that dialed in are odd")
 		}
 		facet := stateOf(t, "schema/node-acme-charts").Schema().Facet(pm.Node)
 		if h, _ := facet.Hash(); hx(h) != pm.Hash {
@@ -262,9 +262,9 @@ func TestHub(t *testing.T) {
 		if h, _ := view.Hash(); !bytes.Equal(h, v.Hex("hash")) {
 			t.Fatalf("view hash %x", h)
 		}
-		w, _ := wire.Decode(vector(t, "welcome/node-pipe").Hex("cbor"))
+		w, _ := wire.Decode(vector(t, "welcome/node-dial-in").Hex("cbor"))
 		if !bytes.Equal(w.(*wire.Welcome).ServerSchema.Hash, v.Hex("hash")) {
-			t.Fatal("welcome/node-pipe offers a different schema")
+			t.Fatal("welcome/node-dial-in offers a different schema")
 		}
 	}, "schema_view")
 

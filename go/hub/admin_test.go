@@ -1,7 +1,6 @@
 package hub
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"strings"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/aiviarium/sparrow-rpc/go/admin"
 	"github.com/aiviarium/sparrow-rpc/go/adminiface"
+	"github.com/aiviarium/sparrow-rpc/go/cbor"
 	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
 	nd "github.com/aiviarium/sparrow-rpc/go/node"
 	"github.com/aiviarium/sparrow-rpc/go/schema"
@@ -117,7 +117,7 @@ func TestAdminOverTheWire(t *testing.T) {
 	}
 	// Invalid documents carry their problems.
 	bad := cfg.Clone()
-	bad.Nodes["x"] = &admin.NodeConfig{}
+	bad.Nodes["x"] = &admin.NodeConfig{Link: admin.Link{UnknownTag: 7, Unknown: cbor.Null}}
 	_, err = c.Commit(ctx, nrev, bad, 0)
 	if ps := admin.ProblemsOf(err); session.Code(err) != status.FailedPrecondition || len(ps) != 1 || ps[0].Path[1] != "x" {
 		t.Fatalf("%v %v", err, ps)
@@ -129,7 +129,7 @@ func TestAdminOverTheWire(t *testing.T) {
 	if _, err := c.Validate(ctx, 0, bad); session.Code(err) != status.Aborted {
 		t.Fatalf("%v", err)
 	}
-	// Secrets and stored facets.
+	// Secrets.
 	if err := c.SetSecret(ctx, "s1", []byte("v")); err != nil {
 		t.Fatal(err)
 	}
@@ -140,27 +140,12 @@ func TestAdminOverTheWire(t *testing.T) {
 	if len(names) != 3 || names[2] != "s1" { // and the echo nodes' credentials
 		t.Fatal(names)
 	}
-	key, err := c.PutFacet(ctx, echoFacetDoc(t, "echo"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	keys, _ := c.ListFacets(ctx)
-	if len(keys) != 1 || !bytes.Equal(keys[0], key) {
-		t.Fatal(keys)
-	}
-	if _, err := c.PutFacet(ctx, []byte{1, 2, 3}); session.Code(err) != status.InvalidArgument {
-		t.Fatalf("%v", err)
-	}
 	cfg3 := cfg.Clone()
-	cfg3.Nodes["acme"] = &admin.NodeConfig{Credential: strp("s1")}
-	cfg3.Nodes["echo"].Facets = [][]byte{key}
+	cfg3.Nodes["acme"] = &admin.NodeConfig{Link: admin.DialIn("s1")}
 	if _, err := c.Commit(ctx, nrev, cfg3, 0); err != nil {
 		t.Fatal(err)
 	}
 	if err := c.DeleteSecret(ctx, "s1"); session.Code(err) != status.FailedPrecondition {
-		t.Fatalf("%v", err)
-	}
-	if err := c.DeleteFacet(ctx, key); session.Code(err) != status.FailedPrecondition {
 		t.Fatalf("%v", err)
 	}
 	w.Close()

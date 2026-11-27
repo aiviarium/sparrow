@@ -118,9 +118,9 @@ func TestValueVectors(t *testing.T) {
 func TestConfigRoundTrip(t *testing.T) {
 	c := &Config{
 		Nodes: map[string]*NodeConfig{
-			"a": {Credential: ptr("a"), Facets: [][]byte{{1, 2}}, Enabled: ptr(false), Extensions: map[string][]byte{"x.y": {0xf5}}},
-			"b": {Credential: ptr("c"), Peer: ptr(true)},
-			"c": {Dial: &Dial{URL: "https://x", Pin: make([]byte, 32), Credential: "d"}},
+			"a": {Link: DialIn("a"), Enabled: ptr(false), Extensions: map[string][]byte{"x.y": {0xf5}}},
+			"b": {Link: DialIn("c"), Peer: ptr(true)},
+			"c": {Link: Dialed(Dial{URL: "https://x", Pin: make([]byte, 32), Credential: "d"})},
 		},
 		Defaults:   map[string]string{string(make([]byte, 33)): "a"},
 		Extensions: map[string][]byte{},
@@ -146,11 +146,27 @@ func TestConfigRoundTrip(t *testing.T) {
 		t.Fatalf("extra element: %v", err)
 	}
 	// A Dial with extra elements is fine; one missing an element is not.
-	dialExtra := []byte{0x81, 0xa1, 0x61, 'n', 0x81, 0x84, 0x61, 'u', 0x40, 0x61, 'c', 0x00}
-	if dc, err := DecodeConfig(dialExtra); err != nil || dc.Nodes["n"].Dial == nil || dc.Nodes["n"].Dial.Credential != "c" {
+	// {"n": [[0, ["u", h'', "c", 0]]]}
+	dialExtra := []byte{0x81, 0xa1, 0x61, 'n', 0x81, 0x82, 0x00, 0x84, 0x61, 'u', 0x40, 0x61, 'c', 0x00}
+	if dc, err := DecodeConfig(dialExtra); err != nil || dc.Nodes["n"].Link.Dial == nil || dc.Nodes["n"].Link.Dial.Credential != "c" {
 		t.Fatalf("dial with an extra element: %v", err)
 	}
-	for _, bad := range [][]byte{{0x80}, {0x81, 0x01}, {0x81, 0xa1, 0x61, 'a', 0x81, 0x82, 0x00, 0x80}, {0x81, 0xa1, 0x61, 'a', 0x81, 0x82, 0x61, 'u', 0x40}} {
+	// An unknown Link variant is kept, and is a validation problem.
+	unk := []byte{0x81, 0xa1, 0x61, 'n', 0x81, 0x82, 0x09, 0xf6}
+	dc, err := DecodeConfig(unk)
+	if err != nil || dc.Nodes["n"].Link.UnknownTag != 9 || !bytes.Equal(dc.Encode(), unk) {
+		t.Fatalf("unknown variant: %v", err)
+	}
+	if ps := Validate(dc, ValidateEnv{}); len(ps) != 1 || strings.Join(ps[0].Path, "/") != "nodes/n/link" {
+		t.Fatalf("%v", ps)
+	}
+	for _, bad := range [][]byte{
+		{0x80}, {0x81, 0x01},
+		{0x81, 0xa1, 0x61, 'a', 0x80},                                    // no link
+		{0x81, 0xa1, 0x61, 'a', 0x81, 0x82, 0x00, 0x80},                  // Dial without fields
+		{0x81, 0xa1, 0x61, 'a', 0x81, 0x82, 0x00, 0x82, 0x61, 'u', 0x40}, // Dial without credential
+		{0x81, 0xa1, 0x61, 'a', 0x81, 0x82, 0x01, 0x01},                  // credential not a string
+	} {
 		if _, err := DecodeConfig(bad); err == nil {
 			t.Fatalf("%x decoded", bad)
 		}
@@ -159,40 +175,14 @@ func TestConfigRoundTrip(t *testing.T) {
 
 func ptr[T any](v T) *T { return &v }
 
-func facetDoc(t *testing.T, name string, id uint64) []byte {
-	t.Helper()
-	f := &schema.Facet{ID: id, Name: name, Version: "1.0.0", Types: []schema.TypeDef{}, Annotations: schema.Annotations{},
-		Services: []schema.Service{{ID: 0, Name: "S", Annotations: schema.Annotations{}, Methods: []schema.Method{
-			{ID: 1, Name: "b", Input: schema.Named(schema.TypeUnit), Output: schema.Named(schema.TypeUnit), Errors: []uint64{}, Annotations: schema.Annotations{}},
-			{ID: 0, Name: "a", Input: schema.Named(schema.TypeUnit), Output: schema.Named(schema.TypeUnit), Errors: []uint64{}, Annotations: schema.Annotations{}},
-		}}}, Sigils: []schema.Sigil{}, Retired: []schema.Retired{}}
-	// Encode without canonicalizing: methods out of order.
-	b, err := f.Encode()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return b
-}
-
 func TestValidate(t *testing.T) {
 	secrets := map[string]bool{"s1": true, "s2": true, "dial": true, "same-as-s1": true}
 	values := map[string]string{"s1": "v1", "s2": "v2", "dial": "v3", "same-as-s1": "v1"}
-	charts := &schema.Facet{Name: "acme.charts"}
-	other := &schema.Facet{Name: "other"}
 	env := ValidateEnv{
 		SecretExists: func(n string) bool { return secrets[n] },
 		SecretValue: func(n string) ([]byte, bool) {
 			v, ok := values[n]
 			return []byte(v), ok
-		},
-		StoredFacet: func(k []byte) *schema.Facet {
-			switch string(k) {
-			case "charts":
-				return charts
-			case "other":
-				return other
-			}
-			return nil
 		},
 		Extension: func(node, key string, v []byte) error {
 			if key == "ok" {
@@ -212,47 +202,37 @@ func TestValidate(t *testing.T) {
 	}{
 		{"empty", EmptyConfig(), nil},
 		{"good", &Config{Nodes: map[string]*NodeConfig{
-			"acme":        {Credential: ptr("s1")},
-			"acme.charts": {Dial: &Dial{URL: "https://charts:4433/sparrow/wt", Pin: pin, Credential: "s2"}, Facets: [][]byte{[]byte("charts")}},
-			"remote":      {Dial: &Dial{URL: "wss://h/x", Pin: pin, Credential: "dial"}},
+			"acme":        {Link: DialIn("s1")},
+			"acme.charts": {Link: Dialed(Dial{URL: "https://charts:4433/sparrow/wt", Pin: pin, Credential: "s2"})},
+			"remote":      {Link: Dialed(Dial{URL: "wss://h/x", Pin: pin, Credential: "dial"}), Peer: ptr(true)},
 		}, Extensions: map[string][]byte{"ok": {0}}}, nil},
 		{"grammar and reserved", &Config{Nodes: map[string]*NodeConfig{
-			"A":         {Credential: ptr("s1")},
-			"sparrow":   {Credential: ptr("s2")},
-			"sparrow.x": {Credential: ptr("dial")},
+			"A":         {Link: DialIn("s1")},
+			"sparrow":   {Link: DialIn("s2")},
+			"sparrow.x": {Link: DialIn("dial")},
 		}}, [][]string{{"nodes", "A"}, {"nodes", "sparrow"}, {"nodes", "sparrow.x"}}},
-		{"directions", &Config{Nodes: map[string]*NodeConfig{
-			"both":    {Credential: ptr("s1"), Dial: &Dial{URL: "https://h", Pin: pin, Credential: "s2"}},
-			"neither": {},
-		}}, [][]string{{"nodes", "both"}, {"nodes", "neither"}}},
-		{"missing secrets", &Config{Nodes: map[string]*NodeConfig{
-			"a": {Credential: ptr("nope")},
-			"c": {Dial: &Dial{URL: "http://h", Pin: []byte{1}, Credential: "nope2"}},
-			"d": {Dial: &Dial{URL: "https://", Pin: pin, Credential: "dial"}},
-		}}, [][]string{{"nodes", "a", "credential"},
-			{"nodes", "c", "dial", "url"}, {"nodes", "c", "dial", "pin"}, {"nodes", "c", "dial", "credential"}, {"nodes", "d", "dial", "url"}}},
-		{"dial-in credentials with the same value", &Config{Nodes: map[string]*NodeConfig{
-			"a": {Credential: ptr("s1")},
-			"b": {Credential: ptr("s1")},
-			"c": {Credential: ptr("s2")},
-			"d": {Credential: ptr("same-as-s1")},
-		}}, [][]string{{"nodes", "b", "credential"}, {"nodes", "d", "credential"}}},
-		{"replayable credential", &Config{Nodes: map[string]*NodeConfig{
-			"a": {Credential: ptr("s1")},
-			"b": {Dial: &Dial{URL: "https://h", Pin: pin, Credential: "s1"}},
-		}}, [][]string{{"nodes", "a", "credential"}, {"nodes", "b", "dial", "credential"}}},
-		{"replayable credential value", &Config{Nodes: map[string]*NodeConfig{
-			"a": {Credential: ptr("s1")},
-			"b": {Dial: &Dial{URL: "https://h", Pin: pin, Credential: "same-as-s1"}},
-			"c": {Dial: &Dial{URL: "https://h", Pin: pin, Credential: "s2"}},
-		}}, [][]string{{"nodes", "b", "dial", "credential"}}},
-		{"facets", &Config{Nodes: map[string]*NodeConfig{
-			"acme":   {Credential: ptr("s1"), Facets: [][]byte{[]byte("charts"), []byte("charts"), []byte("other"), []byte("gone")}},
-			"peer-1": {Credential: ptr("s2"), Peer: ptr(true), Facets: [][]byte{[]byte("charts")}},
-		}}, [][]string{{"nodes", "acme", "facets", "1"}, {"nodes", "acme", "facets", "2"}, {"nodes", "acme", "facets", "3"},
-			{"nodes", "peer-1", "facets"}, {"nodes", "peer-1", "facets", "0"}}},
+		{"dial and missing secrets", &Config{Nodes: map[string]*NodeConfig{
+			"a": {Link: DialIn("nope")},
+			"c": {Link: Dialed(Dial{URL: "http://h", Pin: []byte{1}, Credential: "nope2"})},
+			"d": {Link: Dialed(Dial{URL: "https://", Pin: pin, Credential: "dial"})},
+		}}, [][]string{{"nodes", "c", "link", "dial", "url"}, {"nodes", "c", "link", "dial", "pin"}, {"nodes", "d", "link", "dial", "url"},
+			{"nodes", "a", "link", "credential"}, {"nodes", "c", "link", "dial", "credential"}}},
+		{"a secret named twice", &Config{Nodes: map[string]*NodeConfig{
+			"a": {Link: DialIn("s1")},
+			"b": {Link: DialIn("s1")},
+			"c": {Link: Dialed(Dial{URL: "https://h", Pin: pin, Credential: "s1"})},
+		}}, [][]string{{"nodes", "b", "link", "credential"}, {"nodes", "c", "link", "dial", "credential"}}},
+		{"secret values pairwise distinct", &Config{Nodes: map[string]*NodeConfig{
+			"a": {Link: DialIn("s1")},
+			"b": {Link: DialIn("same-as-s1")},
+			"c": {Link: Dialed(Dial{URL: "https://h", Pin: pin, Credential: "s2"})},
+		}}, [][]string{{"nodes", "b", "link", "credential"}}},
+		{"a dialed credential with a dial-in credential's value", &Config{Nodes: map[string]*NodeConfig{
+			"a": {Link: DialIn("s1")},
+			"b": {Link: Dialed(Dial{URL: "https://h", Pin: pin, Credential: "same-as-s1"})},
+		}}, [][]string{{"nodes", "b", "link", "dial", "credential"}}},
 		{"defaults and extensions", &Config{Nodes: map[string]*NodeConfig{
-			"a": {Credential: ptr("s1"), Extensions: map[string][]byte{"nope": {0}}},
+			"a": {Link: DialIn("s1"), Extensions: map[string][]byte{"nope": {0}}},
 		}, Defaults: map[string]string{"short": "a", string(make([]byte, 33)): "Bad Name"}, Extensions: map[string][]byte{"bad": {0}, "x": {0}}},
 			[][]string{{"nodes", "a", "extensions", "nope"}, {"defaults", hex.EncodeToString(make([]byte, 33))}, {"defaults", hex.EncodeToString([]byte("short"))},
 				{"extensions", "bad"}, {"extensions", "x"}}},
@@ -309,6 +289,9 @@ func newManager(t *testing.T, dir string, clk session.Clock) (*Manager, *recAppl
 	}
 	a := &recApplier{}
 	m.Start(a)
+	for _, id := range []string{"a", "b", "c", "d", "e"} {
+		_ = m.SetSecret("cred-"+id, []byte("value of cred-"+id)) // for doc
+	}
 	return m, a
 }
 
@@ -317,7 +300,7 @@ func code(err error) status.Code { return session.Code(err) }
 func doc(ids ...string) *Config {
 	c := EmptyConfig()
 	for _, id := range ids {
-		c.Nodes[id] = &NodeConfig{Dial: &Dial{URL: "https://" + id + ".example:4433/sparrow/wt", Pin: make([]byte, 32), Credential: "cred"}}
+		c.Nodes[id] = &NodeConfig{Link: Dialed(Dial{URL: "https://" + id + ".example:4433/sparrow/wt", Pin: make([]byte, 32), Credential: "cred-" + id})}
 	}
 	return c
 }
@@ -356,14 +339,14 @@ func TestManagerRevisions(t *testing.T) {
 		t.Fatalf("first event %+v", e)
 	}
 	// Invalid: failed_precondition with problems.
-	_, err := m.Commit(&CommitRequest{Base: 0, Config: &Config{Nodes: map[string]*NodeConfig{"x": {Credential: ptr("cred")}}}})
+	_, err := m.Commit(&CommitRequest{Base: 0, Config: &Config{Nodes: map[string]*NodeConfig{"x": {Link: DialIn("missing")}}}})
 	if code(err) != status.FailedPrecondition {
 		t.Fatalf("got %v", err)
 	}
 	var se *session.Error
 	errors.As(err, &se)
 	ps, _ := DecodeProblems(se.Details)
-	if len(ps) != 1 || strings.Join(ps[0].Path, "/") != "nodes/x/credential" {
+	if len(ps) != 1 || strings.Join(ps[0].Path, "/") != "nodes/x/link/credential" {
 		t.Fatalf("problems %v", ps)
 	}
 	if err := m.SetSecret("cred", []byte("v")); err != nil {
@@ -408,7 +391,7 @@ func TestManagerRevisions(t *testing.T) {
 		}
 	}
 	// Deleting a secret the rollback target refers to fails.
-	if err := m.DeleteSecret("cred"); code(err) != status.FailedPrecondition {
+	if err := m.DeleteSecret("cred-a"); code(err) != status.FailedPrecondition {
 		t.Fatalf("%v", err)
 	}
 	if err := m.Confirm(1); code(err) != status.NotFound {
@@ -570,7 +553,7 @@ func TestStoreCrashSafety(t *testing.T) {
 	}
 }
 
-func TestSecretsAndFacets(t *testing.T) {
+func TestSecrets(t *testing.T) {
 	dir := t.TempDir()
 	m, _ := newManager(t, dir, nil)
 	if err := m.SetSecret("Bad Name", nil); code(err) != status.InvalidArgument {
@@ -585,38 +568,9 @@ func TestSecretsAndFacets(t *testing.T) {
 	if v, _ := m.SecretValue("s"); string(v) != "1" {
 		t.Fatal(string(v))
 	}
-	// Two encodings of one facet (one unsorted, with a facet ID) get the
-	// same key; the stored form is canonical with ID 0.
-	k1, err := m.PutFacet(facetDoc(t, "acme", 17))
-	if err != nil {
-		t.Fatal(err)
-	}
-	k2, err := m.PutFacet(facetDoc(t, "acme", 0))
-	if err != nil || !bytes.Equal(k1, k2) {
-		t.Fatalf("%x %x %v", k1, k2, err)
-	}
-	f := m.StoredFacet(k1)
-	if f == nil || f.ID != 0 || f.Services[0].Methods[0].ID != 0 {
-		t.Fatalf("%+v", f)
-	}
-	want, _ := f.StoredKey()
-	if !bytes.Equal(want, k1) {
-		t.Fatal("key")
-	}
-	if _, err := m.PutFacet([]byte{0x01}); code(err) != status.InvalidArgument {
-		t.Fatalf("%v", err)
-	} else if ps := ProblemsOf(err); len(ps) != 1 {
-		t.Fatalf("details %v", ps)
-	}
-	if got := m.ListFacets(); len(got) != 1 {
-		t.Fatal(got)
-	}
-	cfg := &Config{Nodes: map[string]*NodeConfig{"acme": {Credential: ptr("s"), Facets: [][]byte{k1}}}}
+	cfg := &Config{Nodes: map[string]*NodeConfig{"acme": {Link: DialIn("s")}}}
 	if _, err := m.Commit(&CommitRequest{Base: 0, Config: cfg}); err != nil {
 		t.Fatal(err)
-	}
-	if err := m.DeleteFacet(k1); code(err) != status.FailedPrecondition {
-		t.Fatalf("%v", err)
 	}
 	if err := m.DeleteSecret("s"); code(err) != status.FailedPrecondition {
 		t.Fatalf("%v", err)
@@ -626,22 +580,16 @@ func TestSecretsAndFacets(t *testing.T) {
 	}
 	// Persisted.
 	m2, _ := newManager(t, dir, nil)
-	if got := m2.ListSecrets(); len(got) != 1 || got[0] != "s" {
+	if got := m2.ListSecrets(); len(got) != 6 || got[5] != "s" { // and doc's cred-a..e
 		t.Fatal(got)
 	}
-	if m2.StoredFacet(k1) == nil {
-		t.Fatal("facet lost")
-	}
 	if _, err := m2.Commit(&CommitRequest{Base: 1, Config: EmptyConfig()}); err != nil {
-		t.Fatal(err)
-	}
-	if err := m2.DeleteFacet(k1); err != nil {
 		t.Fatal(err)
 	}
 	if err := m2.DeleteSecret("s"); err != nil {
 		t.Fatal(err)
 	}
-	if len(m2.ListSecrets()) != 0 || len(m2.ListFacets()) != 0 {
+	if len(m2.ListSecrets()) != 5 {
 		t.Fatal("not deleted")
 	}
 }

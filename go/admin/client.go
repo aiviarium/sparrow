@@ -117,30 +117,6 @@ func (c *Client) ListSecrets(ctx context.Context) ([]string, error) {
 	return DecodeStrings(b)
 }
 
-// PutFacet stores an encoded facet document and returns its key.
-func (c *Client) PutFacet(ctx context.Context, facet []byte) ([]byte, error) {
-	b, err := c.unary(ctx, adminiface.MethodPutFacet, cbor.AppendBytes(nil, facet))
-	if err != nil {
-		return nil, err
-	}
-	return DecodeBytes(b)
-}
-
-// DeleteFacet deletes a stored facet.
-func (c *Client) DeleteFacet(ctx context.Context, key []byte) error {
-	_, err := c.unary(ctx, adminiface.MethodDeleteFacet, cbor.AppendBytes(nil, key))
-	return err
-}
-
-// ListFacets lists stored-facet keys.
-func (c *Client) ListFacets(ctx context.Context) ([][]byte, error) {
-	b, err := c.unary(ctx, adminiface.MethodListFacets, nil)
-	if err != nil {
-		return nil, err
-	}
-	return DecodeBytesList(b)
-}
-
 // Watcher is a running watch.
 type Watcher struct {
 	cc *session.ClientCall

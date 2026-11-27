@@ -1,10 +1,10 @@
 {
   "format": 1,
-  "spec_revision": "core rev347 (draft); hub-admin rev35 (draft)",
+  "spec_revision": "core rev377 (draft); hub-admin rev38 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "callee-error-while-streaming",
-  "description": "The callee fails a client-stream call while input is still arriving. It MUST keep reading and discarding the caller's input until the caller's half is finished. An Item already on its way when the Error was sent is discarded; when the Error arrives the caller sends End next, with no further Item or Bytes (7.1).",
-  "spec": "7.1, 7.3",
+  "description": "The callee fails a client-stream call while input is still arriving. It forgets the call with its Error: it stops counting it and ignores the caller's later input, granting no more credit for it, but on this leased stream it notes when the caller's half finishes, since only then is the stream idle. An Item already on its way when the Error was sent is ignored; when the Error arrives the caller sends End next, with no further Item or Bytes, and the stream is idle (7.1, 7.6).",
+  "spec": "7.1, 7.3, 7.6",
   "given": {
     "schema": "schema/scenario-host",
     "session": "established as in scenario handshake-normal (steps 1-3), with no call open"
@@ -95,7 +95,8 @@
       "step": 7,
       "expect": "discarded",
       "by": "server",
-      "call_id": 2
+      "call_id": 2,
+      "note": "ignored: the callee forgot the call"
     },
     {
       "step": 8,

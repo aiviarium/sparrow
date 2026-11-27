@@ -230,7 +230,7 @@ func TestBinary(t *testing.T) {
 	_, dialURL, dialPin := echoListening(t, "echo-dialed", "hub-to-dialed")
 	p.admin(t, p.addrs.WebSocket, "set-secret", "echo-link", "echo-to-hub")
 	p.admin(t, p.addrs.WebSocket, "set-secret", "dialed-link", "hub-to-dialed")
-	doc := fmt.Sprintf(`{"nodes": {"echo": {"credential": "echo-link"}, "echo-dialed": {"dial": {"url": %q, "pin": %q, "credential": "dialed-link"}}},
+	doc := fmt.Sprintf(`{"nodes": {"echo": {"link": {"credential": "echo-link"}}, "echo-dialed": {"link": {"dial": {"url": %q, "pin": %q, "credential": "dialed-link"}}}},
 		"policy": [["group:eng", "echo", "use"], ["group:eng", "echo-dialed", "use"]]}`, dialURL, dialPin)
 	docFile := filepath.Join(dir, "doc.json")
 	_ = os.WriteFile(docFile, []byte(doc), 0o600)

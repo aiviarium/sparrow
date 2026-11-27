@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 )
 
-const specRevision = "core rev347 (draft); hub-admin rev35 (draft)"
+const specRevision = "core rev377 (draft); hub-admin rev38 (draft)"
 
 func main() {
 	out := flag.String("out", "../../test-vectors", "output directory")

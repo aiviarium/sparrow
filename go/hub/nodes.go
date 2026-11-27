@@ -75,17 +75,18 @@ type node struct {
 	ready   chan struct{}
 	state   admin.NodeState
 	message string
-	dl      *dialer // the dial loop of a dialed node
+	dl      *dialer       // the dial loop of a dialed node
+	gone    chan struct{} // closed when the node is removed or disabled (10.7)
 
 	switching sync.Mutex   // serializes supersedes and schema updates (10.2)
 	waiting   atomic.Int32 // calls waiting for the node to connect (10.7)
 }
 
 func (n *node) credentialName() string {
-	if n.cfg == nil || n.cfg.Credential == nil {
+	if n.cfg == nil {
 		return ""
 	}
-	return *n.cfg.Credential
+	return n.cfg.CredentialName()
 }
 
 // setState records a node state and reports it to watchers (hub-admin 4).
@@ -98,7 +99,7 @@ func (n *node) setState(st admin.NodeState, msg string) {
 		return
 	}
 	n.state, n.message = st, msg
-	rev := n.rev
+	rev := h.rev // the revision applied when the event is sent (hub-admin 4)
 	h.mu.Unlock()
 	ev := admin.NodeEvent{Node: n.id, Revision: rev, State: st}
 	if msg != "" {
@@ -242,9 +243,14 @@ func (h *Hub) attach(n *node, l *link) {
 	}
 	fs, err := h.checkNodeFacetsLocked(n, peerSchema)
 	if err != nil {
+		// Refused facets: the new session goes, an old one is kept (10.2).
+		connected := n.link != nil
 		h.mu.Unlock()
 		n.switching.Unlock()
 		l.sess.Close(session.Code(err), err.Error())
+		if !connected {
+			n.setState(admin.Offline, "refused: "+err.Error())
+		}
 		return
 	}
 	mapping, changed := h.commitNodeFacetsLocked(n, fs)
@@ -292,6 +298,7 @@ func (h *Hub) detach(n *node, l *link) {
 	enabled := h.nodes[n.id] == n && n.cfg.IsEnabled()
 	h.mu.Unlock()
 	if enabled && l.kind == linkDialIn {
+		// The message is the last connection failure, if any (hub-admin 4).
 		n.setState(admin.Offline, sessionReason(l.sess))
 	}
 }
@@ -349,7 +356,7 @@ func (h *Hub) relayTimeout(n *node) time.Duration {
 // backoff.
 func (h *Hub) waitLink(ctx context.Context, n *node, timeout time.Duration) (*link, error) {
 	h.mu.Lock()
-	l, ready := n.link, n.ready
+	l, ready, gone := n.link, n.ready, n.gone
 	h.mu.Unlock()
 	if l != nil {
 		return l, nil
@@ -362,6 +369,8 @@ func (h *Hub) waitLink(ctx context.Context, n *node, timeout time.Duration) (*li
 	select {
 	case <-ready:
 	case <-t.C:
+	case <-gone:
+		return nil, &session.Error{Code: status.Unimplemented, Message: fmt.Sprintf("node %s was removed or disabled", n.id)}
 	case <-ctx.Done():
 		return nil, context.Cause(ctx)
 	}
@@ -412,11 +421,9 @@ func (h *Hub) Apply(cfg *admin.Config, rev uint64) {
 		if _, ok := h.nodes[id]; ok {
 			continue
 		}
-		n := &node{h: h, id: id, cfg: cfg.Nodes[id], rev: rev, ready: make(chan struct{}), state: admin.Offline}
+		n := &node{h: h, id: id, cfg: cfg.Nodes[id], rev: rev, ready: make(chan struct{}), gone: make(chan struct{}), state: admin.Offline}
 		if ids, ok := h.tab.known[id]; ok {
 			n.listed = ids // last known facets survive restarts (10.7)
-		} else {
-			h.listConfiguredFacetsLocked(n)
 		}
 		h.nodes[id] = n
 		added = append(added, n)
@@ -424,10 +431,9 @@ func (h *Hub) Apply(cfg *admin.Config, rev uint64) {
 	_ = h.tab.save()
 	h.mu.Unlock()
 
-	// Revocation first, ahead of any takeover (10.2).
-	h.revalidateCredentials()
 	for _, n := range removed {
-		n.stopLink()
+		n.markGone()
+		n.stopLink("node removed from the configuration")
 		n.setState(admin.Removed, "")
 	}
 	for _, n := range changed {
@@ -454,64 +460,27 @@ func (h *Hub) Apply(cfg *admin.Config, rev uint64) {
 	}()
 }
 
-// listConfiguredFacetsLocked lists the facets the document gives for a node
-// never seen (10.7).
-func (h *Hub) listConfiguredFacetsLocked(n *node) {
-	if n.cfg.IsPeer() || len(n.cfg.Facets) == 0 {
-		n.listed = nil
-		return
-	}
-	sc := &schema.Schema{Format: schema.Format, Facets: []schema.Facet{}, Annotations: schema.Annotations{}}
-	for i, key := range n.cfg.Facets {
-		f := h.adm.StoredFacet(key)
-		if f == nil {
-			continue
-		}
-		f.ID = schema.FirstFreeFacetID + uint64(i)
-		sc.Facets = append(sc.Facets, *f)
-	}
-	fs, err := h.checkNodeFacetsLocked(n, sc)
-	if err != nil {
-		h.log.Warn("configured facets of a node are not usable", "node", n.id, "err", err)
-		return
-	}
-	h.commitNodeFacetsLocked(n, fs)
-	delete(h.tab.known, n.id) // still never seen
-}
-
-// reconfigure applies a changed NodeConfig (hub-admin 2.2).
+// reconfigure applies a changed NodeConfig (core 10.2, hub-admin 2.2):
+// a node that is disabled, or whose link or peer setting changed, has its
+// session ended at once, and is dialed anew or waited for only while it
+// is still enabled.
 func (h *Hub) reconfigure(n *node, old *admin.NodeConfig) {
-	h.mu.Lock()
 	nc := n.cfg
-	if _, seen := h.tab.known[n.id]; !seen {
-		h.listConfiguredFacetsLocked(n)
-	}
-	h.mu.Unlock()
-	dialChanged := !bytes.Equal(encDial(old.Dial), encDial(nc.Dial)) || old.IsPeer() != nc.IsPeer()
+	linkChanged := !bytes.Equal(old.Link.AppendTo(nil), nc.Link.AppendTo(nil)) || old.IsPeer() != nc.IsPeer()
 	switch {
 	case !nc.IsEnabled():
-		n.stopLink()
-		n.setState(admin.Disabled, "")
-	case nc.Dial == nil:
-		// Dial-in: a node the hub used to dial, or whose kind changed,
-		// must dial in again (a changed credential is handled by the
-		// revalidation in Apply).
-		if old.Dial != nil || old.IsPeer() != nc.IsPeer() || !old.IsEnabled() {
-			n.stopLink()
-			n.setState(admin.Offline, "waiting for the node to dial in")
+		if old.IsEnabled() {
+			n.markGone()
+			n.stopLink("node disabled")
 		}
-	case !old.IsEnabled() || dialChanged:
-		// A dialed node is dialed again and the new session supersedes
-		// the old one, which stays open until then (hub-admin 2.2).
-		n.redial()
+		n.setState(admin.Disabled, "")
+	case !old.IsEnabled():
+		n.unmarkGone()
+		n.begin()
+	case linkChanged:
+		n.stopLink("node reconfigured")
+		n.begin()
 	}
-}
-
-func encDial(d *admin.Dial) []byte {
-	if d == nil {
-		return nil
-	}
-	return d.AppendTo(nil)
 }
 
 // WebExtension is the document extension holding the top-level web.*
@@ -584,15 +553,40 @@ func (h *Hub) loadInterfacesLocked(cfg *admin.Config) {
 	}
 }
 
-// begin starts a new node as its configuration says.
+// begin starts a new or newly enabled node as its configuration says: a
+// dialed node is dialed at once, a dial-in node is waited for (10.7).
 func (n *node) begin() {
 	switch {
 	case !n.cfg.IsEnabled():
+		n.markGone()
 		n.setState(admin.Disabled, "")
-	case n.cfg.Dial == nil:
-		n.setState(admin.Offline, "waiting for the node to dial in")
+	case n.cfg.Link.Dial == nil:
+		n.setState(admin.Offline, "")
 	default:
+		n.setState(admin.Offline, "")
 		n.redial()
+	}
+}
+
+// markGone fails the calls waiting for the node (removed or disabled) with
+// unimplemented (10.7); unmarkGone re-arms it when the node is enabled.
+func (n *node) markGone() {
+	n.h.mu.Lock()
+	defer n.h.mu.Unlock()
+	select {
+	case <-n.gone:
+	default:
+		close(n.gone)
+	}
+}
+
+func (n *node) unmarkGone() {
+	n.h.mu.Lock()
+	defer n.h.mu.Unlock()
+	select {
+	case <-n.gone:
+		n.gone = make(chan struct{})
+	default:
 	}
 }
 
@@ -609,62 +603,73 @@ func (n *node) kickDial() {
 	}
 }
 
-// stopLink stops the node's dial loop and ends its session.
-func (n *node) stopLink() *dialer {
+// stopDial stops the node's dial loop, if any, leaving its session alone.
+func (n *node) stopDial() *dialer {
 	h := n.h
 	h.mu.Lock()
 	dl := n.dl
 	n.dl = nil
-	l := n.link
-	if l != nil {
-		// New calls wait for the next session (10.7).
-		n.link = nil
-		n.ready = make(chan struct{})
-	}
 	h.mu.Unlock()
 	if dl != nil {
 		dl.stop()
 	}
-	if l != nil {
-		l.sess.GoAway(status.GoingAway, "node removed, disabled or reconfigured", nil)
-	}
 	return dl
 }
 
-// redial stops the current dial loop and starts a new one for the current
-// configuration. When the old loop has a session, that session stays until
-// the new one supersedes it or the first new attempt fails (hub-admin 2.2).
+// stopLink stops the dial loop and ends the node's session at once,
+// without the grace period of 5.6 (10.2): the calls running on it end
+// with Error(unavailable) toward their callers, then GoAway
+// (unauthenticated) and the transport closes. Until a new session is
+// ready the node is offline.
+func (n *node) stopLink(why string) {
+	h := n.h
+	dl := n.stopDial()
+	h.mu.Lock()
+	l := n.link
+	if l != nil {
+		n.link = nil
+		n.ready = make(chan struct{})
+	}
+	h.mu.Unlock()
+	if l != nil {
+		h.endLinkNow(l, why)
+	}
+	if dl != nil {
+		dl.wait(10 * time.Second)
+	}
+}
+
+// endLinkNow ends a node session at once (10.2).
+func (h *Hub) endLinkNow(l *link, why string) {
+	h.mu.Lock()
+	var calls []*activeCall
+	for a := range h.calls {
+		if a.link == l {
+			calls = append(calls, a)
+		}
+	}
+	h.mu.Unlock()
+	for _, a := range calls {
+		a.end(status.Unavailable, why)
+	}
+	l.sess.Close(status.Unauthenticated, why)
+}
+
+// redial starts a dial loop for the current configuration of a dialed
+// node.
 func (n *node) redial() {
 	h := n.h
 	h.mu.Lock()
-	old := n.dl
 	cfg := n.cfg
-	if h.nodes[n.id] != n || h.closed || cfg.Dial == nil || !cfg.IsEnabled() {
+	if h.nodes[n.id] != n || h.closed || cfg.Link.Dial == nil || !cfg.IsEnabled() || n.dl != nil {
 		h.mu.Unlock()
 		return
 	}
-	d := &dialer{n: n, done: make(chan struct{}), handEnd: make(chan struct{}), kick: make(chan struct{}, 1)}
+	d := &dialer{n: n, done: make(chan struct{}), kick: make(chan struct{}, 1)}
 	d.ctx, d.cancel = context.WithCancel(h.ctx)
 	n.dl = d
-	handoff := old != nil && n.link != nil && n.link.kind == linkDial
-	if handoff {
-		old.handoff.Store(true)
-		d.prev = old
-	}
-	connected := n.link != nil
 	h.mu.Unlock()
-	if !connected {
-		n.setState(admin.Offline, "dialing "+cfg.Dial.URL)
-	}
-	go func() {
-		if old != nil && handoff {
-			old.cancel() // its session stays until the new one supersedes it
-		} else if old != nil {
-			old.stop()
-			old.wait(10 * time.Second)
-		}
-		d.run(cfg.Dial)
-	}()
+	go d.run(cfg.Link.Dial)
 }
 
 // dialer keeps one dialed node connected (10.2), redialing with backoff.
@@ -676,29 +681,10 @@ type dialer struct {
 	kick   chan struct{} // a waiting call asks for an attempt now (10.7)
 	mu     sync.Mutex
 	sess   *session.Session
-	// handoff: a new dialer took over; the current session ends when the
-	// new one supersedes it (or after a minute).
-	handoff  atomic.Bool
-	handEnd  chan struct{} // closed when the successor's first dial failed
-	handOnce sync.Once
-	prev     *dialer // the dialer this one takes over from
 }
 
-// endHandoff lets a handed-off session close: its successor could not
-// connect.
-func (s *dialer) endHandoff() {
-	s.handOnce.Do(func() { close(s.handEnd) })
-}
-
-func (s *dialer) stop() {
-	s.cancel()
-	s.mu.Lock()
-	sess := s.sess
-	s.mu.Unlock()
-	if sess != nil {
-		sess.GoAway(status.GoingAway, "node stopped by the hub", nil)
-	}
-}
+// stop ends the dial loop; whoever stops it ends its session.
+func (s *dialer) stop() { s.cancel() }
 
 func (s *dialer) wait(d time.Duration) {
 	t := time.NewTimer(d)
@@ -719,10 +705,11 @@ func (s *dialer) setSession(sess *session.Session) {
 // wait for the node.
 const waitingRedial = 250 * time.Millisecond
 
-// backoff is the wait before redial attempt n: from about 125 ms, doubling
-// up to 30 s, with jitter. A call waiting for the node cuts it short.
+// backoff is the wait before redial attempt n, exponential with jitter as
+// a client reconnects (5.6, 10.7): about 500 ms doubling up to about 30 s.
+// A call waiting for the node cuts it short.
 func backoff(attempt int) time.Duration {
-	d := 250 * time.Millisecond << min(attempt, 7)
+	d := 500 * time.Millisecond << min(attempt, 6)
 	if d > 30*time.Second {
 		d = 30 * time.Second
 	}
@@ -748,9 +735,6 @@ func (s *dialer) run(d *admin.Dial) {
 		if err != nil {
 			msg = err.Error()
 			h.log.Warn("dialing a node failed", "node", n.id, "url", d.URL, "err", err)
-			if s.prev != nil {
-				s.prev.endHandoff() // the old session does not wait any longer
-			}
 		} else {
 			attempt = 0
 		}
@@ -811,17 +795,15 @@ func (s *dialer) dialOnce(d *admin.Dial) error {
 	select {
 	case <-sess.Done():
 	case <-s.ctx.Done():
-		if s.handoff.Load() {
-			select {
-			case <-sess.Done():
-			case <-s.handEnd:
-			case <-time.After(time.Minute):
-			}
+		if !h.closing() {
+			// Reconfigured or removed: ended at once (10.2); stopLink has
+			// normally done so already.
+			sess.Close(status.Unauthenticated, "node link stopped by the hub")
 		}
-		sess.GoAway(status.GoingAway, "node link stopped by the hub", nil)
+		// At shutdown Close has sent GoAway and waits for the session.
 		select {
 		case <-sess.Done():
-		case <-time.After(5 * time.Second):
+		case <-time.After(6 * time.Second):
 			sess.Close(status.GoingAway, "node link stopped by the hub")
 		}
 	}

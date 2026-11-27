@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "spec_revision": "core rev347 (draft); hub-admin rev35 (draft)",
+  "spec_revision": "core rev377 (draft); hub-admin rev38 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "notification-shared-lane",
   "description": "A notification: a Request with call ID 0 on the shared lane to a method flagged 0x2. The callee sends nothing back, and the notification does not count toward maxConcurrentCalls (7.1, 7.3, 7.6).",

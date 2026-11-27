@@ -176,10 +176,10 @@ func TestComposition(t *testing.T) {
 	ifaces = cbor.AppendBytes(ifaces, rb)
 	rh, _ := r.Hash()
 	cfg := &admin.Config{Nodes: map[string]*admin.NodeConfig{
-		"acme":   {Credential: strp("x")},
-		"charts": {Credential: strp("y")},
-		"hub-b":  {Credential: strp("z"), Peer: boolp(true)},
-		"off":    {Credential: strp("w"), Enabled: boolp(false)},
+		"acme":   {Link: admin.DialIn("x")},
+		"charts": {Link: admin.DialIn("y")},
+		"hub-b":  {Link: admin.DialIn("z"), Peer: boolp(true)},
+		"off":    {Link: admin.DialIn("w"), Enabled: boolp(false)},
 	}, Defaults: map[string]string{string(rh): "charts.svg"}, Extensions: map[string][]byte{
 		InterfacesExtension: ifaces,
 		PolicyExtension: EncodeGrants([]Grant{

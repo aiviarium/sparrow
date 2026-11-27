@@ -54,28 +54,6 @@ func TestAdmin(t *testing.T) {
 		}
 	}, "facet")
 
-	each(t, "admin.json", func(t *testing.T, v vectors.Vector) {
-		f := decodeFacetField(t, v, "input")
-		src := decodeFacetField(t, vector(t, v.String("facet")), "input")
-		a, _ := f.CanonicalBytes()
-		b, _ := src.CanonicalBytes()
-		if !bytes.Equal(a, b) {
-			t.Fatalf("input is not the named facet")
-		}
-		ki, _ := f.StoredKeyInput()
-		if !bytes.Equal(ki, v.Hex("key_input_cbor")) || !bytes.Equal(ki, v.CBOR("key_input")) {
-			t.Fatalf("key input %x", ki)
-		}
-		k, err := adminiface.StoredFacetKey(f)
-		if err != nil || !bytes.Equal(k, v.Hex("stored_facet_key")) {
-			t.Fatalf("stored-facet key %x", k)
-		}
-		h, _ := f.Hash()
-		if !bytes.Equal(h, v.Hex("facet_hash")) || bytes.Equal(h, k) != !v.Bool("differs") {
-			t.Fatalf("facet hash %x", h)
-		}
-	}, "stored_facet_key")
-
 	codec := codecFor(t, adminiface.Facet(20))
 	each(t, "admin.json", func(t *testing.T, v vectors.Vector) {
 		cb := v.Hex("cbor")

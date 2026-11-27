@@ -1,4 +1,4 @@
-// Command echo-node is an example Sparrow node. It runs in one of three
+// Command echo-node is an example Sparrow node. It runs in one of two
 // ways; whatever starts it (a person, a service manager, an orchestrator, a
 // test) hands it its configuration, since a hub never starts nodes (core
 // section 10.2):
@@ -15,8 +15,6 @@
 //     SHA-256 of its SubjectPublicKeyInfo: the URL and pin to register with
 //     sparrow.hub.admin. -key-file keeps the key (made if missing), so the
 //     pin survives restarts.
-//   - With neither, it speaks the pipe binding on its standard input and
-//     output (4.7), for a supervisor that starts it as a child process.
 //
 // Logs go to standard error. With -web-modules it ships client modules
 // (Web Profile 9.4) in its facet.
@@ -93,6 +91,9 @@ func main() {
 	if *hubURL != "" && listening {
 		fail("flags", errors.New("-hub and -listen exclude each other: a node has one link direction"))
 	}
+	if *hubURL == "" && !listening {
+		fail("flags", errors.New("give -hub URL (dial in) or -listen / -listen-wss ADDR (be dialed)"))
+	}
 	if listening && *credential == "" {
 		fail("flags", errors.New("-listen needs -credential, the credential the hub presents"))
 	}
@@ -132,10 +133,8 @@ func main() {
 			do.HTTPClient = &http.Client{Transport: &http.Transport{TLSClientConfig: tc}}
 		}
 		err = n.RunDial(ctx, *hubURL, do)
-	case listening:
-		err = serveListening(ctx, n, log, *listen, *listenWSS, *keyFile, *credential)
 	default:
-		err = n.RunStdio(ctx)
+		err = serveListening(ctx, n, log, *listen, *listenWSS, *keyFile, *credential)
 	}
 	sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	n.Shutdown(sctx)

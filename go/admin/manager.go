@@ -1,8 +1,6 @@
 package admin
 
 import (
-	"bytes"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,7 +10,6 @@ import (
 	"time"
 
 	"github.com/aiviarium/sparrow-rpc/go/cbor"
-	"github.com/aiviarium/sparrow-rpc/go/schema"
 	"github.com/aiviarium/sparrow-rpc/go/session"
 	"github.com/aiviarium/sparrow-rpc/go/status"
 )
@@ -46,11 +43,10 @@ const (
 	fileHighWater = "highwater"    // the highest revision handed out
 	filePending   = "pending.cbor" // [revision]: a commit is pending
 	dirSecrets    = "secrets"
-	dirFacets     = "facets"
 )
 
 // Manager holds the administration state: the applied document and its
-// revision, the pending commit, stored secrets and facets, and watchers.
+// revision, the pending commit, stored secrets, and watchers.
 type Manager struct {
 	o     Options
 	store *Store
@@ -70,7 +66,6 @@ type Manager struct {
 	deadline     time.Time
 	timer        session.Timer
 	secrets      map[string][]byte
-	facets       map[string][]byte // stored-facet key -> canonical facet
 	nodes        map[string]NodeEvent
 	watchers     map[*watcher]struct{}
 }
@@ -86,7 +81,7 @@ func NewManager(o Options) (*Manager, error) {
 		o.WatchQueue = 256
 	}
 	m := &Manager{o: o, store: o.Store, clock: o.Clock, log: o.Logger, doc: EmptyConfig(), state: Confirmed,
-		secrets: map[string][]byte{}, facets: map[string][]byte{}, nodes: map[string]NodeEvent{}, watchers: map[*watcher]struct{}{}}
+		secrets: map[string][]byte{}, nodes: map[string]NodeEvent{}, watchers: map[*watcher]struct{}{}}
 	if m.clock == nil {
 		m.clock = session.RealClock{}
 	}
@@ -131,21 +126,6 @@ func (m *Manager) load() error {
 			return err
 		}
 		m.secrets[n] = v
-	}
-	keys, err := s.List(dirFacets)
-	if err != nil {
-		return err
-	}
-	for _, k := range keys {
-		key, err := hex.DecodeString(k)
-		if err != nil {
-			continue
-		}
-		v, err := s.Read(dirFacets + "/" + k)
-		if err != nil {
-			return err
-		}
-		m.facets[string(key)] = v
 	}
 	if b, err := s.Read(filePending); err == nil {
 		p, err := DecodeUint(b)
@@ -242,26 +222,10 @@ func (m *Manager) SecretValue(name string) ([]byte, bool) {
 	return v, ok
 }
 
-// StoredFacet returns a stored facet (with facet ID 0) by key.
-func (m *Manager) StoredFacet(key []byte) *schema.Facet {
-	m.mu.Lock()
-	b, ok := m.facets[string(key)]
-	m.mu.Unlock()
-	if !ok {
-		return nil
-	}
-	f, err := schema.DecodeFacet(b)
-	if err != nil {
-		return nil
-	}
-	return f
-}
-
 func (m *Manager) env() ValidateEnv {
 	return ValidateEnv{
 		SecretExists: func(n string) bool { _, ok := m.SecretValue(n); return ok },
 		SecretValue:  m.SecretValue,
-		StoredFacet:  m.StoredFacet,
 		Extension:    m.o.Extension,
 	}
 }
@@ -466,18 +430,14 @@ func (m *Manager) Rollback(n uint64) (uint64, error) {
 }
 
 // referencedLocked reports whether the applied document or, while a commit
-// is pending, its rollback target refers to a secret or facet (2.1).
-func (m *Manager) referencedLocked(secret string, facet []byte) bool {
+// is pending, its rollback target refers to a secret (2.1).
+func (m *Manager) referencedLocked(secret string) bool {
 	docs := []*Config{m.doc}
 	if m.state == Pending {
 		docs = append(docs, m.confirmedDoc)
 	}
 	for _, d := range docs {
-		ss, fs := References(d)
-		if secret != "" && ss[secret] {
-			return true
-		}
-		if facet != nil && fs[string(facet)] {
+		if References(d)[secret] {
 			return true
 		}
 	}
@@ -510,7 +470,7 @@ func (m *Manager) DeleteSecret(name string) error {
 	if _, ok := m.secrets[name]; !ok {
 		return nil
 	}
-	if m.referencedLocked(name, nil) {
+	if m.referencedLocked(name) {
 		return &session.Error{Code: status.FailedPrecondition, Message: fmt.Sprintf("secret %q is still referenced", name)}
 	}
 	if err := m.store.Remove(dirSecrets + "/" + name); err != nil {
@@ -532,80 +492,8 @@ func (m *Manager) ListSecrets() []string {
 	return out
 }
 
-// PutFacet stores a facet document in canonical form with facet ID 0 and
-// returns its stored-facet key (2.1).
-func (m *Manager) PutFacet(doc []byte) ([]byte, error) {
-	bad := func(msg string) error {
-		ps := []Problem{{Path: []string{}, Message: msg}}
-		return &session.Error{Code: status.InvalidArgument, Message: msg, Details: ProblemsDetails(ps)}
-	}
-	f, err := schema.DecodeFacet(doc)
-	if err != nil {
-		return nil, bad("not a facet document: " + err.Error())
-	}
-	f.ID = 0
-	f = f.Canonical()
-	probe := f.Clone()
-	probe.ID = schema.FirstFreeFacetID
-	if err := probe.Validate(); err != nil {
-		return nil, bad("invalid facet: " + err.Error())
-	}
-	if cbor.ContainsFloat(doc) {
-		return nil, bad("a facet contains no floats")
-	}
-	key, err := f.StoredKey()
-	if err != nil {
-		return nil, bad(err.Error())
-	}
-	canon, err := f.CanonicalBytes()
-	if err != nil {
-		return nil, bad(err.Error())
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if old, ok := m.facets[string(key)]; ok && bytes.Equal(old, canon) {
-		return key, nil
-	}
-	if err := m.store.Write(dirFacets+"/"+hex.EncodeToString(key), canon); err != nil {
-		return nil, &session.Error{Code: status.Internal, Message: err.Error()}
-	}
-	m.facets[string(key)] = canon
-	return key, nil
-}
-
-// DeleteFacet deletes a stored facet that nothing refers to.
-func (m *Manager) DeleteFacet(key []byte) error {
-	m.opMu.Lock()
-	defer m.opMu.Unlock()
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if _, ok := m.facets[string(key)]; !ok {
-		return nil
-	}
-	if m.referencedLocked("", key) {
-		return &session.Error{Code: status.FailedPrecondition, Message: fmt.Sprintf("facet %x is still referenced", key)}
-	}
-	if err := m.store.Remove(dirFacets + "/" + hex.EncodeToString(key)); err != nil {
-		return &session.Error{Code: status.Internal, Message: err.Error()}
-	}
-	delete(m.facets, string(key))
-	return nil
-}
-
-// ListFacets returns the stored-facet keys.
-func (m *Manager) ListFacets() [][]byte {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	out := make([][]byte, 0, len(m.facets))
-	for k := range m.facets {
-		out = append(out, []byte(k))
-	}
-	sort.Slice(out, func(i, j int) bool { return bytes.Compare(out[i], out[j]) < 0 })
-	return out
-}
-
 // NodeEvent records a node's state and sends it to every watcher (section
-// 4). A Removed node is forgotten.
+// 4). A Removed node is reported once and forgotten.
 func (m *Manager) NodeEvent(ev NodeEvent) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -613,6 +501,10 @@ func (m *Manager) NodeEvent(ev NodeEvent) {
 		return
 	}
 	if ev.State == Removed {
+		// One removed event, and the node is not reported again (4).
+		if _, ok := m.nodes[ev.Node]; !ok {
+			return
+		}
 		delete(m.nodes, ev.Node)
 	} else {
 		m.nodes[ev.Node] = ev

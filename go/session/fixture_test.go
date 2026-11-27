@@ -19,7 +19,6 @@ import (
 	"github.com/aiviarium/sparrow-rpc/go/status"
 	"github.com/aiviarium/sparrow-rpc/go/transport"
 	"github.com/aiviarium/sparrow-rpc/go/transport/mem"
-	"github.com/aiviarium/sparrow-rpc/go/transport/pipe"
 	wsb "github.com/aiviarium/sparrow-rpc/go/transport/websocket"
 	wtb "github.com/aiviarium/sparrow-rpc/go/transport/webtransport"
 	"github.com/aiviarium/sparrow-rpc/go/value"
@@ -292,31 +291,6 @@ func memBinding() binding {
 	}, true}
 }
 
-func pipeBinding() binding {
-	return binding{"pipe", func(t testing.TB) (transport.Conn, transport.Conn) {
-		a, b := net.Pipe()
-		return pipe.New(a), pipe.New(b)
-	}, false}
-}
-
-func unixBinding() binding {
-	return binding{"unix", func(t testing.TB) (transport.Conn, transport.Conn) {
-		dir := t.TempDir()
-		ln, err := net.Listen("unix", dir+"/s")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer ln.Close()
-		ch := make(chan net.Conn, 1)
-		go func() { c, _ := ln.Accept(); ch <- c }()
-		a, err := net.Dial("unix", dir+"/s")
-		if err != nil {
-			t.Fatal(err)
-		}
-		return pipe.New(a), pipe.New(<-ch)
-	}, false}
-}
-
 func wsBinding() binding {
 	return binding{"websocket", func(t testing.TB) (transport.Conn, transport.Conn) {
 		ch := make(chan transport.Conn, 1)
@@ -386,7 +360,7 @@ func wtBinding() binding {
 }
 
 func allBindings() []binding {
-	return []binding{memBinding(), pipeBinding(), wsBinding(), wtBinding()}
+	return []binding{memBinding(), wsBinding(), wtBinding()}
 }
 
 // pair connects a client and a server session.

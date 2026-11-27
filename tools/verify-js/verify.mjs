@@ -16,7 +16,6 @@ import {
 import {
   P, SchemaState, DeltaError, canonicalFacet, canonicalIface, canonicalSchema, facetHash, facetHashInput, ifaceHash,
   schemaHash, schemaHashInput, conforms, validateFacet, validateIface, validateSchema, validateSentSchema,
-  storedFacetKey, storedFacetKeyInput,
 } from './lib/schema.mjs';
 import { checkValue } from './lib/value.mjs';
 import {
@@ -635,7 +634,7 @@ function checkHub(v) {
       msgOk(v.node_response, 'node response');
       msgOk(v.relayed_response, 'relayed response');
       check(cr[1] !== fr[1], v, 'call_id differs between hops');
-      checkEq(fr[1] % 2, 1, v, 'hub is the Sparrow server on the pipe link, so its call ID is odd');
+      checkEq(fr[1] % 2, 1, v, 'hub is the Sparrow server on the link of a node that dialed in, so its call ID is odd');
       checkEq(cr[2], v.facet_map.hub_facet_id, v, 'client uses the hub facet ID');
       checkEq(fr[2], v.facet_map.node_facet_id, v, 'forwarded call uses the node facet ID');
       checkEq(cr[3], fr[3], v, 'same method ID');
@@ -710,8 +709,8 @@ function checkHub(v) {
       const view = canonicalSchema(base.input);
       view[3] = view[3].filter((p) => !v.omitted_facet_ids.includes(p[P.id]));
       checkEq(hex(schemaHash(view)), v.hash, v, 'view hash');
-      const w = byName.get('welcome/node-pipe').message;
-      checkEq(w[5][1].$bytes, v.hash, v, 'welcome/node-pipe offers this view');
+      const w = byName.get('welcome/node-dial-in').message;
+      checkEq(w[5][1].$bytes, v.hash, v, 'welcome/node-dial-in offers this view');
       break;
     }
     case 'node_id_table':
@@ -781,32 +780,33 @@ function checkParams(v) {
 
 // Section 5 of the admin tab, transcribed independently of the generator.
 const ADMIN_TYPES = [
-  [64, 'Config', 'struct'], [65, 'NodeConfig', 'struct'], [66, 'Dial', 'struct'], [67, 'Snapshot', 'struct'], [68, 'CommitRequest', 'struct'],
-  [69, 'ValidateRequest', 'struct'], [70, 'Problem', 'struct'], [71, 'Problems', 'alias'], [72, 'Secret', 'struct'], [73, 'Names', 'alias'],
-  [74, 'Hashes', 'alias'], [75, 'Event', 'union'], [76, 'RevisionEvent', 'struct'], [77, 'RevisionState', 'enum'], [78, 'NodeEvent', 'struct'],
+  [64, 'Config', 'struct'], [65, 'NodeConfig', 'struct'], [66, 'Link', 'union'], [67, 'Dial', 'struct'], [68, 'Snapshot', 'struct'],
+  [69, 'CommitRequest', 'struct'], [70, 'ValidateRequest', 'struct'], [71, 'Problem', 'struct'], [72, 'Problems', 'alias'], [73, 'Secret', 'struct'],
+  [74, 'Names', 'alias'], [75, 'Event', 'union'], [76, 'RevisionEvent', 'struct'], [77, 'RevisionState', 'enum'], [78, 'NodeEvent', 'struct'],
   [79, 'NodeState', 'enum'],
 ];
 const ADMIN_FIELDS = { // type -> [tag, name, type, optional]
   64: [[0, 'nodes', [1, 6, 65]], [1, 'defaults', [1, 7, 6], 1], [2, 'extensions', [1, 6, 7], 1]],
-  65: [[0, 'dial', 66, 1], [1, 'credential', 6, 1], [2, 'facets', [0, 7], 1], [3, 'peer', 1, 1], [4, 'enabled', 1, 1], [5, 'extensions', [1, 6, 7], 1]],
-  66: [[0, 'url', 6], [1, 'pin', 7], [2, 'credential', 6]],
-  67: [[0, 'revision', 3], [1, 'config', 64], [2, 'state', 77], [3, 'confirmInMs', 3, 1]],
-  68: [[0, 'base', 3], [1, 'config', 64], [2, 'confirmWithinMs', 3]],
-  69: [[0, 'base', 3], [1, 'config', 64]],
-  70: [[0, 'path', [0, 6]], [1, 'message', 6]],
-  72: [[0, 'name', 6], [1, 'value', 7]],
-  75: [[0, 'snapshot', 67], [1, 'revision', 76], [2, 'node', 78]],
+  65: [[0, 'link', 66], [1, 'peer', 1, 1], [2, 'enabled', 1, 1], [3, 'extensions', [1, 6, 7], 1]],
+  66: [[0, 'dial', 67], [1, 'credential', 6]],
+  67: [[0, 'url', 6], [1, 'pin', 7], [2, 'credential', 6]],
+  68: [[0, 'revision', 3], [1, 'config', 64], [2, 'state', 77], [3, 'confirmInMs', 3, 1]],
+  69: [[0, 'base', 3], [1, 'config', 64], [2, 'confirmWithinMs', 3]],
+  70: [[0, 'base', 3], [1, 'config', 64]],
+  71: [[0, 'path', [0, 6]], [1, 'message', 6]],
+  73: [[0, 'name', 6], [1, 'value', 7]],
+  75: [[0, 'snapshot', 68], [1, 'revision', 76], [2, 'node', 78]],
   76: [[0, 'revision', 3], [1, 'state', 77], [2, 'confirmInMs', 3, 1]],
   78: [[0, 'node', 6], [1, 'revision', 3], [2, 'state', 79], [3, 'message', 6, 1]],
 };
-const ADMIN_ALIASES = { 71: [0, 70], 73: [0, 6], 74: [0, 7] };
+const ADMIN_ALIASES = { 72: [0, 71], 74: [0, 6] };
 const ADMIN_ENUMS = { 77: [64, 65, 66], 79: [67, 68, 69, 70] };
 const ADMIN_SIGILS = ['pending', 'confirmed', 'rolledBack', 'connected', 'offline', 'disabled', 'removed'];
 const IDEM = 0x1;
 const ADMIN_METHODS = [ // id, name, input, output, flags
-  [0, 'get', 0, 67, IDEM], [1, 'validate', 69, 71, IDEM], [2, 'commit', 68, 3, 0], [3, 'confirm', 3, 0, IDEM],
-  [4, 'rollback', 3, 3, 0], [5, 'setSecret', 72, 0, 0], [6, 'deleteSecret', 6, 0, IDEM], [7, 'listSecrets', 0, 73, IDEM],
-  [8, 'putFacet', 7, 7, IDEM], [9, 'deleteFacet', 7, 0, IDEM], [10, 'listFacets', 0, 74, IDEM], [11, 'watch', 0, [3, 75], 0x10],
+  [0, 'get', 0, 68, IDEM], [1, 'validate', 70, 72, IDEM], [2, 'commit', 69, 3, 0], [3, 'confirm', 3, 0, IDEM],
+  [4, 'rollback', 3, 3, 0], [5, 'setSecret', 73, 0, 0], [6, 'deleteSecret', 6, 0, IDEM], [7, 'listSecrets', 0, 74, IDEM],
+  [8, 'watch', 0, [3, 75], 0x10],
 ];
 const KIND_NAMES = ['struct', 'enum', 'union', 'alias'];
 
@@ -830,7 +830,7 @@ function checkAdminInterface(v, iface) {
   checkEq(svcs.length, 1, v, 'one service');
   checkEq(svcs[0][0], 0, v, 'service 0');
   checkEq(svcs[0][1], 'Admin', v, 'service name');
-  check(eqTJ(svcs[0][2], ADMIN_METHODS.map(([id, n, i, o, f]) => [id, n, i, o, [], f, {}])), v, 'methods 0-11 with inputs, outputs and flags');
+  check(eqTJ(svcs[0][2], ADMIN_METHODS.map(([id, n, i, o, f]) => [id, n, i, o, [], f, {}])), v, 'methods 0-8 with inputs, outputs and flags');
 }
 
 function checkAdmin(v) {
@@ -849,36 +849,20 @@ function checkAdmin(v) {
       for (const m of v.input[P.services][0][2]) check(eqTJ(m[6], { 'sparrow.level': 'manage' }), v, `method ${m[1]} carries sparrow.level manage`);
       break;
     }
-    case 'stored_facet_key': {
-      const src = byName.get(v.facet);
-      check(eqTJ(v.input, src.input), v, 'input is the named facet');
-      check(eqTJ(storedFacetKeyInput(v.input), v.key_input), v, 'key input: canonical facet, id 0, name kept');
-      checkEq(v.key_input[P.name], v.input[P.name], v, 'name kept');
-      checkEq(v.key_input[P.id], 0, v, 'id 0');
-      checkEq(hex(encTJ(v.key_input)), v.key_input_cbor, v, 'key input bytes');
-      checkEq(hex(storedFacetKey(v.input)), v.stored_facet_key, v, 'stored-facet key');
-      checkEq(hex(encTJ(facetHashInput(v.input))), v.facet_hash_input_cbor, v, 'facet hash input');
-      checkEq(hex(facetHash(v.input)), v.facet_hash, v, 'facet hash');
-      checkEq(v.facet_hash, src.facet_hash, v, 'facet hash of the named facet vector');
-      check(v.differs && v.facet_hash !== v.stored_facet_key, v, 'key and facet hash differ');
-      break;
-    }
     case 'admin_value':
       roundTrip(v, v.value, v.cbor);
       checkEq(v.type_name, typeMap().get(v.type_id)?.[2], v, 'type name');
       expectOk(() => checkValue(typeMap(), v.type_id, v.value), v, 'value conforms to its type');
       if (v.name === 'admin/value/config') {
-        const key = byName.get('admin/stored-facet-key').stored_facet_key;
-        check(v.value[0]['acme.charts'][2][0].$bytes === key, v, 'acme.charts lists its stored-facet key');
         checkEq(v.value[1].$map[0][0].$bytes, byName.get('interface/acme-charts-renderer').hash, v, 'defaults key is the Renderer interface hash');
-        check(Object.values(v.value[0]).every((n) => (n[0] != null) !== (n[1] != null)), v, 'every node has exactly one link direction');
+        check(Object.values(v.value[0]).every((n) => Array.isArray(n[0]) && (n[0][0] === 0 || n[0][0] === 1)), v, 'every node has a link: a Dial or a dial-in credential');
       }
       break;
     case 'message': {
       checkMessage(v);
       const m = v.message;
       checkEq(m[2], 9, v, 'failed_precondition');
-      checkEq(m[4][0], 71, v, 'details are dynamic Problems');
+      checkEq(m[4][0], 72, v, 'details are dynamic Problems');
       expectOk(() => checkValue(typeMap(), 10, m[4]), v, 'details conform');
       break;
     }

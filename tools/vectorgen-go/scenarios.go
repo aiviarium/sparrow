@@ -257,7 +257,7 @@ func scenarios() []*scenario {
 	s.expect("stream_idle", "stream", "lease:1")
 	out = append(out, s)
 
-	s = newScenario("callee-error-while-streaming", "The callee fails a client-stream call while input is still arriving. It MUST keep reading and discarding the caller's input until the caller's half is finished. An Item already on its way when the Error was sent is discarded; when the Error arrives the caller sends End next, with no further Item or Bytes (7.1).", "7.1, 7.3",
+	s = newScenario("callee-error-while-streaming", "The callee fails a client-stream call while input is still arriving. It forgets the call with its Error: it stops counting it and ignores the caller's later input, granting no more credit for it, but on this leased stream it notes when the caller's half finishes, since only then is the stream idle. An Item already on its way when the Error was sent is ignored; when the Error arrives the caller sends End next, with no further Item or Bytes, and the stream is idle (7.1, 7.6).", "7.1, 7.3, 7.6",
 		after())
 	s.msg("client", "lease:1", req(2, mSum, none, nil))
 	s.msg("client", "lease:1", []any{18, 2, 5})
@@ -265,7 +265,7 @@ func scenarios() []*scenario {
 	s.msg("server", "lease:1", []any{20, 2, 11, "item 5000 exceeds 1000", nil}, "compare", "status")
 	s.expect("half_finished", "call_id", 2, "half", "callee")
 	s.msg("client", "lease:1", []any{18, 2, 7}, "crossed", true, "note", "sent before the Error reached the client")
-	s.expect("discarded", "by", "server", "call_id", 2)
+	s.expect("discarded", "by", "server", "call_id", 2, "note", "ignored: the callee forgot the call")
 	s.msg("client", "lease:1", []any{19, 2, none}, "note", "the caller's next message after receiving the Error")
 	s.expect("call_ended", "call_id", 2)
 	s.expect("stream_idle", "stream", "lease:1")

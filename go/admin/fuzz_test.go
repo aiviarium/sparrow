@@ -10,7 +10,7 @@ import (
 // the same document.
 func FuzzDecode(f *testing.F) {
 	f.Add(EmptyConfig().Encode())
-	f.Add((&CommitRequest{Base: 1, Config: &Config{Nodes: map[string]*NodeConfig{"a": {Credential: ptr("c"), Facets: [][]byte{{1}}}}}, ConfirmWithinMs: 5}).Encode())
+	f.Add((&CommitRequest{Base: 1, Config: &Config{Nodes: map[string]*NodeConfig{"a": {Link: DialIn("c")}, "b": {Link: Dialed(Dial{URL: "https://b", Pin: []byte{1}, Credential: "d"})}}}, ConfirmWithinMs: 5}).Encode())
 	f.Add(EncodeSecret("x", []byte{1}))
 	f.Add(EncodeProblems([]Problem{{Path: []string{"a", "0"}, Message: "m"}}))
 	f.Fuzz(func(t *testing.T, b []byte) {

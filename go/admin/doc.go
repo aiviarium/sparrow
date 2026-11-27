@@ -33,9 +33,7 @@ type Config struct {
 
 // NodeConfig configures one node.
 type NodeConfig struct {
-	Dial       *Dial // the hub dials the node; nil: the node dials in
-	Credential *string
-	Facets     [][]byte // stored-facet keys; nil when absent
+	Link       Link
 	Peer       *bool
 	Enabled    *bool
 	Extensions map[string][]byte
@@ -46,6 +44,30 @@ func (n *NodeConfig) IsEnabled() bool { return n.Enabled == nil || *n.Enabled }
 
 // IsPeer reports the peer flag (default false).
 func (n *NodeConfig) IsPeer() bool { return n.Peer != nil && *n.Peer }
+
+// Link is the Link union (type 66): exactly one of Dial (the hub dials
+// the node) or Credential (the secret a node that dials in presents), or
+// a variant this hub does not know (UnknownTag, kept as Unknown).
+type Link struct {
+	Dial       *Dial
+	Credential *string
+	UnknownTag uint64
+	Unknown    cbor.Raw
+}
+
+// DialIn returns a Link for a node that dials in presenting the secret.
+func DialIn(secret string) Link { return Link{Credential: &secret} }
+
+// Dialed returns a Link for a node the hub dials.
+func Dialed(d Dial) Link { return Link{Dial: &d} }
+
+// CredentialName returns the dial-in credential's secret name, or "".
+func (n *NodeConfig) CredentialName() string {
+	if n.Link.Credential == nil {
+		return ""
+	}
+	return *n.Link.Credential
+}
 
 // Dial makes the hub dial a node.
 type Dial struct {
@@ -165,26 +187,35 @@ func (c *Config) AppendTo(dst []byte) []byte {
 
 // AppendTo appends the canonical encoding of a NodeConfig (type 65).
 func (n *NodeConfig) AppendTo(dst []byte) []byte {
-	var dial, facets, peer, enabled []byte
-	if n.Dial != nil {
-		dial = n.Dial.AppendTo(nil)
-	}
-	if n.Facets != nil {
-		facets = cbor.AppendArrayHead(nil, len(n.Facets))
-		for _, f := range n.Facets {
-			facets = cbor.AppendBytes(facets, f)
-		}
-	}
+	var peer, enabled []byte
 	if n.Peer != nil {
 		peer = boolv(*n.Peer)
 	}
 	if n.Enabled != nil {
 		enabled = boolv(*n.Enabled)
 	}
-	return appendStruct(dst, dial, optText(n.Credential), facets, peer, enabled, encStringBytesMap(n.Extensions))
+	return appendStruct(dst, n.Link.AppendTo(nil), peer, enabled, encStringBytesMap(n.Extensions))
 }
 
-// AppendTo appends the canonical encoding of a Dial (type 66).
+// AppendTo appends the Link union (type 66).
+func (l *Link) AppendTo(dst []byte) []byte {
+	dst = cbor.AppendArrayHead(dst, 2)
+	switch {
+	case l.Dial != nil:
+		dst = cbor.AppendUint(dst, adminiface.LinkDial)
+		return l.Dial.AppendTo(dst)
+	case l.Credential != nil:
+		dst = cbor.AppendUint(dst, adminiface.LinkCredential)
+		return cbor.AppendText(dst, *l.Credential)
+	}
+	dst = cbor.AppendUint(dst, l.UnknownTag)
+	if l.Unknown == nil {
+		return cbor.AppendNull(dst)
+	}
+	return append(dst, l.Unknown...)
+}
+
+// AppendTo appends the canonical encoding of a Dial (type 67).
 func (d *Dial) AppendTo(dst []byte) []byte {
 	return appendStruct(dst, text(d.URL), bstr(d.Pin), text(d.Credential))
 }
@@ -410,46 +441,31 @@ func (r *dec) config() *Config {
 
 func (r *dec) nodeConfig() *NodeConfig {
 	n := &NodeConfig{}
-	r.structFields(6, func(i int) {
+	hasLink := false
+	r.structFields(4, func(i int) {
 		switch i {
 		case 0:
-			r.push("dial")
-			if !r.null() {
-				n.Dial = r.dial()
+			r.push("link")
+			hasLink = !r.null()
+			if hasLink {
+				n.Link = r.link()
 			}
 			r.pop()
 		case 1:
-			r.push("credential")
-			if !r.null() {
-				s := r.text()
-				n.Credential = &s
-			}
-			r.pop()
-		case 2:
-			r.push("facets")
-			if !r.null() {
-				k := r.array()
-				n.Facets = make([][]byte, 0, k)
-				for j := 0; j < k && r.err == nil; j++ {
-					n.Facets = append(n.Facets, r.bytes())
-				}
-			}
-			r.pop()
-		case 3:
 			r.push("peer")
 			if !r.null() {
 				v := r.boolean()
 				n.Peer = &v
 			}
 			r.pop()
-		case 4:
+		case 2:
 			r.push("enabled")
 			if !r.null() {
 				v := r.boolean()
 				n.Enabled = &v
 			}
 			r.pop()
-		case 5:
+		case 3:
 			r.push("extensions")
 			if !r.null() {
 				n.Extensions = r.stringBytesMap()
@@ -457,7 +473,33 @@ func (r *dec) nodeConfig() *NodeConfig {
 			r.pop()
 		}
 	})
+	if !hasLink && r.err == nil {
+		r.fail("link is required")
+	}
 	return n
+}
+
+func (r *dec) link() Link {
+	var l Link
+	if n := r.array(); n != 2 && r.err == nil {
+		r.fail("a union is [tag, value]")
+		return l
+	}
+	switch tag := r.uint(); tag {
+	case adminiface.LinkDial:
+		r.push("dial")
+		l.Dial = r.dial()
+		r.pop()
+	case adminiface.LinkCredential:
+		r.push("credential")
+		c := r.text()
+		l.Credential = &c
+		r.pop()
+	default:
+		l.UnknownTag = tag
+		l.Unknown = r.raw()
+	}
+	return l
 }
 
 func (r *dec) dial() *Dial {
@@ -535,7 +577,7 @@ func (s NodeState) String() string {
 	return fmt.Sprintf("NodeState(%d)", uint64(s))
 }
 
-// Snapshot is type 67.
+// Snapshot is type 68.
 type Snapshot struct {
 	Revision    uint64
 	Config      *Config
@@ -565,7 +607,7 @@ type Event struct {
 	Node     *NodeEvent
 }
 
-// Problem is type 70.
+// Problem is type 71.
 type Problem struct {
 	Path    []string
 	Message string
@@ -603,7 +645,7 @@ func (e *Event) Encode() []byte {
 	}
 }
 
-// EncodeProblems encodes a Problems list (type 71).
+// EncodeProblems encodes a Problems list (type 72).
 func EncodeProblems(ps []Problem) []byte {
 	dst := cbor.AppendArrayHead(nil, len(ps))
 	for _, p := range ps {
@@ -617,14 +659,14 @@ func EncodeProblems(ps []Problem) []byte {
 }
 
 // ProblemsDetails returns Error.details for an invalid document: the
-// dynamic value [71, problems] (section 5.2).
+// dynamic value [72, problems] (section 5.2).
 func ProblemsDetails(ps []Problem) cbor.Raw {
 	dst := cbor.AppendArrayHead(nil, 2)
 	dst = cbor.AppendUint(dst, adminiface.TypeProblems)
 	return append(dst, EncodeProblems(ps)...)
 }
 
-// DecodeSnapshot decodes type 67.
+// DecodeSnapshot decodes type 68.
 func DecodeSnapshot(b []byte) (*Snapshot, error) {
 	var s *Snapshot
 	err := decodeWith(b, func(r *dec) { s = r.snapshot() })
@@ -709,7 +751,7 @@ func DecodeEvent(b []byte) (*Event, error) {
 	return e, err
 }
 
-// DecodeProblems decodes type 71, or the dynamic [71, problems].
+// DecodeProblems decodes type 73, or the dynamic [72, problems].
 func DecodeProblems(b []byte) ([]Problem, error) {
 	var ps []Problem
 	err := decodeWith(b, func(r *dec) {
@@ -744,7 +786,7 @@ func DecodeProblems(b []byte) ([]Problem, error) {
 	return ps, err
 }
 
-// CommitRequest is type 68.
+// CommitRequest is type 69.
 type CommitRequest struct {
 	Base            uint64
 	Config          *Config
@@ -756,7 +798,7 @@ func (c *CommitRequest) Encode() []byte {
 	return appendStruct(nil, uintv(c.Base), c.Config.Encode(), uintv(c.ConfirmWithinMs))
 }
 
-// DecodeCommitRequest decodes type 68 (and type 69, which is its prefix).
+// DecodeCommitRequest decodes type 69 (and type 70, which is its prefix).
 func DecodeCommitRequest(b []byte) (*CommitRequest, error) {
 	c := &CommitRequest{}
 	seen := 0
@@ -779,12 +821,12 @@ func DecodeCommitRequest(b []byte) (*CommitRequest, error) {
 	return c, err
 }
 
-// EncodeValidateRequest encodes type 69.
+// EncodeValidateRequest encodes type 70.
 func EncodeValidateRequest(base uint64, c *Config) []byte {
 	return appendStruct(nil, uintv(base), c.Encode())
 }
 
-// EncodeSecret encodes type 72.
+// EncodeSecret encodes type 73.
 func EncodeSecret(name string, value []byte) []byte {
 	return appendStruct(nil, text(name), bstr(value))
 }
@@ -820,15 +862,6 @@ func EncodeStrings(ss []string) []byte {
 	return dst
 }
 
-// EncodeBytesList encodes list<bytes> (Hashes).
-func EncodeBytesList(bs [][]byte) []byte {
-	dst := cbor.AppendArrayHead(nil, len(bs))
-	for _, b := range bs {
-		dst = cbor.AppendBytes(dst, b)
-	}
-	return dst
-}
-
 // DecodeStrings decodes list<string>.
 func DecodeStrings(b []byte) ([]string, error) {
 	var out []string
@@ -837,19 +870,6 @@ func DecodeStrings(b []byte) ([]string, error) {
 		out = make([]string, 0, n)
 		for i := 0; i < n && r.err == nil; i++ {
 			out = append(out, r.text())
-		}
-	})
-	return out, err
-}
-
-// DecodeBytesList decodes list<bytes>.
-func DecodeBytesList(b []byte) ([][]byte, error) {
-	var out [][]byte
-	err := decodeWith(b, func(r *dec) {
-		n := r.array()
-		out = make([][]byte, 0, n)
-		for i := 0; i < n && r.err == nil; i++ {
-			out = append(out, r.bytes())
 		}
 	})
 	return out, err

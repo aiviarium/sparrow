@@ -175,24 +175,6 @@ func framingVectors() O {
 		"bytes", hx(cat([]byte{1}, wantReq)),
 		"reverse_bytes", hx(wantRsp),
 	))
-	nh := nodeHello()
-	nhb := enc(nh)
-	hv := hubViewForNode()
-	nw := []any{1, 1, map[string]any{}, testSessionID, map[string]any{}, []any{2, schemaHash(hv), hv}, map[string]any{}}
-	nwb := enc(nw)
-	vs = append(vs, o(
-		"name", "pipe/node-hello",
-		"description", "Pipe binding (section 4.7): a started process, here node acme.charts, writes Hello on its standard output, length-prefixed with a QUIC varint and with no stream header. The side that started it answers on the process's standard input the same way. A hub never starts processes (section 10.2); the binding is generic.",
-		"spec", "4.7, 10.2",
-		"type", "stream",
-		"parts", []any{
-			o("what", "length prefix", "hex", hx(varint(uint64(len(nhb))))),
-			o("what", "Hello", "hex", hx(nhb), "ref", "hello/node-pipe"),
-		},
-		"bytes", hx(cat(varint(uint64(len(nhb))), nhb)),
-		"reverse_bytes", hx(cat(varint(uint64(len(nwb))), nwb)),
-		"reverse_ref", "welcome/node-pipe",
-	))
 	vs = append(vs, o(
 		"name", "websocket/7.7",
 		"description", "WebSocket binding: each binary WebSocket message carries exactly one Sparrow message, with no length prefix and no stream header.",
@@ -260,13 +242,13 @@ func handshakeVectors() O {
 	vs = append(vs, msgVec("ready",
 		"Ready naming the server schema hash the client loaded.",
 		"5.4", []any{2, r.baseHash}, "refs", o("schema_hash", "schema/server-base")))
-	vs = append(vs, msgVec("hello/node-pipe",
-		"Hello from node 'acme.charts', a started process on the pipe binding (section 4.7): no auth, since only the side that started it holds its standard input and output; the node's facets travel in client_schema.",
-		"4.7, 10.2", nodeHello(), "refs", o("client_schema", "schema/node-acme-charts")))
+	vs = append(vs, msgVec("hello/node-dial-in",
+		"Hello from node 'acme.charts', which dials in: it presents [\"link\", credential] (section 10.2), and its facets travel in client_schema.",
+		"10.2", nodeHello(), "refs", o("client_schema", "schema/node-acme-charts")))
 	hv := hubViewForNode()
-	vs = append(vs, msgVec("welcome/node-pipe",
-		"The Welcome to node 'acme.charts' on the pipe: the full schema of the hub's view the node may call, which leaves out the node's own facet (section 10.3).",
-		"4.7, 10.3", []any{1, 1, map[string]any{}, testSessionID, map[string]any{}, []any{2, schemaHash(hv), hv}, map[string]any{}}))
+	vs = append(vs, msgVec("welcome/node-dial-in",
+		"The hub's Welcome to node 'acme.charts', which dialed in: the full schema of the hub's view the node may call, which leaves out the node's own facet (section 10.3).",
+		"10.2, 10.3", []any{1, 1, map[string]any{}, testSessionID, map[string]any{}, []any{2, schemaHash(hv), hv}, map[string]any{}}))
 	vs = append(vs, msgVec("goaway/unsupported-version",
 		"GoAway(unsupported_version) listing the server's versions.",
 		"5.4, 5.5", []any{9, 19, "no common protocol version", nil, []any{1}}))

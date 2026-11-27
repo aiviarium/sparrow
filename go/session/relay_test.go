@@ -232,10 +232,10 @@ func equalStrings(a, b []string) bool {
 
 func TestRelay(t *testing.T) {
 	combos := [][2]binding{
-		{wsBinding(), pipeBinding()},
+		{wsBinding(), wsBinding()},
 		{wtBinding(), memBinding()},
 		{memBinding(), wtBinding()},
-		{pipeBinding(), wsBinding()},
+		{memBinding(), wsBinding()},
 	}
 	for _, cb := range combos {
 		t.Run(cb[0].name+"->"+cb[1].name, func(t *testing.T) {

@@ -41,6 +41,7 @@ type activeCall struct {
 	method *schema.Method
 	in     *session.ServerCall
 	out    *session.ClientCall // nil for a call the hub serves itself
+	link   *link               // the node link out runs on
 	ctx    *callContext        // the context it carries, if any
 	once   sync.Once
 }
@@ -244,6 +245,10 @@ func (h *Hub) forward(ctx context.Context, start time.Time, v *viewer, c *sessio
 			fail(status.DeadlineExceeded, "the deadline passed while waiting for the node to connect")
 			return
 		}
+		if e, ok := err.(*session.Error); ok && e.Code == status.Unimplemented {
+			fail(status.Unimplemented, e.Message) // removed or disabled meanwhile (10.7)
+			return
+		}
 		fail(status.Unavailable, err.Error())
 		return
 	}
@@ -259,7 +264,8 @@ func (h *Hub) forward(ctx context.Context, start time.Time, v *viewer, c *sessio
 	act := forwardActor(actors)
 	nc := &callContext{link: l, actor: act, open: true, nested: map[*activeCall]struct{}{}}
 	if hasDeadline {
-		// Lowered by the time already spent, start-up included (10.5).
+		// Lowered by the time already spent, including any wait for the
+		// node (10.5, 10.7).
 		left := time.Until(deadline)
 		if left <= 0 {
 			fail(status.DeadlineExceeded, "deadline exceeded")
@@ -288,19 +294,21 @@ func (h *Hub) forward(ctx context.Context, start time.Time, v *viewer, c *sessio
 	md.SetPrincipal(act.Principal)
 	_ = start
 	octx := context.WithoutCancel(ctx)
-	out, err := l.sess.OpenRaw(octx, session.ForwardRequest(c, local, md), &session.CallOptions{ManualCredit: true})
+	// At the node's maxConcurrentCalls the call is refused, not queued
+	// (10.2).
+	out, err := l.sess.OpenRaw(octx, session.ForwardRequest(c, local, md), &session.CallOptions{ManualCredit: true, NoWait: true})
 	if err != nil {
 		if !toPeer {
 			h.endContext(nc)
 		}
 		code := session.Code(err)
-		if code != status.MessageTooLarge {
+		if code != status.MessageTooLarge && code != status.ResourceExhausted {
 			code = status.Unavailable
 		}
 		fail(code, "cannot forward the call: "+err.Error())
 		return
 	}
-	a := &activeCall{v: v, actors: actors, facet: lf.ref.ID, method: c.Method(), in: c, out: out, ctx: cc}
+	a := &activeCall{v: v, actors: actors, facet: lf.ref.ID, method: c.Method(), in: c, out: out, link: l, ctx: cc}
 	h.track(a)
 	_ = session.Relay(ctx, c, out)
 	h.untrack(a)

@@ -119,8 +119,7 @@ func AppendFrame(dst, msg []byte) []byte {
 	return append(AppendVarint(dst, uint64(len(msg))), msg...)
 }
 
-// FrameReader reads length-prefixed messages from a stream or pipe
-// (sections 4.1 and 4.7). It rejects a message longer than MaxMessageSize
+// FrameReader reads length-prefixed messages from a stream (section 4.1). It rejects a message longer than MaxMessageSize
 // before reading or buffering its body.
 type FrameReader struct {
 	r   *bufio.Reader

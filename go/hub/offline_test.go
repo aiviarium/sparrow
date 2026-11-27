@@ -2,7 +2,6 @@ package hub
 
 import (
 	"fmt"
-	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -11,65 +10,30 @@ import (
 	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
 	"github.com/aiviarium/sparrow-rpc/go/session"
 	"github.com/aiviarium/sparrow-rpc/go/status"
-	"github.com/aiviarium/sparrow-rpc/go/transport/pipe"
 )
 
-// echoFacetDoc runs the echo node once and returns its facet document.
-func echoFacetDoc(t *testing.T, id string) []byte {
-	t.Helper()
-	cmd := exec.Command(echoBin, "-id", id)
-	conn, err := pipe.Spawn(cmd)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s, err := session.NewServer(tctx(t), conn, session.Config{MaxClientSchemaSize: -1})
-	if err != nil {
-		t.Fatal(err)
-	}
-	f := s.PeerSchema().Schema().Facets[0]
-	s.Close(status.OK, "done")
-	_ = cmd.Wait()
-	b, err := f.Encode()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return b
-}
-
-// TestConfiguredFacetsBeforeFirstConnect: the facets the document lists
-// for a node never seen are listed at once (10.7); a call to them waits for
-// the node, which an outside system starts meanwhile, and the node serves
-// it.
-func TestConfiguredFacetsBeforeFirstConnect(t *testing.T) {
+// TestNeverSeenNodeHasNoFacets: a configured node that has never connected
+// lists no facets (10.7); once an outside system starts it and it dials in,
+// its facets appear.
+func TestNeverSeenNodeHasNoFacets(t *testing.T) {
 	f := newFixture(t, nil)
 	c, _ := f.adminClient("websocket")
 	ctx := tctx(t)
-	key, err := c.PutFacet(ctx, echoFacetDoc(t, "echo"))
-	if err != nil {
-		t.Fatal(err)
-	}
 	nc := f.echo("echo")
-	nc.Facets = [][]byte{key}
 	snap, _ := c.Get(ctx)
 	// Committed directly, so the echo process is not started yet.
 	if _, err := c.Commit(ctx, snap.Revision, &admin.Config{Nodes: map[string]*admin.NodeConfig{"echo": nc}, Extensions: policy(grant("user:alice", "echo", "use"))}, 0); err != nil {
 		t.Fatal(err)
 	}
 	cli := f.client("webtransport", aliceToken)
-	// Listed from the document before the node was ever seen (10.7).
-	waitFacet(t, cli, "echo")
-	if f.h.Stats().Nodes["echo"].Connected {
-		t.Fatal("connected before the node was started")
+	time.Sleep(200 * time.Millisecond)
+	if cli.Session().PeerFacet("echo") != nil || len(f.h.Stats().Nodes["echo"].Listed) != 0 {
+		t.Fatal("a node never seen lists facets")
 	}
-	go func() {
-		time.Sleep(300 * time.Millisecond)
-		f.startEchoes()
-	}()
+	f.startEchoes()
+	waitFacet(t, cli, "echo")
 	if v, err := cli.Call(ctx, "echo", "echo", "first"); err != nil || v != "first" {
 		t.Fatalf("%v %v", v, err)
-	}
-	if !f.h.Stats().Nodes["echo"].Connected {
-		t.Fatal("not connected")
 	}
 }
 

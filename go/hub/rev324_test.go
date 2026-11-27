@@ -22,14 +22,14 @@ import (
 // is configured (ref.interfaces), the claim is verified and accepted.
 func TestUnknownInterfaceRefused(t *testing.T) {
 	r := renderer()
-	h := unitHub(t, &admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": {Credential: strp("x")}}})
+	h := unitHub(t, &admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": {Link: admin.DialIn("x")}}})
 	err := h.publish(t, "acme", schemaOf(implFacet(16, "acme.png", r)))
 	if session.Code(err) != status.SchemaMismatch {
 		t.Fatalf("unknown interface: %v", err)
 	}
 	rb, _ := r.Encode()
 	ifaces := cbor.AppendBytes(cbor.AppendArrayHead(nil, 1), rb)
-	h.Apply(&admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": {Credential: strp("x")}},
+	h.Apply(&admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": {Link: admin.DialIn("x")}},
 		Extensions: map[string][]byte{InterfacesExtension: ifaces}}, 2)
 	if err := h.publish(t, "acme", schemaOf(implFacet(16, "acme.png", r))); err != nil {
 		t.Fatal(err)
@@ -196,18 +196,16 @@ func TestNotificationToOfflineNodeDropped(t *testing.T) {
 		return b.MustBuild()
 	}
 	f := newFixture(t, nil)
-	c, _ := f.adminClient("websocket")
-	doc, _ := mk().Def.Encode()
-	key, err := c.PutFacet(tctx(t), doc)
+	f.secret("acme-1", "cred-one")
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": dialInConfig("acme-1")}, Extensions: policy(grant("user:alice", "acme", "use"))})
+	first, err := dialInNode(t, f, "websocket", "acme", "cred-one", mk())
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.secret("acme-1", "cred-one")
-	nc := dialInConfig("acme-1")
-	nc.Facets = [][]byte{key}
-	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": nc}, Extensions: policy(grant("user:alice", "acme", "use"))})
 	cli := f.client("webtransport", aliceToken)
-	waitFacet(t, cli, "acme") // listed from the configured facet
+	waitFacet(t, cli, "acme")
+	first.Close()
+	waitNode(t, f.h, "acme", false) // its last known facets stay listed
 	if err := cli.Notify(tctx(t), "acme", "poke", "while offline"); err != nil {
 		t.Fatal(err)
 	}
@@ -224,49 +222,6 @@ func TestNotificationToOfflineNodeDropped(t *testing.T) {
 		t.Fatal(err)
 	}
 	testutil.Eventually(t, 5*time.Second, func() bool { return got.Load() == 1 }, "notification not delivered while online")
-}
-
-// TestConfiguredFacetsIgnoredAfterPublish (10.7): once a node has
-// published a schema, configured facets are no longer used for it, also
-// when the document changes them.
-func TestConfiguredFacetsIgnoredAfterPublish(t *testing.T) {
-	h := unitHub(t, &admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": {Credential: strp("x")}}})
-	key, err := h.Admin().PutFacet(mustEncode(t, testFacet(0, "acme.cfg", "1.0.0")))
-	if err != nil {
-		t.Fatal(err)
-	}
-	cfg := func(rev uint64, keys ...[]byte) {
-		h.Apply(&admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": {Credential: strp("x"), Facets: keys}}}, rev)
-	}
-	cfg(2, key)
-	listed := func() []string {
-		h.mu.Lock()
-		defer h.mu.Unlock()
-		var out []string
-		for _, f := range h.nodeFacetsLocked(h.nodes["acme"]) {
-			out = append(out, f.ref.Name)
-		}
-		return out
-	}
-	if l := listed(); len(l) != 1 || l[0] != "acme.cfg" {
-		t.Fatalf("configured facets not listed: %v", l)
-	}
-	h.mu.Lock()
-	n := h.nodes["acme"]
-	fs, err := h.checkNodeFacetsLocked(n, schemaOf(testFacet(16, "acme", "1.0.0")))
-	if err == nil {
-		h.commitNodeFacetsLocked(n, fs)
-		h.tab.known[n.id] = n.listed
-	}
-	h.mu.Unlock()
-	if err != nil {
-		t.Fatal(err)
-	}
-	key2, _ := h.Admin().PutFacet(mustEncode(t, testFacet(0, "acme.other", "1.0.0")))
-	cfg(3, key, key2)
-	if l := listed(); len(l) != 1 || l[0] != "acme" {
-		t.Fatalf("after publishing, listed %v", l)
-	}
 }
 
 func mustEncode(t *testing.T, f interface{ Encode() ([]byte, error) }) []byte {
@@ -307,7 +262,7 @@ func TestWatchReportsEveryNode(t *testing.T) {
 		t.Fatalf("node events after the snapshot: %v", seen)
 	}
 	// Revision 2 disables b and leaves a unchanged.
-	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"a": dialInConfig("a-1"), "b": {Credential: strp("b-1"), Enabled: boolp(false)}}})
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"a": dialInConfig("a-1"), "b": {Link: admin.DialIn("b-1"), Enabled: boolp(false)}}})
 	got := map[string]bool{}
 	deadline := time.Now().Add(10 * time.Second)
 	for len(got) < 2 && time.Now().Before(deadline) {

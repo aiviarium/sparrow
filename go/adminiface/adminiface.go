@@ -1,7 +1,7 @@
 // Package adminiface defines sparrow.hub.admin v1, the standard hub
 // administration interface (spec/hub-admin.md, section 5), as schema
 // values: the interface document, the facet a hub publishes for it, its
-// type, method and sigil IDs, and the stored-facet key of section 2.1.
+// type, method and sigil IDs.
 //
 // The definitions match the vectors in test-vectors/admin.json: every
 // constructor returns a fresh copy that callers may modify.
@@ -23,15 +23,15 @@ const (
 const (
 	TypeConfig          uint64 = 64
 	TypeNodeConfig      uint64 = 65
-	TypeDial            uint64 = 66
-	TypeSnapshot        uint64 = 67
-	TypeCommitRequest   uint64 = 68
-	TypeValidateRequest uint64 = 69
-	TypeProblem         uint64 = 70
-	TypeProblems        uint64 = 71
-	TypeSecret          uint64 = 72
-	TypeNames           uint64 = 73
-	TypeHashes          uint64 = 74
+	TypeLink            uint64 = 66
+	TypeDial            uint64 = 67
+	TypeSnapshot        uint64 = 68
+	TypeCommitRequest   uint64 = 69
+	TypeValidateRequest uint64 = 70
+	TypeProblem         uint64 = 71
+	TypeProblems        uint64 = 72
+	TypeSecret          uint64 = 73
+	TypeNames           uint64 = 74
 	TypeEvent           uint64 = 75
 	TypeRevisionEvent   uint64 = 76
 	TypeRevisionState   uint64 = 77
@@ -43,9 +43,9 @@ const (
 const (
 	ConfigNodes, ConfigDefaults, ConfigExtensions uint64 = 0, 1, 2
 
-	NodeConfigDial, NodeConfigCredential, NodeConfigFacets  uint64 = 0, 1, 2
-	NodeConfigPeer, NodeConfigEnabled, NodeConfigExtensions uint64 = 3, 4, 5
+	NodeConfigLink, NodeConfigPeer, NodeConfigEnabled, NodeConfigExtensions uint64 = 0, 1, 2, 3
 
+	LinkDial, LinkCredential         uint64 = 0, 1
 	DialURL, DialPin, DialCredential uint64 = 0, 1, 2
 
 	SnapshotRevision, SnapshotConfig, SnapshotState, SnapshotConfirmInMs uint64 = 0, 1, 2, 3
@@ -83,10 +83,7 @@ const (
 	MethodSetSecret    uint64 = 5
 	MethodDeleteSecret uint64 = 6
 	MethodListSecrets  uint64 = 7
-	MethodPutFacet     uint64 = 8
-	MethodDeleteFacet  uint64 = 9
-	MethodListFacets   uint64 = 10
-	MethodWatch        uint64 = 11
+	MethodWatch        uint64 = 8
 )
 
 // LevelAnnotation is the hint every method of the facet carries (section 1).
@@ -140,12 +137,11 @@ func Types() []schema.TypeDef {
 			opt(1, "defaults", mapOf(tBytes, tString)),
 			opt(2, "extensions", mapOf(tString, tBytes))),
 		strct(TypeNodeConfig, "NodeConfig",
-			opt(0, "dial", named(TypeDial)),
-			opt(1, "credential", tString),
-			opt(2, "facets", list(tBytes)),
-			opt(3, "peer", tBool),
-			opt(4, "enabled", tBool),
-			opt(5, "extensions", mapOf(tString, tBytes))),
+			req(0, "link", named(TypeLink)),
+			opt(1, "peer", tBool),
+			opt(2, "enabled", tBool),
+			opt(3, "extensions", mapOf(tString, tBytes))),
+		union(TypeLink, "Link", req(0, "dial", named(TypeDial)), req(1, "credential", tString)),
 		strct(TypeDial, "Dial", req(0, "url", tString), req(1, "pin", tBytes), req(2, "credential", tString)),
 		strct(TypeSnapshot, "Snapshot", req(0, "revision", tUint), req(1, "config", named(TypeConfig)), req(2, "state", named(TypeRevisionState)), opt(3, "confirmInMs", tUint)),
 		strct(TypeCommitRequest, "CommitRequest", req(0, "base", tUint), req(1, "config", named(TypeConfig)), req(2, "confirmWithinMs", tUint)),
@@ -154,7 +150,6 @@ func Types() []schema.TypeDef {
 		alias(TypeProblems, "Problems", list(named(TypeProblem))),
 		strct(TypeSecret, "Secret", req(0, "name", tString), req(1, "value", tBytes)),
 		alias(TypeNames, "Names", list(tString)),
-		alias(TypeHashes, "Hashes", list(tBytes)),
 		union(TypeEvent, "Event", req(0, "snapshot", named(TypeSnapshot)), req(1, "revision", named(TypeRevisionEvent)), req(2, "node", named(TypeNodeEvent))),
 		strct(TypeRevisionEvent, "RevisionEvent", req(0, "revision", tUint), req(1, "state", named(TypeRevisionState)), opt(2, "confirmInMs", tUint)),
 		enum(TypeRevisionState, "RevisionState", SigilPending, SigilConfirmed, SigilRolledBack),
@@ -173,7 +168,7 @@ func Sigils() []schema.Sigil {
 	return out
 }
 
-// Methods returns methods 0-11 of service 0, each with the given
+// Methods returns methods 0-8 of service 0, each with the given
 // annotations (nil for none). Every error the methods name is a core status
 // code, so every errors list is empty.
 func Methods(ann schema.Annotations) []schema.Method {
@@ -194,9 +189,6 @@ func Methods(ann schema.Annotations) []schema.Method {
 		m(MethodSetSecret, "setSecret", named(TypeSecret), tUnit, 0),
 		m(MethodDeleteSecret, "deleteSecret", tString, tUnit, idem),
 		m(MethodListSecrets, "listSecrets", tUnit, named(TypeNames), idem),
-		m(MethodPutFacet, "putFacet", tBytes, tBytes, idem),
-		m(MethodDeleteFacet, "deleteFacet", tBytes, tUnit, idem),
-		m(MethodListFacets, "listFacets", tUnit, named(TypeHashes), idem),
 		m(MethodWatch, "watch", tUnit, schema.Stream(named(TypeEvent)), schema.MethodOutputEnd),
 	}
 }
@@ -250,8 +242,3 @@ func Facet(id uint64) *schema.Facet {
 		Annotations: schema.Annotations{},
 	}
 }
-
-// StoredFacetKey returns the key putFacet returns for a facet: 0x01 ||
-// SHA-256 of the canonical facet with its ID set to 0 and its name kept
-// (section 2.1). It differs from the facet hash, which blanks the name.
-func StoredFacetKey(f *schema.Facet) ([]byte, error) { return f.StoredKey() }

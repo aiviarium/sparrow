@@ -125,8 +125,8 @@ func webHub(t *testing.T, extra map[string]any) (*hubProc, *webKeys, []byte) {
 	webExt, _ = cbor.Canonical(webExt, cbor.Options{})
 	doc := map[string]any{
 		"nodes": map[string]any{
-			"echo":   map[string]any{"credential": "echo-cred"},
-			"dialed": map[string]any{"dial": map[string]any{"url": url, "pin": pin, "credential": "dialed-cred"}}},
+			"echo":   map[string]any{"link": map[string]any{"credential": "echo-cred"}},
+			"dialed": map[string]any{"link": map[string]any{"dial": map[string]any{"url": url, "pin": pin, "credential": "dialed-cred"}}}},
 		"extensions": map[string]string{"ref.web": hex.EncodeToString(webExt)},
 		"policy":     [][3]string{{"group:eng", "echo", "use"}, {"group:eng", "dialed", "use"}},
 	}

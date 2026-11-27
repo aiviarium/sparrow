@@ -31,18 +31,4 @@ func TestInterfaceAndFacet(t *testing.T) {
 	if Types()[0].Name != "Config" {
 		t.Fatal("Types shares state")
 	}
-	k, err := StoredFacetKey(f)
-	fh, _ := f.Hash()
-	if err != nil || bytes.Equal(k, fh) || len(k) != schema.HashLen {
-		t.Fatalf("stored key %x facet hash %x (%v)", k, fh, err)
-	}
-	g := f.Clone()
-	g.ID = 99
-	if k2, _ := StoredFacetKey(g); !bytes.Equal(k, k2) {
-		t.Fatal("stored key depends on the facet ID")
-	}
-	g.Name = "sparrow.hub.admin2"
-	if k3, _ := StoredFacetKey(g); bytes.Equal(k, k3) {
-		t.Fatal("stored key ignores the name")
-	}
 }

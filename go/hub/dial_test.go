@@ -97,7 +97,7 @@ func nilSafe(a *wire.Auth) []byte {
 }
 
 func dialConfig(url string, pin []byte, cred string) *admin.NodeConfig {
-	return &admin.NodeConfig{Dial: &admin.Dial{URL: url, Pin: pin, Credential: cred}}
+	return &admin.NodeConfig{Link: admin.Dialed(admin.Dial{URL: url, Pin: pin, Credential: cred})}
 }
 
 func TestHubDialsNode(t *testing.T) {
@@ -154,41 +154,6 @@ func TestHubDialsNode(t *testing.T) {
 				t.Fatalf("failed after %v, before the connect timeout", d)
 			}
 		})
-	}
-}
-
-// TestDialedNodeSupersede: a changed Dial (here the credential) dials the
-// node again; the new session supersedes the old one, which gets
-// GoAway(going_away) only once the new one is in place (hub-admin 2.2).
-func TestDialedNodeSupersede(t *testing.T) {
-	f := newFixture(t, nil)
-	n := nd.New(nd.Options{ID: "remote", Logger: testLogger(t)})
-	rec := &recorder{}
-	if _, err := n.Add(tctx(t), rec.facet("remote")); err != nil {
-		t.Fatal(err)
-	}
-	ln := &listeningNode{n: n}
-	*ln = *serveNodeAny(t, n, "old-secret", "new-secret")
-	f.secret("cred-old", "old-secret")
-	f.secret("cred-new", "new-secret")
-	grants := policy(grant("user:alice", "remote", "use"))
-	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"remote": dialConfig(ln.url, ln.pin, "cred-old")}, Extensions: grants})
-	waitNode(t, f.h, "remote", true)
-	first := n.Session()
-	cli := f.client("websocket", aliceToken)
-	waitFacet(t, cli, "remote")
-	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"remote": dialConfig(ln.url, ln.pin, "cred-new")}, Extensions: grants})
-	select {
-	case <-first.Done():
-	case <-time.After(10 * time.Second):
-		t.Fatal("old session not superseded")
-	}
-	if g := first.GoAwayReceived(); g == nil || status.Code(g.Status) != status.GoingAway {
-		t.Fatalf("old session got %v", g)
-	}
-	waitNode(t, f.h, "remote", true)
-	if v, err := cli.Call(tctx(t), "remote", "ping", nil); err != nil || v != "pong" {
-		t.Fatalf("%v %v", v, err)
 	}
 }
 

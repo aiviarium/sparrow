@@ -18,11 +18,11 @@ func chartValue() []any {
 	return []any{64, "Sales", []any{[]any{"2026", []any{3, 5, 8}}}}
 }
 
-// nodeHello: the node acme.charts speaks first as the Sparrow client and
-// publishes its facets in client_schema (here on the pipe binding, 4.7).
+// nodeHello: the node acme.charts dials in as the Sparrow client, presents
+// ["link", credential] and publishes its facets in client_schema (10.2).
 func nodeHello() []any {
 	r := schemas()
-	return []any{0, []any{1}, map[string]any{}, nil, nil, []any{2, r.nodeHash, r.node}, map[string]any{}, false}
+	return []any{0, []any{1}, map[string]any{}, []any{"link", "TEST-ONLY link credential of acme.charts"}, nil, []any{2, r.nodeHash, r.node}, map[string]any{}, false}
 }
 
 // hubViewForNode: the schema the hub sends node acme.charts, i.e. the server
@@ -127,7 +127,7 @@ func hubVectors() O {
 		"type", "message_with_principals",
 		"request", msg(nested),
 		"acting_principals", []any{"user:alice", "node:" + hubNodeID},
-		"refs", o("schema", "welcome/node-pipe"),
+		"refs", o("schema", "welcome/node-dial-in"),
 	))
 	hv := hubViewForNode()
 	add(o(

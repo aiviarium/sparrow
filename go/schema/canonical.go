@@ -259,28 +259,6 @@ func (f *Facet) HashInput() ([]byte, error) {
 	return w.b, w.err
 }
 
-// StoredKeyInput returns the bytes a stored-facet key covers (Sparrow Hub
-// Administration, section 2.1): the canonical facet with its ID set to 0
-// and its name kept.
-func (f *Facet) StoredKeyInput() ([]byte, error) {
-	c := f.Canonical()
-	c.ID = 0
-	w := &writer{canonical: true}
-	w.facet(c)
-	return w.b, w.err
-}
-
-// StoredKey returns the stored-facet key that sparrow.hub.admin's putFacet
-// returns: 0x01 || SHA-256 of StoredKeyInput. Unlike the facet hash it
-// covers the facet's name.
-func (f *Facet) StoredKey() ([]byte, error) {
-	b, err := f.StoredKeyInput()
-	if err != nil {
-		return nil, err
-	}
-	return Hash(b), nil
-}
-
 // Hash returns the facet hash, which does not depend on the facet's ID or
 // name.
 func (f *Facet) Hash() ([]byte, error) {

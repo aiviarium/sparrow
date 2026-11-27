@@ -13,11 +13,11 @@ import (
 )
 
 func peerDialIn(cred string) *admin.NodeConfig {
-	return &admin.NodeConfig{Credential: strp(cred), Peer: boolp(true)}
+	return &admin.NodeConfig{Link: admin.DialIn(cred), Peer: boolp(true)}
 }
 
 func peerDial(f *fixture, cred string) *admin.NodeConfig {
-	return &admin.NodeConfig{Dial: &admin.Dial{URL: f.wtURL, Pin: f.pin, Credential: cred}, Peer: boolp(true)}
+	return &admin.NodeConfig{Link: admin.Dialed(admin.Dial{URL: f.wtURL, Pin: f.pin, Credential: cred}), Peer: boolp(true)}
 }
 
 // TestFederation: hub-a dials hub-b as a peer and imports its facets as

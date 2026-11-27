@@ -295,7 +295,7 @@ func (f *fixture) echo(id string, extra ...string) *admin.NodeConfig {
 	}
 	e := &echoNode{id: id, cred: "cred-of-" + id, args: extra}
 	f.storeSecret(id+"-link", e.cred)
-	e.nc = &admin.NodeConfig{Credential: strp(id + "-link")}
+	e.nc = &admin.NodeConfig{Link: admin.DialIn(id + "-link")}
 	f.echoes[id] = e
 	return e.nc.Clone()
 }
@@ -373,7 +373,7 @@ func (f *fixture) dialedEcho(id string, extra ...string) *admin.NodeConfig {
 	e := &echoNode{id: id, cred: "dial-cred-of-" + id, args: extra, keyFile: filepath.Join(f.t.TempDir(), id+".key")}
 	f.storeSecret(id+"-link", e.cred)
 	f.listenEcho(e, "127.0.0.1:0")
-	e.nc = &admin.NodeConfig{Dial: &admin.Dial{URL: e.url, Pin: e.pin, Credential: id + "-link"}}
+	e.nc = &admin.NodeConfig{Link: admin.Dialed(admin.Dial{URL: e.url, Pin: e.pin, Credential: id + "-link"})}
 	f.echoes[id] = e
 	return e.nc.Clone()
 }

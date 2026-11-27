@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -11,18 +12,18 @@ import (
 //
 //	{
 //	  "nodes": {
-//	    "remote": {"dial": {"url": "https://...", "pin": "<hex>", "credential": "secret-name"}},
-//	    "acme":   {"credential": "secret-name", "facets": ["<hex key>"], "peer": false, "enabled": true,
+//	    "remote": {"link": {"dial": {"url": "https://...", "pin": "<hex>", "credential": "secret-name"}}},
+//	    "acme":   {"link": {"credential": "secret-name"}, "peer": false, "enabled": true,
 //	               "extensions": {"key": "<hex CBOR>"}}
 //	  },
 //	  "defaults":   {"<hex interface hash>": "facet.name"},
 //	  "extensions": {"key": "<hex CBOR>"}
 //	}
 //
-// Struct fields are keys named as in the interface (hub-admin 5.1), and
-// byte strings (values and map keys) are lowercase hex; Problem.path uses
-// the same keys. A node with a "start" key (the form before hub-admin
-// revision 35) is refused.
+// Struct fields are keys named as in the interface (hub-admin 5.1), a
+// union is an object with its variant name as the only key, and byte
+// strings (values and map keys) are lowercase hex, the same keys
+// Problem.path uses. Unknown keys are refused.
 
 type jsonConfig struct {
 	Nodes      map[string]*jsonNode `json:"nodes"`
@@ -31,13 +32,15 @@ type jsonConfig struct {
 }
 
 type jsonNode struct {
-	Dial       *jsonDial         `json:"dial,omitempty"`
-	Start      json.RawMessage   `json:"start,omitempty"`
-	Credential *string           `json:"credential,omitempty"`
-	Facets     []string          `json:"facets,omitempty"`
+	Link       *jsonLink         `json:"link"`
 	Peer       *bool             `json:"peer,omitempty"`
 	Enabled    *bool             `json:"enabled,omitempty"`
 	Extensions map[string]string `json:"extensions,omitempty"`
+}
+
+type jsonLink struct {
+	Dial       *jsonDial `json:"dial,omitempty"`
+	Credential *string   `json:"credential,omitempty"`
 }
 
 type jsonDial struct {
@@ -82,12 +85,12 @@ func (c *Config) MarshalJSON() ([]byte, error) {
 		}
 	}
 	for id, n := range c.Nodes {
-		jn := &jsonNode{Credential: n.Credential, Peer: n.Peer, Enabled: n.Enabled, Extensions: hexMap(n.Extensions)}
-		for _, f := range n.Facets {
-			jn.Facets = append(jn.Facets, hex.EncodeToString(f))
+		jn := &jsonNode{Link: &jsonLink{Credential: n.Link.Credential}, Peer: n.Peer, Enabled: n.Enabled, Extensions: hexMap(n.Extensions)}
+		if d := n.Link.Dial; d != nil {
+			jn.Link.Dial = &jsonDial{URL: d.URL, Pin: hex.EncodeToString(d.Pin), Credential: d.Credential}
 		}
-		if d := n.Dial; d != nil {
-			jn.Dial = &jsonDial{URL: d.URL, Pin: hex.EncodeToString(d.Pin), Credential: d.Credential}
+		if n.Link.Dial == nil && n.Link.Credential == nil {
+			return nil, fmt.Errorf("node %s: link variant %d has no JSON form", id, n.Link.UnknownTag)
 		}
 		j.Nodes[id] = jn
 	}
@@ -97,7 +100,9 @@ func (c *Config) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON reads the JSON form.
 func (c *Config) UnmarshalJSON(b []byte) error {
 	var j jsonConfig
-	if err := json.Unmarshal(b, &j); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&j); err != nil {
 		return err
 	}
 	out := Config{Nodes: map[string]*NodeConfig{}}
@@ -122,29 +127,24 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 	sort.Strings(ids)
 	for _, id := range ids {
 		jn := j.Nodes[id]
-		if jn == nil {
-			jn = &jsonNode{}
+		if jn == nil || jn.Link == nil {
+			return fmt.Errorf("node %s: link is required", id)
 		}
-		n := &NodeConfig{Credential: jn.Credential, Peer: jn.Peer, Enabled: jn.Enabled}
+		n := &NodeConfig{Peer: jn.Peer, Enabled: jn.Enabled}
 		if n.Extensions, err = unhexMap(jn.Extensions, "extension"); err != nil {
 			return fmt.Errorf("node %s: %v", id, err)
 		}
-		for _, f := range jn.Facets {
-			k, err := hex.DecodeString(f)
-			if err != nil {
-				return fmt.Errorf("node %s facet %q: %v", id, f, err)
-			}
-			n.Facets = append(n.Facets, k)
-		}
-		if jn.Start != nil {
-			return fmt.Errorf("node %s: \"start\" is not part of the document; a dialed node has \"dial\"", id)
-		}
-		if jn.Dial != nil {
-			pin, err := hex.DecodeString(jn.Dial.Pin)
+		switch l := jn.Link; {
+		case l.Dial != nil && l.Credential != nil, l.Dial == nil && l.Credential == nil:
+			return fmt.Errorf("node %s: link is one of {\"dial\": ...} and {\"credential\": ...}", id)
+		case l.Dial != nil:
+			pin, err := hex.DecodeString(l.Dial.Pin)
 			if err != nil {
 				return fmt.Errorf("node %s pin: %v", id, err)
 			}
-			n.Dial = &Dial{URL: jn.Dial.URL, Pin: pin, Credential: jn.Dial.Credential}
+			n.Link = Dialed(Dial{URL: l.Dial.URL, Pin: pin, Credential: l.Dial.Credential})
+		default:
+			n.Link = DialIn(*l.Credential)
 		}
 		out.Nodes[id] = n
 	}

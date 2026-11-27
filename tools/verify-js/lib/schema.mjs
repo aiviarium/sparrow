@@ -57,13 +57,6 @@ export function facetHashInput(p) {
   return c;
 }
 export const facetHash = (p) => h33(encTJ(facetHashInput(p)));
-/** hub-admin 2.1: 0x01 || SHA-256 of the canonical facet with id 0, name kept. */
-export function storedFacetKeyInput(p) {
-  const c = canonicalFacet(p);
-  c[P.id] = 0;
-  return c;
-}
-export const storedFacetKey = (p) => h33(encTJ(storedFacetKeyInput(p)));
 export const ifaceHash = (i) => h33(encTJ(canonicalIface(i)));
 
 export function schemaHashInput(s) {

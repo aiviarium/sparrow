@@ -3,6 +3,7 @@ package hub
 import (
 	"bytes"
 	"context"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -59,7 +60,7 @@ func dialInNode(t *testing.T, f *fixture, binding, id, cred string, facets ...*n
 	return n, err
 }
 
-func dialInConfig(cred string) *admin.NodeConfig { return &admin.NodeConfig{Credential: strp(cred)} }
+func dialInConfig(cred string) *admin.NodeConfig { return &admin.NodeConfig{Link: admin.DialIn(cred)} }
 
 func TestDialInPayloadUnchanged(t *testing.T) {
 	f := newFixture(t, nil)
@@ -191,16 +192,14 @@ func TestOneLinkDirection(t *testing.T) {
 	}
 	_, err = dialInNode(t, f, "websocket", "acme", "cred-one", rec.facet("acme"))
 	mustCode(t, err, status.Unauthenticated)
-	// A document with both directions, or neither, is invalid.
+	// A link of a kind this hub does not know is a validation problem.
 	c, _ := f.adminClient("websocket")
 	snap, _ := c.Get(tctx(t))
-	both := dialed.Clone()
-	both.Credential = strp("acme-1")
-	ps, err := c.Validate(tctx(t), snap.Revision, &admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": both, "x": {}}})
+	ps, err := c.Validate(tctx(t), snap.Revision, &admin.Config{Nodes: map[string]*admin.NodeConfig{"x": {Link: admin.Link{UnknownTag: 7, Unknown: cbor.Null}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ps) != 2 || ps[0].Path[1] != "acme" || ps[1].Path[1] != "x" {
+	if len(ps) != 1 || strings.Join(ps[0].Path, "/") != "nodes/x/link" {
 		t.Fatalf("problems %v", ps)
 	}
 }

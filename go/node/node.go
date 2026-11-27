@@ -18,7 +18,6 @@ import (
 	"github.com/aiviarium/sparrow-rpc/go/session"
 	"github.com/aiviarium/sparrow-rpc/go/status"
 	"github.com/aiviarium/sparrow-rpc/go/transport"
-	"github.com/aiviarium/sparrow-rpc/go/transport/pipe"
 	"github.com/aiviarium/sparrow-rpc/go/transport/websocket"
 	"github.com/aiviarium/sparrow-rpc/go/transport/webtransport"
 	"github.com/aiviarium/sparrow-rpc/go/wire"
@@ -37,8 +36,7 @@ type Options struct {
 	// Params are the limits the node imposes on its peer.
 	Params wire.Params
 	// TrustPeer marks the link as an authenticated link to the node's hub,
-	// so Principal and CallContext metadata are honoured (10.2). Stdio
-	// links (RunStdio) are always trusted.
+	// so Principal and CallContext metadata are honoured (10.2).
 	TrustPeer bool
 	// Session lets callers adjust the session configuration (timeouts,
 	// clock, hooks) before it is used.
@@ -296,21 +294,10 @@ func (n *Node) attach(s *session.Session, trusted bool) {
 	}()
 }
 
-// RunStdio connects on standard input and output with the pipe binding
-// (4.7), as a process whose parent speaks Sparrow to it, and blocks until
-// the session ends. Logs must go to standard error. A hub never starts
-// nodes (10.2); this is for other supervisors.
-func (n *Node) RunStdio(ctx context.Context) error {
-	if err := n.Connect(ctx, pipe.Stdio(), true); err != nil {
-		return err
-	}
-	return n.Wait(ctx)
-}
-
 // DialOptions configure Dial.
 type DialOptions struct {
 	// WebSocketURL is tried when WebTransport does not connect within
-	// FallbackAfter (4.8).
+	// FallbackAfter (4.7).
 	WebSocketURL string
 	// FallbackAfter defaults to 3 s.
 	FallbackAfter time.Duration
