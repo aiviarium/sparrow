@@ -47,9 +47,9 @@ import (
 // messages written just before the close are delivered.
 const DefaultLinger = 2 * time.Second
 
-// headerTimeout bounds how long an accepted stream may take to send its
-// header byte.
-const headerTimeout = 10 * time.Second
+// DefaultHeaderTimeout bounds how long an accepted stream may take to send
+// its header byte.
+const DefaultHeaderTimeout = 10 * time.Second
 
 // DefaultMaxIncomingStreams is the QUIC backstop for incoming bidirectional
 // streams per connection.
@@ -89,13 +89,23 @@ type ServerOptions struct {
 	QUICConfig *quic.Config
 	// Linger overrides DefaultLinger for accepted connections.
 	Linger time.Duration
+	// HeaderTimeout overrides DefaultHeaderTimeout for accepted
+	// connections.
+	HeaderTimeout time.Duration
 }
 
 // Server accepts Sparrow WebTransport sessions on an HTTP/3 server. Mount
 // Handler (or call Upgrade from your own handler) on WT.H3.Handler.
 type Server struct {
-	WT     *wt.Server
-	linger time.Duration
+	WT            *wt.Server
+	linger        time.Duration
+	headerTimeout time.Duration
+
+	mu     sync.Mutex
+	closed bool
+	lns    map[*quic.EarlyListener]struct{}
+	qconns map[*quic.Conn]struct{}
+	wg     sync.WaitGroup
 }
 
 // NewServer returns a server; set WT.H3.Handler before serving.
@@ -106,7 +116,7 @@ func NewServer(o ServerOptions) *Server {
 		QUICConfig: quicConfig(o.QUICConfig, o.MaxIncomingStreams),
 	}
 	wt.ConfigureHTTP3Server(h3)
-	return &Server{WT: &wt.Server{H3: h3, CheckOrigin: o.CheckOrigin}, linger: o.Linger}
+	return &Server{WT: &wt.Server{H3: h3, CheckOrigin: o.CheckOrigin}, linger: o.Linger, headerTimeout: o.HeaderTimeout}
 }
 
 // Upgrade accepts a WebTransport session request and returns the server
@@ -117,7 +127,7 @@ func (s *Server) Upgrade(w http.ResponseWriter, r *http.Request) (*Conn, error) 
 	if err != nil {
 		return nil, err
 	}
-	return newConn(sess, wire.Server, s.linger, nil), nil
+	return newConn(sess, wire.Server, s.linger, s.headerTimeout, nil), nil
 }
 
 // Handler returns an http.Handler that upgrades every request and passes
@@ -133,14 +143,89 @@ func (s *Server) Handler(accept func(*Conn, *http.Request)) http.Handler {
 	})
 }
 
-// Serve serves HTTP/3 on a UDP socket.
-func (s *Server) Serve(pc net.PacketConn) error { return s.WT.Serve(pc) }
+// Serve serves HTTP/3 on a UDP socket until Close.
+//
+// It runs its own accept loop instead of webtransport-go's Serve, whose
+// Close clears the connection table while a connection accepted just
+// before may still be registering in it (a nil-map panic): this Close
+// stops accepting and closes every connection, and the table stays.
+func (s *Server) Serve(pc net.PacketConn) error {
+	qc := s.WT.H3.QUICConfig.Clone()
+	ln, err := quic.ListenEarly(pc, s.WT.H3.TLSConfig, qc)
+	if err != nil {
+		return err
+	}
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		_ = ln.Close()
+		return http.ErrServerClosed
+	}
+	if s.lns == nil {
+		s.lns, s.qconns = map[*quic.EarlyListener]struct{}{}, map[*quic.Conn]struct{}{}
+	}
+	s.lns[ln] = struct{}{}
+	s.mu.Unlock()
+	defer ln.Close()
+	for {
+		conn, err := ln.Accept(context.Background())
+		if err != nil {
+			s.mu.Lock()
+			closed := s.closed
+			s.mu.Unlock()
+			if closed {
+				return http.ErrServerClosed
+			}
+			return err
+		}
+		s.mu.Lock()
+		if s.closed {
+			s.mu.Unlock()
+			_ = conn.CloseWithError(0, "server closed")
+			continue
+		}
+		s.qconns[conn] = struct{}{}
+		s.wg.Add(1)
+		s.mu.Unlock()
+		go func() {
+			defer s.wg.Done()
+			_ = s.WT.ServeQUICConn(conn)
+			s.mu.Lock()
+			delete(s.qconns, conn)
+			s.mu.Unlock()
+		}()
+	}
+}
 
 // ListenAndServe listens on Addr.
-func (s *Server) ListenAndServe() error { return s.WT.ListenAndServe() }
+func (s *Server) ListenAndServe() error {
+	pc, err := net.ListenPacket("udp", s.WT.H3.Addr)
+	if err != nil {
+		return err
+	}
+	defer pc.Close()
+	return s.Serve(pc)
+}
 
 // Close stops the server and closes its connections.
-func (s *Server) Close() error { return s.WT.Close() }
+func (s *Server) Close() error {
+	s.mu.Lock()
+	s.closed = true
+	for ln := range s.lns {
+		_ = ln.Close()
+	}
+	conns := make([]*quic.Conn, 0, len(s.qconns))
+	for c := range s.qconns {
+		conns = append(conns, c)
+	}
+	s.mu.Unlock()
+	for _, c := range conns {
+		_ = c.CloseWithError(0, "server closed")
+	}
+	err := s.WT.H3.Close()
+	s.wg.Wait()
+	return err
+}
 
 // DialOptions configure Dial.
 type DialOptions struct {
@@ -157,6 +242,8 @@ type DialOptions struct {
 	QUICConfig *quic.Config
 	// Linger overrides DefaultLinger.
 	Linger time.Duration
+	// HeaderTimeout overrides DefaultHeaderTimeout.
+	HeaderTimeout time.Duration
 }
 
 // Dial opens a WebTransport session to an https:// URL and returns the
@@ -193,16 +280,17 @@ func Dial(ctx context.Context, url string, o *DialOptions) (*Conn, error) {
 		d.Close()
 		return nil, err
 	}
-	return newConn(sess, wire.Client, o.Linger, func() { d.Close() }), nil
+	return newConn(sess, wire.Client, o.Linger, o.HeaderTimeout, func() { d.Close() }), nil
 }
 
 // Conn is a Sparrow WebTransport connection.
 type Conn struct {
-	sess    *wt.Session
-	role    wire.Role
-	linger  time.Duration
-	onClose func()
-	limit   atomic.Uint64
+	sess          *wt.Session
+	role          wire.Role
+	linger        time.Duration
+	headerTimeout time.Duration
+	onClose       func()
+	limit         atomic.Uint64
 
 	sharedMu    sync.Mutex
 	shared      *stream
@@ -218,11 +306,14 @@ type Conn struct {
 	closeOnce sync.Once
 }
 
-func newConn(sess *wt.Session, role wire.Role, linger time.Duration, onClose func()) *Conn {
-	if linger == 0 {
+func newConn(sess *wt.Session, role wire.Role, linger, headerTimeout time.Duration, onClose func()) *Conn {
+	if linger <= 0 {
 		linger = DefaultLinger
 	}
-	c := &Conn{sess: sess, role: role, linger: linger, onClose: onClose,
+	if headerTimeout <= 0 {
+		headerTimeout = DefaultHeaderTimeout
+	}
+	c := &Conn{sess: sess, role: role, linger: linger, headerTimeout: headerTimeout, onClose: onClose,
 		sharedReady: make(chan struct{}), done: make(chan struct{})}
 	c.acceptCond = sync.NewCond(&c.acceptMu)
 	c.limit.Store(wire.DefaultMaxMessageSize)
@@ -253,7 +344,7 @@ func (c *Conn) acceptLoop() {
 }
 
 func (c *Conn) classify(s *wt.Stream) {
-	_ = s.SetReadDeadline(time.Now().Add(headerTimeout))
+	_ = s.SetReadDeadline(time.Now().Add(c.headerTimeout))
 	st := newStream(c, s, false, 0)
 	h, err := st.br.ReadByte()
 	_ = s.SetReadDeadline(time.Time{})

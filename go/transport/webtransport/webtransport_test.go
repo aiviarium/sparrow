@@ -63,6 +63,7 @@ func (f *fixture) dial(t *testing.T) (*Conn, *Conn) {
 }
 
 func TestStreams(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	c, s := f.dial(t)
 	ctx := context.Background()
@@ -142,6 +143,7 @@ func TestStreams(t *testing.T) {
 }
 
 func TestClose(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	c, s := f.dial(t)
 	cl, _ := c.SharedLane(context.Background())
@@ -150,6 +152,22 @@ func TestClose(t *testing.T) {
 	if _, err := sl.ReadMessage(); err != nil {
 		t.Fatal(err)
 	}
+	// Each side reads its shared lane to the end, as a session does, so
+	// a closing side sees the peer's finish instead of waiting out its
+	// linger.
+	drain := func(st transport.Stream, finish bool) {
+		go func() {
+			for {
+				if _, err := st.ReadMessage(); err != nil {
+					if finish {
+						_ = st.CloseWrite()
+					}
+					return
+				}
+			}
+		}()
+	}
+	drain(sl, false)
 	long := strings.Repeat("é", 1000) // 2000 bytes
 	go func() { _ = s.Close(status.GoingAway, long) }()
 	// The peer sees the shared lane finish first, then the session close.
@@ -173,6 +191,8 @@ func TestClose(t *testing.T) {
 	_ = l2.WriteMessage([]byte{0xf6})
 	sl2, _ := s2.SharedLane(context.Background())
 	_, _ = sl2.ReadMessage()
+	drain(sl2, true)
+	drain(l2, false)
 	_ = c2.Close(status.SchemaMismatch, long)
 	select {
 	case <-s2.Done():
@@ -205,6 +225,7 @@ func TestClose(t *testing.T) {
 			}
 		}
 	}()
+	drain(sl3, false)
 	_ = s3.Close(status.Unauthenticated, long)
 	select {
 	case <-c3.Done():
@@ -229,6 +250,7 @@ func rawSession(t *testing.T, f *fixture) *wt.Session {
 }
 
 func TestHeaderRules(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	for _, tc := range []struct {
 		name    string
@@ -246,8 +268,8 @@ func TestHeaderRules(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				// Two shared lanes are refused in either arrival order.
 				_, _ = st.Write([]byte{h})
-				time.Sleep(20 * time.Millisecond)
 			}
 			select {
 			case <-s.Done():
@@ -278,6 +300,7 @@ func TestHeaderRules(t *testing.T) {
 }
 
 func TestPinning(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
