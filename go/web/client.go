@@ -34,7 +34,9 @@ type HTTPError struct {
 	Body   string
 }
 
-func (e *HTTPError) Error() string { return fmt.Sprintf("web: HTTP %d: %s", e.Status, strings.TrimSpace(e.Body)) }
+func (e *HTTPError) Error() string {
+	return fmt.Sprintf("web: HTTP %d: %s", e.Status, strings.TrimSpace(e.Body))
+}
 
 func (c *Client) http() *http.Client {
 	if c.HTTP != nil {
