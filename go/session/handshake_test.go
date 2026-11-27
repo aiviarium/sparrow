@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -455,7 +454,6 @@ func TestReadyMismatch(t *testing.T) {
 // server's write has not returned yet.
 type welcomeGate struct {
 	transport.Conn
-	once    sync.Once
 	accepts atomic.Int32
 	release chan struct{}
 }

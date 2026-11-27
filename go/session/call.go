@@ -100,13 +100,6 @@ func (c *call) peerHalfDoneLocked() bool {
 	return c.h.callerDone
 }
 
-func (c *call) ownHalfDoneLocked() bool {
-	if c.caller {
-		return c.h.callerDone
-	}
-	return c.h.calleeDone
-}
-
 // deliver handles a message the peer sent on this call. It runs on the
 // lane's reader goroutine and never blocks on the application.
 func (c *call) deliver(m *Msg) {

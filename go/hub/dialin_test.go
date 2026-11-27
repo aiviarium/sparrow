@@ -19,11 +19,10 @@ import (
 
 // recorder is a raw facet that records what reaches the node.
 type recorder struct {
-	mu       sync.Mutex
-	inputs   [][]byte
-	md       []wire.Metadata
-	reply    []byte
-	contexts [][]byte
+	mu     sync.Mutex
+	inputs [][]byte
+	md     []wire.Metadata
+	reply  []byte
 }
 
 func (r *recorder) facet(name string) *nd.Facet {

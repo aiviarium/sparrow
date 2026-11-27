@@ -1,7 +1,6 @@
 package session
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"time"
@@ -330,5 +329,3 @@ func (s *Session) PeerFacet(name string) *schema.Facet {
 	}
 	return nil
 }
-
-func hashEqual(a, b []byte) bool { return bytes.Equal(a, b) }

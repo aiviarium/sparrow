@@ -448,5 +448,3 @@ func (h *Hub) Sessions() map[string][]*session.Session {
 	}
 	return out
 }
-
-func sortStrings(s []string) { sort.Strings(s) }

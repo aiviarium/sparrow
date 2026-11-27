@@ -110,7 +110,6 @@ type Session struct {
 	draining   bool
 	closed     bool
 	closeErr   *Error
-	closing    bool
 
 	shrinkArmed bool
 	pingNonce   uint64
@@ -1429,13 +1428,6 @@ func (s *Session) handshakeError() error {
 		return s.closeErr
 	}
 	return &Error{Code: status.Unavailable, Message: "session closed"}
-}
-
-func (s *Session) closedErrorOr(err error) error {
-	if s.isClosed() {
-		return s.closedError()
-	}
-	return err
 }
 
 func (s *Session) wrapTransportErr(err error) error {

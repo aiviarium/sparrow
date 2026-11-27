@@ -114,12 +114,3 @@ func (h *halves) calleeMsg(k wire.Kind) bool {
 	}
 	return true
 }
-
-// isFinal reports whether kind k from that side would finish its half.
-func (h *halves) isFinal(caller bool, k wire.Kind) bool {
-	c := *h
-	if caller {
-		return c.callerMsg(k)
-	}
-	return c.calleeMsg(k)
-}

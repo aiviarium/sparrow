@@ -448,8 +448,7 @@ func (f *fixture) listenEcho(e *echoNode, addr string) {
 	e.pin, _ = hex.DecodeString(a.Pin)
 }
 
-func strp(s string) *string { return &s }
-func boolp(b bool) *bool    { return &b }
+func boolp(b bool) *bool { return &b }
 
 func policy(gs ...Grant) map[string][]byte {
 	return map[string][]byte{PolicyExtension: EncodeGrants(gs)}

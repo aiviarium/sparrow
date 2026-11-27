@@ -25,10 +25,6 @@ func (RealClock) Now() time.Time { return time.Now() }
 // AfterFunc is time.AfterFunc.
 func (RealClock) AfterFunc(d time.Duration, f func()) Timer { return time.AfterFunc(d, f) }
 
-type nopTimer struct{}
-
-func (nopTimer) Stop() bool { return false }
-
 func stopTimer(t Timer) {
 	if t != nil {
 		t.Stop()

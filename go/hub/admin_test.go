@@ -364,14 +364,6 @@ func TestRecheckSparesUnaryOwnCalls(t *testing.T) {
 	}
 }
 
-func mustEncode(t *testing.T, f interface{ Encode() ([]byte, error) }) []byte {
-	b, err := f.Encode()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return b
-}
-
 // TestWatchReportsEveryNode (hub-admin 4): a new watch begins with the
 // Snapshot and one NodeEvent per configured node, and after every applied
 // revision the hub sends a NodeEvent for every configured node, changed or

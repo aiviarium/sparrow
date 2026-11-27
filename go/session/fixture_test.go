@@ -447,16 +447,12 @@ func stdPair(t testing.TB, b binding, h *testHandlers, mod func(c, s *Config)) (
 	return pair(t, b, ccfg, scfg)
 }
 
-func code(err error) status.Code { return Code(err) }
-
 func mustCode(t testing.TB, err error, want status.Code) {
 	t.Helper()
 	if got := Code(err); got != want {
 		t.Fatalf("status %v (%v), want %v", got, err, want)
 	}
 }
-
-var errAny = errors.New("any")
 
 func testutilEventually(t testing.TB, cond func() bool) {
 	t.Helper()

@@ -138,9 +138,6 @@ func NewUDPProxy(t testing.TB, target string, seed uint64) *UDPProxy {
 // Addr is the address clients send to.
 func (p *UDPProxy) Addr() string { return p.ln.LocalAddr().String() }
 
-// Port is Addr's port.
-func (p *UDPProxy) Port() int { return p.ln.LocalAddr().(*net.UDPAddr).Port }
-
 // Direction is one way through a proxy.
 type Direction int
 
@@ -389,13 +386,6 @@ func (p *TCPProxy) Resume() {
 
 // Resets is the number of connections the proxy reset.
 func (p *TCPProxy) Resets() int64 { return p.resets.Load() }
-
-// Conns is the number of open connections.
-func (p *TCPProxy) Conns() int {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	return len(p.conns)
-}
 
 // ResetAll resets every open connection now.
 func (p *TCPProxy) ResetAll() {

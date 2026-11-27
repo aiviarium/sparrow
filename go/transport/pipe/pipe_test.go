@@ -2,6 +2,7 @@ package pipe
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -34,7 +35,7 @@ func TestMain(m *testing.M) {
 	case "":
 	case "echo": // echoes every message until its input ends, then exits 0
 		c := Stdio(nil)
-		lane, _ := c.SharedLane(nil)
+		lane, _ := c.SharedLane(context.Background())
 		for {
 			b, err := lane.ReadMessage()
 			if err != nil {
@@ -45,7 +46,7 @@ func TestMain(m *testing.M) {
 			}
 		}
 	case "exit3": // reads one message and exits 3
-		lane, _ := Stdio(nil).SharedLane(nil)
+		lane, _ := Stdio(nil).SharedLane(context.Background())
 		_, _ = lane.ReadMessage()
 		os.Exit(3)
 	case "stubborn": // ignores the end of its input
@@ -79,7 +80,7 @@ func TestFraming(t *testing.T) {
 	a, b := net.Pipe()
 	c := New(b, fast)
 	defer c.Close(status.ProtocolError, "")
-	lane, _ := c.SharedLane(nil)
+	lane, _ := c.SharedLane(context.Background())
 	go func() {
 		// A non-shortest length prefix (2-byte form of 3) is accepted.
 		_, _ = a.Write([]byte{0x40, 0x03, 0x82, 0x01, 0x02})
@@ -106,7 +107,7 @@ func TestLimitBeforeBody(t *testing.T) {
 	defer c.Close(status.ProtocolError, "")
 	defer a.Close()
 	c.SetReadLimit(16384)
-	lane, _ := c.SharedLane(nil)
+	lane, _ := c.SharedLane(context.Background())
 	go func() { _, _ = a.Write([]byte{0xc0, 0, 0, 0, 0x40, 0, 0, 0}) }() // 2^30, no body follows
 	var tl *wire.TooLargeError
 	if _, err := lane.ReadMessage(); !errors.As(err, &tl) {
@@ -120,7 +121,7 @@ func TestEmptyFrame(t *testing.T) {
 	c := New(b, fast)
 	defer c.Close(status.ProtocolError, "")
 	defer a.Close()
-	lane, _ := c.SharedLane(nil)
+	lane, _ := c.SharedLane(context.Background())
 	go func() { _, _ = a.Write([]byte{0x00}) }()
 	if _, err := lane.ReadMessage(); !errors.Is(err, wire.ErrEmptyFrame) {
 		t.Fatalf("got %v", err)
@@ -134,7 +135,7 @@ func TestChoppedWrites(t *testing.T) {
 	a, b := net.Pipe()
 	c := New(b, fast)
 	defer c.Close(status.ProtocolError, "")
-	lane, _ := c.SharedLane(nil)
+	lane, _ := c.SharedLane(context.Background())
 	msgs := [][]byte{{0xf6}, bytes.Repeat([]byte{7}, 300), bytes.Repeat([]byte{9}, 70000)}
 	go func() {
 		var all []byte
@@ -162,7 +163,7 @@ func TestClosedMidMessage(t *testing.T) {
 	t.Parallel()
 	a, b := net.Pipe()
 	c := New(b, fast)
-	lane, _ := c.SharedLane(nil)
+	lane, _ := c.SharedLane(context.Background())
 	go func() {
 		_, _ = a.Write(wire.AppendFrame(nil, bytes.Repeat([]byte{1}, 100))[:50])
 		_ = a.Close()
@@ -175,7 +176,7 @@ func TestClosedMidMessage(t *testing.T) {
 	if !errors.As(c.Err(), &ce) || ce.Code != status.Unavailable || !ce.Remote {
 		t.Fatalf("Err() = %v", c.Err())
 	}
-	if _, err := c.SharedLane(nil); err != transport.ErrClosed {
+	if _, err := c.SharedLane(context.Background()); err != transport.ErrClosed {
 		t.Fatalf("SharedLane after the end: %v", err)
 	}
 }
@@ -184,7 +185,7 @@ func TestEOF(t *testing.T) {
 	t.Parallel()
 	a, b := net.Pipe()
 	c := New(b, fast)
-	lane, _ := c.SharedLane(nil)
+	lane, _ := c.SharedLane(context.Background())
 	go func() {
 		_, _ = a.Write(wire.AppendFrame(nil, []byte{0xf6}))
 		_ = a.Close()
@@ -199,7 +200,7 @@ func TestEOF(t *testing.T) {
 	if c.Leases() {
 		t.Fatal("a pipe has no leased streams")
 	}
-	if _, err := c.OpenStream(nil); err != transport.ErrNoLeases {
+	if _, err := c.OpenStream(context.Background()); err != transport.ErrNoLeases {
 		t.Fatalf("OpenStream: %v", err)
 	}
 	if err := c.Wait(); err != nil {
@@ -214,8 +215,8 @@ func TestCloseLingers(t *testing.T) {
 	t.Parallel()
 	x, y := net.Pipe()
 	a, b := New(x, &Options{Linger: 10 * time.Second}), New(y, fast)
-	la, _ := a.SharedLane(nil)
-	lb, _ := b.SharedLane(nil)
+	la, _ := a.SharedLane(context.Background())
+	lb, _ := b.SharedLane(context.Background())
 	go func() {
 		// b reads a's message and the end of a's direction, then closes.
 		for {
@@ -252,7 +253,7 @@ func TestCloseStalledPeer(t *testing.T) {
 	x, y := net.Pipe() // unbuffered: every write waits for a reader
 	defer y.Close()
 	c := New(x, fast)
-	lane, _ := c.SharedLane(nil)
+	lane, _ := c.SharedLane(context.Background())
 	wrote := make(chan error, 1)
 	go func() { wrote <- lane.WriteMessage(bytes.Repeat([]byte{1}, 1000)) }()
 	done := make(chan struct{})
@@ -278,7 +279,7 @@ func TestSpawn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lane, _ := c.SharedLane(nil)
+	lane, _ := c.SharedLane(context.Background())
 	for _, m := range [][]byte{{0xf6}, bytes.Repeat([]byte{3}, 100_000)} {
 		if err := lane.WriteMessage(m); err != nil {
 			t.Fatal(err)
@@ -313,7 +314,7 @@ func TestSpawnChildExits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lane, _ := c.SharedLane(nil)
+	lane, _ := c.SharedLane(context.Background())
 	_ = lane.WriteMessage([]byte{0xf6})
 	if _, err := lane.ReadMessage(); err != io.EOF {
 		t.Fatalf("read from an exited child: %v", err)
@@ -362,7 +363,7 @@ func FuzzConn(f *testing.F) {
 	f.Fuzz(func(t *testing.T, in []byte) {
 		c := New(nopCloser{bytes.NewReader(in)}, fast)
 		c.SetReadLimit(1 << 16)
-		lane, _ := c.SharedLane(nil)
+		lane, _ := c.SharedLane(context.Background())
 		var reframed []byte
 		for i := 0; ; i++ {
 			m, err := lane.ReadMessage()

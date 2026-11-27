@@ -26,12 +26,11 @@ import (
 
 // webKeys are the TEST-ONLY keys of the signing vectors.
 type webKeys struct {
-	root      ed25519.PrivateKey
-	rootPub   []byte
-	stranger  ed25519.PrivateKey // uncertified
-	certs     []cbor.Raw
-	revoked   cbor.Raw
-	verifyNow time.Time
+	root     ed25519.PrivateKey
+	rootPub  []byte
+	stranger ed25519.PrivateKey // uncertified
+	certs    []cbor.Raw
+	revoked  cbor.Raw
 }
 
 func loadWebKeys(t *testing.T) *webKeys {

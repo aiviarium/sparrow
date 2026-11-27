@@ -38,7 +38,6 @@ import {
   isOptional,
   isRemoved,
   isSparse,
-  members,
   reachesByteStream,
   typeIndex,
   validateFacet,

@@ -12,7 +12,6 @@ import { Raw, bytesEqual, decode, encode } from './cbor.js';
 import {
   SchemaError,
   SchemaState,
-  WEB_FACET_ID,
   canonicalSchema,
   decodeDelta,
   decodeSchema,
@@ -36,7 +35,6 @@ import { ConnClosedError, type CloseInfo, type Conn } from './transport.js';
 import { Codec, type DynamicValue } from './value.js';
 import {
   CreditWindow,
-  DecodeError,
   NOTIFICATION_ID,
   NULL_ITEM,
   TooLargeError,
@@ -60,7 +58,6 @@ import {
   type Hello,
   type Limits,
   type Message,
-  type MetaKey,
   type Metadata,
   type Params,
   type Request,
