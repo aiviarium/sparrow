@@ -1,6 +1,6 @@
 # Sparrow Hub Administration (sparrow.hub.admin v1)
 
-> Companion to the core specification (`core.md`, section 10.9). Snapshot of the live draft, revision 38, exported for this repository. The live document is the source of truth.
+> Companion to the core specification (`core.md`, section 10.9). Snapshot of the live draft, revision 41, exported for this repository. The live document is the source of truth.
 
 A hub that implements this interface can be configured entirely at run time by a controlling application, such as an orchestrator that runs the hub in a container. The controller pushes one desired-state document; the hub validates it, applies it as a whole, and rolls it back by itself unless the controller confirms it in time. A bootstrap administrator can always reach the interface, so no document can lock the hub out of administration.
 
@@ -67,8 +67,8 @@ NodeConfig = {
   ? extensions:  { * tstr => bstr }
 }
 
-Link     = [0, Dial]             ; the hub dials the node
-         / [1, secret-name]      ; the node dials in and presents this credential
+Link     = [0, Dial]             ; dial: the hub dials the node
+         / [1, secret-name]      ; credential: the node dials in and presents it
 
 Dial     = { url: tstr, pin: bstr, credential: secret-name }
            ; pin: SHA-256 of the node's SubjectPublicKeyInfo
@@ -78,7 +78,7 @@ Dial     = { url: tstr, pin: bstr, credential: secret-name }
 A document is valid when:
 
 - every node ID follows the node-ID grammar and is not reserved (Hub Profile, section 10.2);
-- every referenced secret exists, every secret named by a link is named once in the document, and the values of all those secrets are pairwise distinct, so no credential presented to one party can be replayed to another;
+- every referenced secret exists, every secret named by a link is named once in the document, and the values of all those secrets are pairwise distinct, so no credential presented to one party can be replayed to another (a clash is reported at each node after the first in node-ID order);
 - every `Dial.url` is an `https` (WebTransport) or `wss` (WebSocket) URL, and every `pin` is 32 bytes;
 - every `defaults` key is a 33-byte interface hash and every value a syntactically valid facet name;
 - every `extensions` key is one the hub supports, with valid contents.
