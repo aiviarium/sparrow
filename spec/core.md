@@ -2,7 +2,7 @@
 
 Nov 26, 2026 · Christoph Feuerer
 
-> Snapshot of the live draft, revision 183, exported for this repository. The live document is the source of truth; diagrams are not included here.
+> Snapshot of the live draft, revision 302, exported for this repository. The live document is the source of truth; diagrams are not included here.
 
 ## 1. Overview
 
@@ -35,8 +35,8 @@ The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are used as described i
 | Schema | The document describing a peer's types, services, methods and sigils. |
 | Schema hash | 0x01 followed by the SHA-256 of a schema's canonical form (section 6.6); identifies a schema across sessions. |
 | Epoch | A counter that goes up by one each time the schema changes within a session. |
-| TypeId | Numeric ID of a type within a part. |
-| MethodId | Numeric ID of a method within a part. A part is a self-contained unit of a schema, usually one plugin (section 6). |
+| TypeId | Numeric ID of a type within a facet. |
+| MethodId | Numeric ID of a method within a facet. A facet is a self-contained unit of a schema, usually one plugin (section 6). |
 | Sigil | Numeric ID of a named constant: an enum value, error code or well-known string. |
 | Call | One RPC invocation and all its messages. Identified by a call ID; runs on the shared lane or on a leased stream. |
 | Shared lane | The one stream every session has, carrying the handshake, session messages and small multiplexed calls. Other calls lease a stream from a pool (section 4). |
@@ -64,7 +64,7 @@ Every message is a single CBOR data item (RFC 8949) in preferred serialization. 
 | Arrays, maps | MUST be definite length. Map keys MUST be unique. |
 | Tags | Only the tags in section 3.5. An unknown tag is a decode error. |
 | Simple values | `false`, `true`, `null` only. `undefined` MUST NOT appear. |
-| Nesting | Decoders MUST reject values nested deeper than 64 levels. |
+| Nesting | Decoders MUST reject a message nested deeper than 64 levels, counting arrays, maps and tags, with the message's own array as level 1. Receivers accept any other valid encoding of an ordinary message, shortest or not; canonical data is checked by recomputing its hash. |
 
 ### 3.2 Canonical encoding
 
@@ -185,7 +185,7 @@ Used when WebTransport is unavailable, for example on networks that block UDP. A
 
 ### 4.7 Pipe binding
 
-For a single ordered byte stream, such as a child process's standard input and output, a unix socket or an SSH channel. The Hub Profile (section 10) uses it for local processes and machines reached over SSH.
+For a single ordered byte stream, such as a child process's standard input and output, a unix socket or an SSH channel. The Hub Profile (section 10) uses it for processes a hub starts, which may themselves reach a remote machine, for example by running `ssh`.
 
 - The side that speaks first with `Hello` is the Sparrow client. A process started by a hub is the client, on its standard input and output.
 - There is a shared lane and nothing else: each message is preceded by its length as a QUIC variable-length integer (shortest form when sending, any valid form when receiving), with no stream header. Every call runs as on the shared lane, with `sharedCredit`. `maxStreams` does not apply.
@@ -281,9 +281,9 @@ params = {
 }
 ```
 
-Each peer's `params` are the limits it imposes on the other, like QUIC transport parameters: `Hello.params` bind the server and `Welcome.params` bind the client. A missing key means the default. `maxStreams` defaults to 16 in `Welcome` (streams the client may open) and 4 in `Hello` (streams the server may open). Both peers use the smaller `idleTimeoutMs`.
+Each peer's `params` are the limits it imposes on the other, like QUIC transport parameters: `Hello.params` bind the server and `Welcome.params` bind the client. A missing key means the default. `maxStreams` defaults to 16 in `Welcome` (streams the client may open) and 4 in `Hello` (streams the server may open). Both peers use the smaller `idleTimeoutMs`. Unknown keys are ignored. `maxMessageSize`, `maxInlineBytes`, `sharedCredit` and `leaseCredit` MUST be at least 16384 and `maxConcurrentCalls` at least 1; a peer that receives a smaller value closes the session with `GoAway(invalid_argument)`.
 
-The client schema is always sent inline and is small for typical clients. The server parses it only after verifying the credential, and MAY reject one larger than 64 KiB or nested deeper than 32 levels with `GoAway(invalid_argument)`.
+The client schema is always sent inline and is small for typical clients. The server parses it only after verifying the credential, and MAY reject one larger than 64 KiB or with type references nested deeper than 32 levels with `GoAway(invalid_argument)`.
 
 If no version matches, the server sends `GoAway(unsupported_version)` with its versions in the `versions` field. If the credential is rejected, it sends `GoAway(unauthenticated)`.
 
@@ -316,24 +316,24 @@ A peer SHOULD send `Ping` when the shared lane has been idle for half of `idleTi
 
 ## 6. Schema model
 
-A schema is a set of **parts**. Each part is self-contained, usually one plugin or one facility, with its own types, services, methods and sigils. A call names its method by part ID and method ID, and its payload is read entirely within that part. A hub can therefore combine parts from many peers and forward calls without decoding their payloads (section 10).
+A schema is a set of **facets**. Each facet is self-contained, usually one plugin or one facility, with its own types, services, methods and sigils. A call names its method by facet ID and method ID, and its payload is read entirely within that facet. A hub can therefore combine facets from many peers and forward calls without decoding their payloads (section 10).
 
 ### 6.1 Ownership and IDs
 
 - Each peer publishes its own schema: the server in `Welcome`, the client (optionally) in `Hello`.
-- **All IDs in a call belong to the callee's schema.** The part ID picks a part of the callee's schema; method, type and sigil IDs are local to that part.
-- **No reference crosses a part.** Every type reference, sigil and `dynamic` value refers to the part of the method being called. Parts that share a contract each carry identical copies of its definitions (section 6.5).
-- **Part IDs** are unique within a schema. 0–15 are reserved for parts this spec defines: part 1 is `sparrow.web` (section 9.4), which MUST match its definition exactly, by part hash. The other reserved IDs MUST NOT appear. Other parts use 16 and up, and a schema lists its parts sorted by ID.
-  - **Names** of parts and node IDs match `[a-z0-9-]+(\.[a-z0-9-]+)*`, ASCII only, except that a hub may prefix imported part names with `<peer-id>/` (section 10.8). Names of types, services, methods, fields, variants and sigils are ASCII as well.
-- **IDs inside a part:**
+- **All IDs in a call belong to the callee's schema.** The facet ID picks a facet of the callee's schema; method, type and sigil IDs are local to that facet.
+- **No reference crosses a facet.** Every type reference, sigil and `dynamic` value refers to the facet of the method being called. Facets that share a contract each carry identical copies of its definitions (section 6.5).
+- **Facet IDs** are unique within a schema. 0–15 are reserved for facets this spec defines: facet 1 is `sparrow.web` (section 9.4), which MUST match its definition exactly, by name and facet hash. The other reserved IDs MUST NOT appear. Other facets use 16 and up, and a schema lists its facets sorted by ID.
+  - **Names** of facets and node IDs match `[a-z0-9-]+(\.[a-z0-9-]+)*`, ASCII only, except that a hub may prefix imported facet names with `<peer-id>/` (section 10.8). Names of types, services, methods, fields, variants and sigils are ASCII as well.
+- **IDs inside a facet:**
 
-| Space | Reserved, same meaning in every part | Free |
+| Space | Reserved, same meaning in every facet | Free |
 | --- | --- | --- |
 | TypeIds | 0–31 built-in types (section 6.3), 32–63 reserved | 64 and up |
 | Sigils | 0–31 status codes (section 8), 32–47 core metadata keys (section 7.2), 48–63 reserved | 64 and up |
-| ServiceIds, MethodIds | none | any; MethodIds are unique within the part |
+| ServiceIds, MethodIds | none | any; MethodIds are unique within the facet |
 
-- Reserved IDs are never defined in a part. Within a session a removed part ID comes back only for a part with the same name and major version that is a compatible successor of the last version the session saw (section 6.7), with its `retired` carried over. An ID listed in a part's `retired` is never defined again in that part.
+- Reserved IDs are never defined in a facet. Within a session a removed facet ID comes back only for a facet with the same name and major version that is a compatible successor of the last version the session saw (section 6.7), with its `retired` carried over. An ID listed in a facet's `retired` is never defined again in that facet.
 
 ### 6.2 Document layout
 
@@ -342,18 +342,18 @@ schema = [
   format:      2,
   name:        tstr,             ; e.g. "sparrow.host"
   version:     tstr,             ; informative
-  parts:       [* part],
+  facets:      [* facet],
   annotations: annotations
 ]
 
-part = [
+facet = [
   id:          uint,
   name:        tstr,             ; unique within the schema, e.g. "acme.charts"
-  version:     tstr,             ; semver of the part
+  version:     tstr,             ; semver of the facet
   types:       [* type-def],
   services:    [* service-def],
   sigils:      [* sigil-def],
-  implements:  bstr / null,      ; hash of the interface this part implements (section 6.5)
+  implements:  bstr / null,      ; hash of the interface this facet implements (section 6.5)
   retired:     [* [space: uint, id: uint]],  ; space: 0 type, 1 service, 2 method, 3 sigil
   annotations: annotations
 ]
@@ -361,7 +361,7 @@ part = [
 annotations = { * tstr => any }  ; profile-defined metadata; unknown keys MUST be ignored
 ```
 
-In CDDL, `any` means any CBOR value. Sparrow's run-time typed value is the built-in type `dynamic` (section 6.3).
+In CDDL, `any` means any CBOR value. Sparrow's run-time typed value is the built-in type `dynamic` (section 6.3). Annotation keys starting with `sparrow.` are reserved for this spec: `sparrow.defaults` (section 10.3) and the hint `sparrow.level` (section 10.4).
 
 ### 6.3 Types
 
@@ -379,7 +379,7 @@ Built-in types:
 | 7 | `bytes` | byte string |
 | 8 | `timestamp` | tag 1 + integer or float seconds |
 | 9 | `uuid` | tag 37 + 16-byte byte string |
-| 10 | `dynamic` | `[type_id, value]`, where `type_id` is a built-in or a named type of the same part |
+| 10 | `dynamic` | `[type_id, value]`, where `type_id` is a built-in or a named type of the same facet |
 | 11 | `symbol` | sigil (uint) or text string |
 
 `symbol` is for strings that repeat often (event names, CSS classes, keys): the encoder sends the sigil when the string has one and the text otherwise. A `dynamic` value can only name a type by ID, so a composite such as a list needs an alias (below).
@@ -420,7 +420,7 @@ A removed field or variant stays in the list as a tombstone, so its tag is never
 service-def = [id: uint, name: tstr, methods: [* method-def], annotations]
 
 method-def = [
-  id:      uint,          ; MethodId, unique within the part
+  id:      uint,          ; MethodId, unique within the facet
   name:    tstr,          ; e.g. "openPanel"
   input:   type-ref,      ; [3, T] = client stream, [4] = byte stream
   output:  type-ref,      ; [3, T] = server stream, [4] = byte stream
@@ -433,7 +433,7 @@ method-def = [
 
 The call shape follows from the types: plain input and output is unary, and `[3, T]` on either side makes that side a stream.
 
-Flags 0x8 and 0x10 say whether each half of a call is finished by `End` (section 7.1). The owner MUST set 0x8 when the input is a stream or contains `[4]` anywhere, following referenced types, and 0x10 likewise for the output. It MAY set them in other cases, which leaves room to add byte fields later. `[4]` MUST NOT appear inside a `dynamic` value. A method's `input`, `output` and flags 0x2, 0x8 and 0x10 never change once defined.
+Flags 0x8 and 0x10 say whether each half of a call is finished by `End` (section 7.1). The owner MUST set 0x8 when the input is a stream or contains `[4]` anywhere, following referenced types, and 0x10 likewise for the output. It MAY set them in other cases, which leaves room to add byte fields later. `[4]` MUST NOT appear inside a `dynamic` value. A method with flag 0x2 (notification) MUST have output `unit` and no `[4]` in its input. A method's `input`, `output` and flags 0x2, 0x8 and 0x10 never change once defined. Type IDs 12–31 are reserved for built-ins of later core versions, so a schema that uses them is invalid under this version.
 
 ### 6.5 Sigils and interfaces
 
@@ -443,50 +443,50 @@ sigil-def = [id: uint, name: tstr, kind: uint, annotations]  ; kind: 0 enum valu
 
 Every enum value, error code and interned symbol is a sigil. Enum values MUST be kind-0 sigils and error codes other than the core ones MUST be kind-1 sigils.
 
-An **interface** is a contract that several parts can implement, such as an extension point every chart plugin provides. A part implements at most one interface; a node that implements several publishes one part for each.
+An **interface** is a contract that several facets can implement, such as an extension point every chart plugin provides. A facet implements at most one interface; a node that implements several publishes one facet for each.
 
 ```
 interface = [name: tstr, version: tstr, types: [* type-def], services: [* service-def], sigils: [* sigil-def]]
 ```
 
-It contains its services and exactly the types and sigils those services reach. Its hash is computed like a part's (section 6.6). Conformance compares **wire shapes**: the canonical encoding of a definition with every `name` replaced by an empty string, every `annotations` by an empty map, the hint flags cleared (method flags 0x1 and 0x4, field flag 0x2), and, for a service, its list of methods left out. A part implements an interface when every type, sigil and service of the interface appears in the part with the same ID and the same wire shape, and every method of each interface service appears in the part's service with the same ID and the same wire shape. The part may add definitions of its own, including further methods in an implemented service. The check is a byte comparison, and names, documentation and annotations such as access hints stay free. A part names the interface it implements in `implements`, and a peer that receives a part SHOULD verify each claim.
+It contains its services and exactly the types and sigils those services reach, not counting references inside tombstones. Its hash is computed like a facet's (section 6.6). Conformance compares **wire shapes**: the canonical encoding of a definition with every `name` replaced by an empty string, every `annotations` by an empty map, the hint flags cleared (method flags 0x1 and 0x4, field flag 0x2), and, for a service, its list of methods left out. A facet implements an interface when every type, sigil and service of the interface appears in the facet with the same ID and the same wire shape, and every method of each interface service appears in the facet's service with the same ID and the same wire shape. The facet may add definitions of its own, including further methods in an implemented service. The check is a byte comparison, and names, documentation and annotations such as access hints stay free. A facet names the interface it implements in `implements`, and a peer that receives a facet SHOULD verify each claim.
 
 ### 6.6 Canonical form, hashes, epochs and deltas
 
-- **Canonical form:** within a part or interface, types, services and sigils are sorted by ID, methods by ID within their service, fields and variants by tag, enum values and errors by sigil ID, and `retired` by space then ID; a schema's parts are sorted by ID. Every other array, including those inside annotations, keeps its order. The result is encoded with Core Deterministic Encoding (section 3.2).
+- **Canonical form:** within a facet or interface, types, services and sigils are sorted by ID, methods by ID within their service, fields and variants by tag, enum values and errors by sigil ID, and `retired` by space then ID; a schema's facets are sorted by ID. Every other array, including those inside annotations, keeps its order. The result is encoded with Core Deterministic Encoding (section 3.2).
 - **Hashes** are all `0x01 || SHA-256(canonical bytes)`, 33 bytes; the leading byte names the algorithm.
-  - A **part hash** covers the canonical part with its `name` set to an empty string and its `id` set to 0, so a part keeps its hash under any part ID or name a hub gives it.
+  - A **facet hash** covers the canonical facet with its `name` set to an empty string and its `id` set to 0, so a facet keeps its hash under any facet ID or name a hub gives it.
   - An **interface hash** covers the canonical interface.
-  - The **schema hash** covers `[format, name, version, [* [part_id, part_name, part_hash]], annotations]`, with the entries sorted by part ID.
+  - The **schema hash** covers `[format, name, version, [* [facet_id, facet_name, facet_hash]], annotations]`, with the entries sorted by facet ID.
 - **Epoch:** each schema has its own epoch, starting at 0 when the session starts and going up by one with each `SchemaUpdate` from its owner. `SchemaAck(N)` acknowledges every epoch up to N. A peer only ever acknowledges the other peer's schema, so an ack is never ambiguous.
-- **Delta:** parts change as whole units:
+- **Delta:** facets change as whole units:
 
 ```
 delta = [* delta-op]
 delta-op =
-    [0, part]            ; add a part, or replace the part with the same ID
-  / [1, part_id: uint]   ; remove a part
+    [0, facet]           ; add a facet, or replace the facet with the same ID
+  / [1, facet_id: uint]  ; remove a facet
   / [2, annotations]     ; replace top-level annotations
   / [3, version: tstr]   ; replace the version string
 ```
 
 Rules for live updates:
 
-1. The owner MUST NOT send any message that uses a part or ID added in epoch N, whether a request, response, item or error detail, until it has received `SchemaAck` for N. Such messages wait in a queue. If the ack has not arrived within 10 s, the owner closes the session with `GoAway(schema_mismatch)`. The receiver MUST send `SchemaAck` as soon as it has applied the delta and checked the hash (a hub relaying a node's parts acks as section 10.3 describes); downloading modules, writing snapshots and other follow-up work happen afterwards.
-2. A replacing part MUST be a compatible change of the part it replaces (section 6.7); a receiver MAY verify this, and a hub MUST verify it for parts it receives from nodes, and every top-level ID it drops MUST appear in its `retired`. Methods that disappear, with their part or alone, reject new calls with `unimplemented`; calls already running finish, and receivers keep the old definitions until those calls end.
-3. After applying a delta, the receiver MUST check that every part is valid (every reference resolves within its part, references inside tombstones excepted; no reserved or retired ID is defined; no part ID outside the rules of section 6.1; no float anywhere) and that the new schema hash matches the one in `SchemaUpdate`. On any failure it closes the session with `GoAway(schema_mismatch)`, and the next connection fetches the full schema.
+1. The owner MUST NOT send any message that uses a facet or ID added in epoch N, whether a request, response, item or error detail, until it has received `SchemaAck` for N. Such messages wait in a queue. If the ack has not arrived within 10 s, the owner closes the session with `GoAway(schema_mismatch)`. The receiver MUST send `SchemaAck` as soon as it has applied the delta and checked the hash (a hub relaying a node's facets acks as section 10.3 describes); downloading modules, writing snapshots and other follow-up work happen afterwards.
+2. A replacing facet MUST be a compatible change of the facet it replaces (section 6.7); a receiver MAY verify this, and a hub MUST verify it for facets it receives from nodes, and every top-level ID it drops MUST appear in its `retired`. Methods that disappear, with their facet or alone, reject new calls with `unimplemented`; calls already running finish, and receivers keep the old definitions until those calls end.
+3. After applying a delta, the receiver MUST check that every facet is valid (every reference resolves within its facet, references inside tombstones excepted; no reserved or retired ID is defined; no facet ID outside the rules of section 6.1; no float anywhere) and that the new schema hash matches the one in `SchemaUpdate`. On any failure it closes the session with `GoAway(schema_mismatch)`, and the next connection fetches the full schema.
 
-Part IDs and the IDs inside parts SHOULD stay stable across restarts, rebuilds and every server of a deployment, so reconnecting clients usually get `Unchanged` or a small delta. A server sends a delta only if it still has the schema the client named; otherwise it sends the full schema. Reference implementations MUST publish test vectors for parts, interfaces, schemas, deltas and their hashes.
+Facet IDs and the IDs inside facets SHOULD stay stable across restarts, rebuilds and every server of a deployment, so reconnecting clients usually get `Unchanged` or a small delta. A server sends a delta only if it still has the schema the client named; otherwise it sends the full schema. Reference implementations MUST publish test vectors for facets, interfaces, schemas, deltas and their hashes.
 
 ### 6.7 Evolution rules
 
-| Change inside a part | Allowed? | Notes |
+| Change inside a facet | Allowed? | Notes |
 | --- | --- | --- |
 | Add a struct field with a new tag | Only if optional | Older readers skip it. |
 | Add an enum value or union variant | Yes | Readers MUST handle unknown values. |
 | Add a type, service, method or sigil | Yes | New IDs. |
-| Move a method to another service of the part | Yes | Methods are identified by ID. |
-| Change annotations, anywhere in the part | Yes |  |
+| Move a method to another service of the facet | Yes | Methods are identified by ID. |
+| Change annotations, anywhere in the facet | Yes |  |
 | Rename a type, field, service, method or sigil | Yes | Names are informational on the wire. |
 | Mark a field deprecated, or change method flags 0x1 and 0x4 | Yes | Hints only. |
 | Remove a type, service, method or sigil that is not an enum value | Yes | Its ID goes into `retired`, which only ever grows. |
@@ -496,8 +496,10 @@ Part IDs and the IDs inside parts SHOULD stay stable across restarts, rebuilds a
 | Make an optional field required, or reuse a tag | No | Add a new field. |
 | Change a method's input, output, or flags 0x2, 0x8, 0x10 | No | Add a new method. |
 | Make `[4]` reachable from a method half whose End flag is not set | No | Peers would disagree on how the call ends. |
-| Change the major version, which is the first number of `version` (0 included) | No | A new major version is a new part (section 10.3). |
-| Rename the part | No | A part's name identifies it. |
+| Change the major version, which is the first number of `version` (0 included) | No | A new major version is a new facet (section 10.3). |
+| Rename the facet | No | A facet's name identifies it. |
+| Make a required field optional | No | Older readers still require it. |
+| Change a field's or variant's type when it becomes a tombstone | No | A tombstone keeps its last definition. |
 
 ## 7. RPC messages
 
@@ -512,13 +514,13 @@ Every call has a call ID chosen by the caller, whether it runs on the shared lan
 - `End`, `Error` and `Cancel` also close every byte token their sender opened in the call. Data not yet marked `fin` is cut off, and the receiver discards any later `Bytes` for the call. A referenced token that was cut off or never sent reaches the application as data_loss.
 - The call **ends** when both halves are finished. Both peers then forget its ID, and a leased stream it ran on is idle again.
 - If the callee finishes first while input is still arriving, it MUST keep reading and discarding that input until the caller's half is finished. When the callee's final message arrives, the caller MUST send `End` (or `Cancel`) next, with no further `Item` or `Bytes`.
-- Messages for an unknown or ended call ID are ignored. A `Request` naming a part or method the callee does not have is answered with `Error(unimplemented)`.
+- Messages for an unknown or ended call ID are ignored. A `Request` naming a facet or method the callee does not have is answered with `Error(unimplemented)`.
 
 ### 7.2 Call messages
 
 | Kind | Message | Sent by | Layout |
 | --- | --- | --- | --- |
-| 16 | `Request` | caller | `[16, call_id, part_id, method_id, metadata, input]` |
+| 16 | `Request` | caller | `[16, call_id, facet_id, method_id, metadata, input]` |
 | 17 | `Response` | callee | `[17, call_id, output]` (unary result) |
 | 18 | `Item` | either | `[18, call_id, value]` (one stream element) |
 | 19 | `End` | either | `[19, call_id, trailers]` (finishes the sender's half) |
@@ -564,7 +566,7 @@ Every call is flow-controlled with credit, per direction, on every stream.
 - **Unit:** bytes. Each `Item` and `Progress` message counts the length of its CBOR data item, that is, of the whole message without its length prefix (so the count is the same over WebSocket), and each `Bytes` message counts the length of `data`. `Request`, `Response`, `Headers`, `End`, `Error`, `Cancel` and `Credit` do not count; each is bounded by `maxMessageSize` and occurs at most once per call or carries no data.
 - **Initial credit:** each direction of a call starts with `sharedCredit` (default 64 KiB) on the shared lane or `leaseCredit` (default 1 MiB) on a leased stream. The caller MAY set the callee's initial credit with the `credit` metadata key.
 - **Granting more:** the receiver sends `Credit [24, call_id, amount]`; grants add up. It SHOULD grant more once about half of its credit is used.
-- **Sending:** a sender MAY send a message whenever its remaining credit is above zero, even if the message is larger; the credit then goes negative until more is granted. This guarantees progress for messages bigger than the window. A sender with zero or negative credit waits.
+- **Sending:** a sender MAY send a message whenever its remaining credit is above zero, even if the message is larger; the credit then goes negative until more is granted. This guarantees progress for messages bigger than the window. A sender with zero or negative credit waits, except for messages that count zero bytes, such as an empty final `Bytes` chunk, which are never held back.
 - **Violation:** a peer that sends with no credit left has broken the protocol for that call. The callee answers `Error(protocol_error)` and the caller sends `Cancel(protocol_error)`.
 - **Memory bound:** a receiver buffers at most its granted credit plus one `maxMessageSize` per call direction, so a session needs at most about `maxConcurrentCalls` × (credit + `maxMessageSize`) for buffered data, plus one Request and one Headers per call, each up to maxMessageSize. Receivers SHOULD grow the credit they grant toward the bandwidth-delay product, so the 64 KiB shared-lane default does not cap throughput on fast links.
 
@@ -582,7 +584,7 @@ Every call is flow-controlled with credit, per direction, on every stream.
 
 ### 7.7 Example
 
-A unary call with call ID 2 to method 1042 (`Panels.open`) of part 16, with input struct `["settings", true]`, on an idle leased stream:
+A unary call with call ID 2 to method 1042 (`Panels.open`) of facet 16, with input struct `["settings", true]`, on an idle leased stream:
 
 ```
 ; caller -> callee
@@ -590,7 +592,7 @@ A unary call with call ID 2 to method 1042 (`Panels.open`) of part 16, with inpu
 86                                  ; array(6)
    10                               ;   16  Request
    02                               ;   2  call_id
-   10                               ;   16  part_id
+   10                               ;   16  facet_id
    19 04 12                         ;   1042  method_id
    a0                               ;   {}  metadata
    82 68 73 65 74 74 69 6e 67 73 f5 ;   ["settings", true]
@@ -644,14 +646,14 @@ Codes 23–31 are reserved for later core versions. Stream resets and transport 
 
 | Where | How the status is carried |
 | --- | --- |
-| `Error`, `Cancel`, `GoAway`, `AuthStatus` | The `status` field. `Error` may carry any status sigil of the method's part; `Cancel`, `GoAway` and `AuthStatus` carry core codes only. |
+| `Error`, `Cancel`, `GoAway`, `AuthStatus` | The `status` field. `Error` may carry any status sigil of the method's facet; `Cancel`, `GoAway` and `AuthStatus` carry core codes only. |
 | WebTransport stream reset | The stream error code: a core status code. |
 | WebTransport session close | The session close code: a core status code; the reason holds at most 1024 bytes of UTF-8. |
 | WebSocket close | 1000 for `ok`, otherwise 4000 + the core status code; the reason holds at most 123 bytes of UTF-8. A sender shortens a longer reason at a character boundary. The mapping covers all core codes 0–31. |
 
 A peer that detects a `protocol_error` inside a call ends that call with `Error` (as callee) or `Cancel` (as caller). Outside any call, it sends `GoAway(protocol_error)` and closes the session.
 
-`Error.details` is any CBOR value. It SHOULD be a `dynamic` value (`[type_id, value]`) from the method's part, so clients can decode structured errors such as a list of invalid fields.
+`Error.details` is any CBOR value. It SHOULD be a `dynamic` value (`[type_id, value]`) from the method's facet, so clients can decode structured errors such as a list of invalid fields.
 
 ## 9. Sparrow Web Profile
 
@@ -713,7 +715,7 @@ Schemas that vary by permission (a user who cannot see the admin plugin gets a s
 
 ### 9.4 Modules and the host API
 
-Each part declares the client modules it ships in its own `web.modules` annotation, so a module arrives and leaves with its part. The client gathers them from all parts:
+Each facet declares the client modules it ships in its own `web.modules` annotation, so a module arrives and leaves with its facet. The client gathers them from all facets:
 
 ```
 web-module = {
@@ -738,11 +740,11 @@ export default function register(host: HostApi): ModuleInstance
 Rules:
 
 - Modules MUST NOT bundle their own copy of SolidJS or other shared runtime libraries; they get them from `host`. Two copies of Solid would mean two reactive systems that cannot see each other's signals.
-- The client MUST skip any module whose `hostApi` range does not include its own host API version, and report it with the `moduleRejected` notification of part 1, `sparrow.web` (below).
+- The client MUST skip any module whose `hostApi` range does not include its own host API version, and report it with the `moduleRejected` notification of facet 1, `sparrow.web` (below).
 - The `hostApi` version is the client's real compatibility contract. It MUST follow semver: removing or changing anything in `HostApi` is a major version.
-- Configuration for the client (layout, routes, feature flags) goes in `Welcome.props` or in top-level schema annotations under `web.*`, whose shape the host API defines. A part's own annotations may carry only `web.modules`, and every module `id` in it MUST equal the part's name or start with it followed by a dot, ignoring any `<peer-id>/` prefix a hub added (section 10.8). Module ids follow the same ASCII grammar as part names. A client ignores any other `web.*` key in a part; `web.keys`, `web.revoked` and client configuration are read from top-level schema annotations only. A part therefore cannot change client-wide settings or ship modules under another part's name.
+- Configuration for the client (layout, routes, feature flags) goes in `Welcome.props` or in top-level schema annotations under `web.*`, whose shape the host API defines. A facet's own annotations may carry only `web.modules`, and every module `id` in it MUST equal the facet's name or start with it followed by a dot, ignoring any `<peer-id>/` prefix a hub added (section 10.8). Module ids follow the same ASCII grammar as facet names. A client ignores any other `web.*` key in a facet; `web.keys`, `web.revoked` and client configuration are read from top-level schema annotations only. A facet therefore cannot change client-wide settings or ship modules under another facet's name.
 
-Part 1, `sparrow.web`, is defined by this spec with version `1.0.0`, no types, sigils, interface, retired IDs or annotations, and every server implementing the web profile includes it exactly. It has one service, 0 `Client`, with one method, 0 `moduleRejected`: a notification (flag 0x2) whose input is a list of strings (`[0, 6]`) holding the module's `id`, its `version` and a reason, and whose output is `unit`.
+Facet 1, `sparrow.web`, is defined by this spec with version `1.0.0`, no types, sigils, interface, retired IDs or annotations, and every server implementing the web profile includes it exactly. It has one service, 0 `Client`, with one method, 0 `moduleRejected`: a notification (flag 0x2) whose input is a list of strings (`[0, 6]`) holding the module's `id`, its `version` and a reason, and whose output is `unit`.
 
 ### 9.5 Module signing
 
@@ -757,7 +759,7 @@ Signing protects clients against a compromised plugin publisher, build pipeline,
 - **Scope:** namespaces limit what each publisher can sign. Once loaded, all modules share one JavaScript realm, so a module can still affect others unless modules are sandboxed (section 12.3).
 - A development build MAY accept unsigned modules behind an explicit flag that a production build cannot enable.
 
-Signed formats, which the test vectors of section 6.6 also cover:
+Signed formats, which the reference test vectors also cover:
 
 - **Keys:** keys are raw 32-byte Ed25519 public keys. `key_id` is the first 16 bytes of SHA-256 of the key. The `key_id` in a module's `sig` is that of the key that signed it, root or publisher.
   - **Verdicts:** a module is accepted only if every rule in this section holds. The order in which a client checks them does not change the verdict.
@@ -783,50 +785,49 @@ Before running any module, the loader MUST check its bytes against the signed ha
 
 ## 10. Sparrow Hub Profile
 
-A hub is a Sparrow server that hosts and routes parts published by other peers, called **nodes**: plugin processes, app services, remote machines and other hubs. A node publishes its parts like any Sparrow peer publishes a schema. The hub combines them into the schema each session sees, authorizes every call, and forwards calls by rewriting envelopes, never payloads. Supporting a new plugin language therefore takes a Sparrow library, not a new server.
+A hub is a Sparrow server that hosts and routes facets published by other peers, called **nodes**: plugin processes, app services, remote machines and other hubs. A node publishes its facets like any Sparrow peer publishes a schema. The hub combines them into the schema each session sees, authorizes every call, and forwards calls by rewriting envelopes, never payloads. Supporting a new plugin language therefore takes a Sparrow library, not a new server.
 
 ### 10.1 Roles
 
 | Role | What it is |
 | --- | --- |
-| Hub | Hosts and routes parts, issues call contexts, authorizes every call. |
-| Node | Publishes parts and handles calls to them: a plugin process, an app service, a remote machine, or another hub (section 10.8). |
-| Client | Calls parts. Any parts it publishes belong to its own session (section 10.3). |
+| Hub | Hosts and routes facets, issues call contexts, authorizes every call. |
+| Node | Publishes facets and handles calls to them: a plugin process, an app service, a remote machine, or another hub (section 10.8). |
+| Client | Calls facets. Any facets it publishes belong to its own session (section 10.3). |
 
 Every link is an ordinary Sparrow session. The profile defines no new message kinds, only what a hub does with the messages it receives.
 
 ### 10.2 Node links
 
-A node publishes its parts in whichever schema it owns on the link, and the hub publishes the parts the node may call in the other:
+A node publishes its facets in whichever schema it owns on the link, and the hub publishes the facets the node may call in the other:
 
-| How the link starts | Binding | Sparrow client | Node's parts travel in |
+| How the link starts | Binding | Sparrow client | Node's facets travel in |
 | --- | --- | --- | --- |
 | The hub spawns a process | pipe (section 4.7) | node | `Hello.client_schema` |
-| The hub runs a command over SSH | pipe | node | `Hello.client_schema` |
 | The node dials in | WebTransport or WebSocket | node | `Hello.client_schema` |
-| The hub dials a service at a URL | WebTransport or WebSocket | hub | `Welcome.server_schema` |
+| The hub dials a configured node at its URL | WebTransport or WebSocket | hub | `Welcome.server_schema` |
 
-- **Identity** comes from the link, never from message content. A spawned or SSH-run process is the node the hub started it as. A node that dials in authenticates with `["node", credential]` in `Hello`, issued when an operator enrolls it; enrollment is the hub's own administration. A service the hub dials is identified by its configured URL and TLS certificate, and the hub MUST authenticate to it in turn, with `["hub", credential]` in `Hello` or with mutual TLS. A node MUST honour `principal` and `context` only on an authenticated link to its hub; a pipe link the hub started itself counts as authenticated.
-- **Node IDs** are stable, from the node's manifest or enrollment, and match `[a-z0-9-]+(\.[a-z0-9-]+)*`.
-- **Part names belong to their node.** Every part a node publishes MUST be named after the node: the name equals the node ID or starts with the node ID and a dot. The hub closes a session that breaks this with `GoAway(invalid_argument)`. Two nodes therefore can never claim the same part.
-- **One session per node.** A new session from a node ID that already has one supersedes it, and a reconnect and an upgrade are the same event. The hub keeps the old session fully open until it switches. If the new session's parts differ from those the hub lists, it first relays the change as in section 10.3 and waits until every session that sees the change has acknowledged it; until then calls keep going to the old session, or wait (within the start timeout of section 10.7) for a node that was offline. When it switches, it routes new calls to the new session and sends `GoAway(going_away)` to the old one, whose running calls finish there.
-- **Limits:** the 64 KiB limit on client schemas (section 5.4) does not apply to nodes; a hub MAY set its own. The hub re-validates a dial-in credential at least every 60 s and closes the session with `GoAway(unauthenticated)` once it is revoked.
+- **Identity** comes from the link, never from message content. A process the hub starts is the node it was configured as; its standard input and output belong to the hub alone. Whichever side opens a link to the other, other than by starting a process, authenticates with `["link", credential]` in `Hello`, and the accepting side maps the credential to the configured node or hub it belongs to; a node that dials in does so. A node the hub dials is configured with its URL and the SHA-256 of its public key (SubjectPublicKeyInfo), which the hub verifies on every connection; the hub MUST authenticate to it in turn, with `["link", credential]` in `Hello` or with mutual TLS. Which nodes exist, with their credentials, URLs and key hashes, is the hub's configuration (section 10.9); a node listed there is a configured node. A node MUST honour `principal` and `context` only on an authenticated link to its hub; the standard input and output of a process the hub started count as authenticated.
+- **Node IDs** are stable, part of the hub's configuration, and match `[a-z0-9-]+(\.[a-z0-9-]+)*`.
+- **Facet names belong to their node.** Every facet a node publishes MUST be named after the node: the name equals the node ID or starts with the node ID and a dot. The hub closes a session that breaks this with `GoAway(invalid_argument)`. Two nodes therefore can never claim the same facet. Node IDs `sparrow` and `sparrow.*` are reserved, and a hub names its own facets `sparrow.*`, so a node's facets never collide with the hub's.
+- **One session per node.** A new session from a node ID that already has one supersedes it, and a reconnect and an upgrade are the same event. Each configured node has exactly one link direction: the hub refuses a dial-in for a node it starts or dials, with `GoAway(failed_precondition)`. The hub keeps the old session fully open until it switches. If the new session's facets differ from those the hub lists, it first relays the change as in section 10.3 and waits until every session that sees the change has acknowledged it; until then calls keep going to the old session, or wait (within the start timeout of section 10.7) for a node that was offline. When it switches, it routes new calls to the new session and sends `GoAway(going_away)` to the old one, whose running calls finish there.
+- **Limits:** the 64 KiB limit on client schemas (section 5.4) does not apply between a hub and its nodes, in either direction; either side MAY set its own. The hub re-validates a dial-in credential at least every 60 s and closes the session with `GoAway(unauthenticated)` once it is revoked or changed. Revocation takes effect at once, ahead of the takeover rule above; the node must dial in again.
 
 ### 10.3 Composition
 
-- **Schemas:** for each session the hub builds its schema from the hub's own parts and every node part `visible` to the session's principal (section 10.4). A node's own parts are left out of the schema the hub sends to that node.
-- **Part IDs** are stable for the triple (node ID, part name, major version) across sessions and restarts. A new major version is a new part: one delta removes the old part and adds the new one. A node moves its own part to a new major version the same way, by removing it and adding it under a new node-local part ID, or by reconnecting. Within a major version a replacement MUST be compatible (section 6.6, rule 2); the hub verifies this and closes a node session whose update is not with `GoAway(schema_mismatch)`.
-- **Interfaces:** the hub MUST verify a part's `implements` claim (section 6.5) and treats a failed claim like an incompatible update. Clients find every implementation of an interface by reading `implements` in their schema.
-- **Offline nodes:** the hub keeps the last parts of every enrolled node and lists them while it is offline, so caches stay valid. Calls to them fail with `unavailable` unless the hub can start the node (section 10.7).
-- **Client parts** are scoped to their session. The hub may call them itself, but never adds them to another session's schema. Nodes reach a client only through calls the client makes, such as responses and server streams.
+- **Schemas:** for each session the hub builds its schema from the hub's own facets and every node facet `visible` to the session's principal (section 10.4). A node's own facets are left out of the schema the hub sends to that node.
+- **Facet IDs** are stable for the triple (node ID, facet name, major version) across sessions and restarts. A new major version is a new facet: one delta removes the old facet and adds the new one. A node moves its own facet to a new major version the same way, by removing it and adding it under a new node-local facet ID, or by reconnecting. A hub never reuses a facet ID: removing a node retires its facet IDs, and a node added again gets new ones. A disabled node's facets are hidden but keep their IDs. Within a major version a replacement MUST be compatible (section 6.6, rule 2); the hub verifies this and closes a node session whose update is not with `GoAway(schema_mismatch)`.
+- **Interfaces:** the hub MUST verify a facet's `implements` claim (section 6.5) and treats a failed claim like an incompatible update. Clients find every implementation of an interface by reading `implements` in their schema. For every interface with at least one visible implementation, the hub names one as the default in the top-level schema annotation `sparrow.defaults`, a map from interface hash (bytes) to facet ID; a caller with no reason to choose calls the default.
+- **Offline nodes:** the hub keeps listing the facets of a configured node while it is offline, so caches stay valid (section 10.7).
+- **Client facets** are scoped to their session. The hub may call them itself, but never adds them to another session's schema. Nodes reach a client only through calls the client makes, such as responses and server streams.
 - **Relaying updates:** when a node's `SchemaUpdate` changes what other sessions see, the hub sends each of them a `SchemaUpdate` and acks the node only once each has acked or been closed. Each downstream session gets half the time the hub itself has left to ack, 5 s for a node's update, before the hub closes it with `GoAway(schema_mismatch)`. A peer hub that relays further gives its own sessions half of its time again, so no sender's limit ever runs out. Until the node receives the ack it uses no new IDs (section 6.6, rule 1), so no session ever receives an ID it cannot decode.
 
 ### 10.4 Authorization
 
 The profile defines two decisions and leaves the policy behind them to the hub:
 
-- `visible(principal, part)`: the part appears in the principal's schema.
-- `allowed(principal, part, method)`: the principal may call the method. A method can only be allowed if its part is visible.
+- `visible(principal, facet)`: the facet appears in the principal's schema.
+- `allowed(principal, facet, method)`: the principal may call the method. A method can only be allowed if its facet is visible.
 
 Every call the hub receives is checked before it is handled or forwarded: each of its **acting principals** must be allowed, or the hub answers `Error(permission_denied)` itself.
 
@@ -841,26 +842,26 @@ Because a node's own principal is always checked, a node can never do more than 
 
 When a decision changes, the hub sends `SchemaUpdate` deltas to the sessions affected and ends calls that are no longer allowed: `Error(permission_denied)` toward the caller and `Cancel(permission_denied)` toward the node.
 
-Principals are strings of the form `kind:id`, where `kind` is `user`, `group` or `node`, and `id` uses ASCII letters, digits and `.`, `_`, `-`, `@`. A peer principal is `peer:<hub-id>/` followed by a non-peer principal, where `<hub-id>` follows the node-ID grammar. How the hub stores grants and evaluates the two decisions is its own design; a common choice is grants of `view`, `use` and `manage` on parts, administered through an ordinary part.
+Principals are strings of the form `kind:id`, where `kind` is `user`, `group` or `node`, and `id` uses ASCII letters, digits and `.`, `_`, `-`, `@`. A peer principal is `peer:<hub-id>/` followed by a non-peer principal, where `<hub-id>` follows the node-ID grammar. How the hub stores grants and evaluates the two decisions is its own design; a common choice is grants of `view`, `use` and `manage` on facets. Methods may carry the hint annotation `"sparrow.level"` (`"use"` or `"manage"`) to help such a policy.
 
 ### 10.5 Forwarding
 
-When a call arrives for a node's part, the hub:
+When a call arrives for a node's facet, the hub:
 
 1. Authorizes it (section 10.4).
-2. Opens a call on the node's link with a new call ID, the node's own part ID, and the same method ID, metadata and input. It sets `context` and `principal` (section 10.6), replacing any values the caller sent. It lowers `deadline` by the time already spent, start-up time included, and may set `credit` to any value no higher than the caller's, or than the default for the caller's stream if the caller sent none.
+2. Opens a call on the node's link with a new call ID, the node's own facet ID, and the same method ID, metadata and input. It sets `context` and `principal` (section 10.6), replacing any values the caller sent. It lowers `deadline` by the time already spent, start-up time included, and may set `credit` to any value no higher than the caller's, or than the default for the caller's stream if the caller sent none.
 3. Relays every later message of the call except `Credit`, changing only the call ID.
 
 The rules for the two calls, caller to hub and hub to node:
 
-- **Payloads** are copied byte for byte: every element of every message except the call ID, the part ID and a `Request`'s metadata, which the hub re-encodes with its changes. The only other exception is `Bytes`, which the hub MAY split or join into different chunks, keeping each token's data and its final `fin` unchanged.
+- **Payloads** are copied byte for byte: every element of every message except the call ID, the facet ID and a `Request`'s metadata, which the hub re-encodes with its changes. The only other exception is `Bytes`, which the hub MAY split or join into different chunks, keeping each token's data and its final `fin` unchanged.
 - **Streams and credit** are chosen per hop (sections 4.3 and 7.4). The hub grants credit to a sender only as it forwards that sender's data, so per call and direction it holds at most the credit it granted plus one message.
 - **Size:** if a message is larger than the next hop's `maxMessageSize`, the hub ends both calls: `Error(message_too_large)` toward the caller and `Cancel(message_too_large)` toward the node.
 - **Endings:** the method flags, identical on both hops, decide how each half ends. If either link drops, the hub ends the other call: `Error(unavailable)` toward the caller and `Cancel(unavailable)` toward the node.
 - **No retries:** the hub never retries a call by itself; retrying is the caller's decision (section 5.2).
 - **Notifications** are relayed best-effort, with call ID 0 on both hops and no `context`, since no call stays open to bind one to. The hub still sets `principal`, and a node handling a notification calls the hub as itself.
 
-A call from a node to any part is handled the same way: authorized, then answered by the hub or forwarded to the node that owns the part.
+A call from a node to any facet is handled the same way: authorized, then answered by the hub or forwarded to the node that owns the facet.
 
 ### 10.6 Call context
 
@@ -870,41 +871,31 @@ A call from a node to any part is handled the same way: authorized, then answere
 - A call with an unknown or expired context fails with `Error(permission_denied)`. It never falls back to the node's own principal.
 - When the grace period ends, the hub cancels every call still open that carries the context.
 
-### 10.7 Local nodes
+### 10.7 Offline and starting nodes
 
-A hub can run nodes itself from a **node manifest**, which a package carries beside its files:
+The hub lists the **last known facets** of every configured node, whether or not the node is connected: the facets the node last published or, for a node never seen, facets given in the hub's configuration.
 
-```
-node-manifest = {
-  id:         tstr,               ; node ID, e.g. "acme.charts"
-  version:    tstr,               ; semver
-  parts:      [* tstr],           ; package paths of canonical part files
-  start:      { command: [+ tstr], ? env: { * tstr => tstr } }  ; spawned, pipe binding
-            / { url: tstr },                                    ; a service the hub dials
-  activation: "startup" / "lazy",
-  ? requires: [* bstr]            ; interfaces some other visible part must implement
-}
-```
-
-- **Lazy start:** the hub lists the manifest's parts before the node runs. On the first call it starts the node and holds the call until the session is ready (the node's `Ready`, or the hub's own `Ready` when it dialed), for at most a start timeout (RECOMMENDED 10 s); after that the call fails with `Error(unavailable)`.
-- **Matching:** the node MUST publish exactly the manifest's parts, compared by part hash. Otherwise the hub closes the session with `GoAway(schema_mismatch)` and marks the node failed.
-- **Requirements:** a node whose required interfaces have no implementation is not started, and its parts are not listed.
-
-*Non-normative:* a hub typically restarts an exited node with backoff and marks it failed after repeated crashes, such as 5 within a minute. An upgrade starts the new version, which supersedes the old session (section 10.2). Packaging, distribution and process isolation are the hub's choice.
+- A call to a facet of a node that is not connected waits until that node's session is ready (its `Ready`, or the hub's own `Ready` when the hub dialed), starting the node if the hub can, for at most a start timeout (RECOMMENDED 10 s), and then fails with `Error(unavailable)`.
+- When the node connects, its facets are handled like those of any new session (section 10.2): changes are relayed and acknowledged before calls reach it, and a facet that is not a compatible successor within its major version is refused with `GoAway(schema_mismatch)`.
+- When its configuration changes how a spawned node starts, the hub stops the old process before it starts the new one, so the node never runs twice; calls wait as above.
 
 ### 10.8 Federation
 
-A peer hub is a node of another hub. Exactly one side opens the link, chosen by configuration, and each side publishes the parts it exports in the schema it owns. A hub refuses an incoming session from a peer it dials itself with `GoAway(failed_precondition)`, so two hubs dialing each other never supersede each other's link. On top of the node rules:
+A peer hub is a node of another hub. As for every node, exactly one side opens the link (section 10.2), and each side publishes the facets it exports in the schema it owns. On top of the node rules:
 
-- **Exports** are the parts `visible` to `node:<peer-id>`.
-- **Names:** the importing hub lists each imported part as `<peer-id>/<name>`, instead of requiring the node-ID prefix. `/` cannot occur in node IDs, so imported names never collide with local ones. Names are not hashed, so part hashes stay the same.
+- **Exports** are the facets `visible` to `node:<peer-id>`.
+- **Names:** the importing hub lists each imported facet as `<peer-id>/<name>`, instead of requiring the node-ID prefix. `/` cannot occur in node IDs, so imported names never collide with local ones. Names are not hashed, so facet hashes stay the same.
 - **Principals:** a call from a peer may name the principal it acts for in `principal`. The receiving hub checks both `node:<peer-id>` and `peer:<peer-id>/<principal>` (section 10.4). It refuses a call whose named principal already starts with `peer:`.
-- **No re-export:** a hub MUST NOT export a part it imported from a peer. With the previous rule, every call crosses at most one peer link, so routing loops and identity chains cannot occur.
+- **No re-export:** a hub MUST NOT export a facet it imported from a peer. With the previous rule, every call crosses at most one peer link, so routing loops and identity chains cannot occur.
 - A failed peer link behaves like an offline node.
 
-### 10.9 Out of scope
+### 10.9 Administration
 
-Facilities such as storage, jobs, blobs, secrets and events are ordinary parts, provided by the hub or by nodes; later profiles MAY standardize their interfaces. High availability, spreading one part over several nodes, and resumable streams are implementation or application concerns. An application that needs to resume passes a cursor in its own methods.
+Administering a hub is a facet like any other. An operator or a controlling application calls it over an ordinary session and is authorized like any caller, and the hub applies changes through the mechanisms above: schema deltas, session takeover and `GoAway`. A hub never replaces its own program this way; upgrading the hub is the job of whatever runs it. The standard administration interface, `sparrow.hub.admin`, is specified in the companion document *Sparrow Hub Administration*, so any controller can drive any hub that implements it.
+
+### 10.10 Out of scope
+
+Facilities such as storage, jobs, blobs, secrets and events are ordinary facets, provided by the hub or by nodes. Standard contracts for them are interfaces published separately from this spec, never protocol sections. High availability, spreading one facet over several nodes, resumable streams, and how a hub installs, packages and supervises nodes are implementation or application concerns; the administration companion standardizes only how nodes are configured. The credentials a hub keeps for its own links are part of its configuration, not a secrets facility. An application that needs to resume passes a cursor in its own methods.
 
 ## 11. Security considerations
 
@@ -923,7 +914,7 @@ The biggest risk is code push: a compromised server or plugin can run code in ev
 | Downgrade to WebSocket | Both transports use TLS. The protocol is identical on both, so a downgrade costs performance but not security. |
 | Tracking via schema hash | A per-user schema hash can identify a user across sessions on a shared device. Snapshots SHOULD be cleared on logout. |
 | A node acting beyond its rights while handling a privileged user's call | Calls made with a context are checked against both the user and the node (section 10.4). Contexts are random, bound to one link and one call, and expire 2 s after it (section 10.6). |
-| A node taking over another plugin's part or a client-wide setting | Part names must start with the node ID (section 10.2); parts may carry only their own web.modules, named after the part (section 9.4). |
+| A node taking over another plugin's facet or a client-wide setting | Facet names must start with the node ID (section 10.2); facets may carry only their own web.modules, named after the facet (section 9.4). |
 | Spoofed principals and identity chains across hubs | Hubs derive principals from links and their own contexts only; peer principals are prefixed and may not nest, and nothing imported is re-exported (section 10.8). |
 | Someone other than the hub connecting to a node or service and forging principal metadata | The hub authenticates to every service it dials, and nodes honour principal and context only on an authenticated hub link (section 10.2). |
 
@@ -950,9 +941,9 @@ The draft is implementable with existing libraries on both sides. The main unkno
 ### 12.3 Decisions on earlier questions
 
 - **ID assignment:** the schema owner assigns IDs and keeps them stable (sections 6.6 and 10.3). IDs derived from name hashes would be larger and could collide.
-- **Session resumption:** not part of the protocol. A reconnect starts a new session; applications resume with cursors in their own methods (section 10.9).
+- **Session resumption:** not part of the protocol. A reconnect starts a new session; applications resume with cursors in their own methods (section 10.10).
 - **Datagrams:** the core defines none. A profile may define them behind the `datagrams` capability (section 4.5).
 - **Compression:** none. Numeric IDs and positional structs already remove most redundancy; a later profile may negotiate compression through `caps`.
 - **Module isolation:** every accepted module runs in the client's own realm (section 9.5). Running untrusted publishers' code in sandboxed iframes or workers is a host API matter outside this spec.
 - **Host API:** its surface and versioning belong to the client product that defines it; the protocol only carries `hostApi` ranges (section 9.4).
-- **Several schemas per session:** not needed. A session has one schema per peer, and parts provide the modularity (section 6).
+- **Several schemas per session:** not needed. A session has one schema per peer, and facets provide the modularity (section 6).
