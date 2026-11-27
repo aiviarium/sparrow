@@ -13,6 +13,18 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./pipe": {
+      "types": "./dist/transport/pipe.d.ts",
+      "default": "./dist/transport/pipe.js"
+    },
+    "./websocket": {
+      "types": "./dist/transport/websocket.d.ts",
+      "default": "./dist/transport/websocket.js"
+    },
+    "./mem": {
+      "types": "./dist/transport/mem.d.ts",
+      "default": "./dist/transport/mem.js"
     }
   },
   "files": [
