@@ -344,8 +344,11 @@ func (s *Session) onRequest(l *lane, r *wire.Request, b []byte) {
 		reject = &Error{Code: status.NotReady, Message: "call before Ready"}
 	case s.draining:
 		reject = &Error{Code: status.GoingAway, Message: "the session is shutting down"}
-	case def == nil || def.IsNotification():
+	case def == nil:
 		reject = &Error{Code: status.Unimplemented, Message: fmt.Sprintf("facet %d has no method %d", r.FacetID, r.MethodID)}
+	case def.IsNotification():
+		// 7.1: a Request with a nonzero call ID for a notification method.
+		reject = &Error{Code: status.InvalidArgument, Message: fmt.Sprintf("method %d of facet %d is a notification; send it with call ID 0", r.MethodID, r.FacetID)}
 	case uint64(s.inOpen) >= localL.MaxConcurrentCalls:
 		reject = &Error{Code: status.ResourceExhausted, Message: "maxConcurrentCalls reached"}
 	default:

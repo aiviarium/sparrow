@@ -48,6 +48,14 @@ type Stream interface {
 	Reset(code status.Code)
 }
 
+// WriteResetter is implemented by streams that can abort only their sending
+// direction and keep reading. A session uses it on a leased stream it
+// resets, so it can count the stream until it has seen the end of the
+// peer's direction too (4.2 rule 5).
+type WriteResetter interface {
+	ResetWrite(code status.Code)
+}
+
 // Conn is one transport connection carrying one session.
 type Conn interface {
 	// Leases reports whether the binding has leased streams. Without them

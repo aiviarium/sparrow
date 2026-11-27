@@ -100,8 +100,10 @@ most its credit plus one message.
 - **Leases**: a pool per side of the streams it opened; a stream counts until both directions are
   finished or reset. Calls go to an idle or new leased stream unless the method is flagged `shared`;
   when the pool is full they fall back to the shared lane (`Config.WaitForLease` waits instead).
-  Streams idle for 30 s are finished, keeping two. A stream this side reset stays counted for
-  `ResetHold` (1 s) so the peer has seen the reset before a replacement arrives.
+  Streams idle for 30 s are finished, keeping two. A stream this side reset (only its sending
+  direction, where the binding allows) stays counted until
+  the peer has ended its own direction too (it does so as soon as it sees the reset), up to
+  `ResetWait` (5 s), so a replacement never reaches a peer that still counts the old stream (4.2 rule 5).
 - **Schema gating** (6.6 rule 1): after `UpdateSchema`, every later callee message of a call to a facet
   the delta adds or replaces waits for `SchemaAck`; calls to other facets are not held. Core `Error`s
   without details never wait.

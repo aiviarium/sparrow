@@ -277,6 +277,21 @@ func (e *end) CloseWrite() error {
 	return nil
 }
 
+// ResetWrite aborts only the sending direction: the peer reads a remote
+// reset, and this side keeps reading.
+func (e *end) ResetWrite(code status.Code) {
+	q := e.out
+	q.mu.Lock()
+	if !q.fin || len(q.msgs) > 0 {
+		q.msgs = nil
+	}
+	if q.reset == nil {
+		q.reset = &transport.ResetError{Code: code, Remote: true}
+	}
+	q.cond.Broadcast()
+	q.mu.Unlock()
+}
+
 func (e *end) Reset(code status.Code) {
 	// Our sending direction: the peer reads a remote reset.
 	q := e.out

@@ -23,7 +23,7 @@ const (
 	DefaultLeaseIdle        = 30 * time.Second
 	DefaultKeepIdle         = 2
 	DefaultLinger           = time.Second
-	DefaultResetHold        = time.Second
+	DefaultResetWait        = 5 * time.Second
 
 	// PreAuthLimit bounds the shared-lane data the server buffers after
 	// Hello until the credential is verified, and the data an optimistic
@@ -111,6 +111,14 @@ type Config struct {
 	// MaxClientSchemaSize limits Hello.client_schema; 0 means 64 KiB and a
 	// negative value means no limit (between a hub and its nodes, 10.2).
 	MaxClientSchemaSize int
+	// ClientSchemaLimit, if set, replaces MaxClientSchemaSize per session,
+	// once the principal is known: a hub lifts the limit for its nodes
+	// (10.2) and keeps it for clients on the same listener.
+	ClientSchemaLimit func(principal string) int
+	// SchemaFor, if set, chooses the server's schema once the credential is
+	// verified, before Welcome: a hub sends each principal the facets
+	// visible to it (10.3). It replaces Schema.
+	SchemaFor func(ctx context.Context, principal string, hello *wire.Hello) (*schema.Schema, error)
 	// HelloTimeout defaults to 10 s.
 	HelloTimeout time.Duration
 	// OnAuthRefresh handles AuthRefresh: it returns the AuthStatus to send
@@ -144,10 +152,11 @@ type Config struct {
 	// Linger bounds how long the session waits for open calls to finish
 	// after the peer finished the shared lane; default 1 s.
 	Linger time.Duration
-	// ResetHold keeps a leased stream this side reset counted toward
-	// maxStreams a little longer, so the peer has seen the reset before a
-	// replacement stream arrives; default 1 s.
-	ResetHold time.Duration
+	// ResetWait bounds how long a leased stream this side reset stays
+	// counted toward maxStreams while it waits for the peer to end its own
+	// direction (4.2 rule 5); default 5 s. On a binding that cannot reset
+	// one direction alone, the stream stays counted for this long.
+	ResetWait time.Duration
 }
 
 // PeerSchemaUpdate describes an applied SchemaUpdate from the peer.

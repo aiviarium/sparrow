@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/aiviarium/sparrow-rpc/go/status"
 	"github.com/aiviarium/sparrow-rpc/go/transport"
@@ -126,8 +127,24 @@ func (c *Conn) AcceptStream(ctx context.Context) (transport.Stream, error) {
 // SetReadLimit sets maxMessageSize for reading.
 func (c *Conn) SetReadLimit(n uint64) { c.limit.Store(n) }
 
+// Linger is how long Close waits, after finishing its own direction, for
+// the peer to finish its own (5.6).
+var Linger = 2 * time.Second
+
 // Close closes the byte stream. The code and reason are not transmitted.
+// It first finishes this side's direction and waits up to Linger for the
+// peer to finish its own (seen by the reader), so messages in flight are
+// not lost (5.6); a protocol_error closes at once.
 func (c *Conn) Close(code status.Code, reason string) error {
+	if !c.closed.Load() && code != status.ProtocolError {
+		_ = c.lane.CloseWrite()
+		t := time.NewTimer(Linger)
+		select {
+		case <-c.done:
+		case <-t.C:
+		}
+		t.Stop()
+	}
 	return c.finish(&transport.CloseError{Code: code, Reason: reason}, true)
 }
 

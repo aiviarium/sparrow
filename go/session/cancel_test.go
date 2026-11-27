@@ -194,8 +194,9 @@ func TestCancelGiveUpLeased(t *testing.T) {
 	}
 	// The server saw the reset and dropped the call and the stream.
 	testutil.Eventually(t, 5*time.Second, func() bool { st := srv.Stats(); return st.OpenCalls == 0 && st.PeerLeased == 0 }, "server: %+v", srv.Stats())
-	// The reset stream stays counted for ResetHold, then is released.
-	clk.Advance(2 * time.Second)
+	// The reset stream stays counted until the server has ended its own
+	// direction too (4.2 rule 5), then is released without waiting for
+	// ResetWait.
 	testutil.Eventually(t, 5*time.Second, func() bool { return cli.Stats().PoolOpen == 0 }, "pool: %+v", cli.Stats())
 }
 

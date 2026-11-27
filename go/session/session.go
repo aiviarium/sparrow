@@ -194,8 +194,11 @@ func NewClient(ctx context.Context, conn transport.Conn, cfg Config) (*Session, 
 		s.startBackground()
 		return s, nil
 	}
+	// Wait until Ready is written, not just until Welcome is processed: a
+	// call the application sends on the shared lane right after NewClient
+	// returns must not overtake Ready (it would get not_ready, 5.2).
 	select {
-	case <-s.welcomeCh:
+	case <-s.readyCh:
 	case <-s.done:
 	case <-ctx.Done():
 		s.terminate(status.Cancelled, "handshake cancelled", false)
@@ -484,14 +487,10 @@ func (s *Session) preWelcomeBudget(n int) error {
 	}
 }
 
+// checkMinimums checks received params against the minimums of 5.4.
 func checkMinimums(p wire.Params) error {
-	for _, k := range []string{wire.ParamMaxMessageSize, wire.ParamMaxInlineBytes, wire.ParamSharedCredit, wire.ParamLeaseCredit} {
-		if v, ok := p.Get(k); ok && v < 16384 {
-			return Errorf(status.InvalidArgument, "params %s = %d is below 16384", k, v)
-		}
-	}
-	if v, ok := p.Get(wire.ParamMaxConcurrentCalls); ok && v < 1 {
-		return Errorf(status.InvalidArgument, "params maxConcurrentCalls must be at least 1")
+	if err := p.Validate(); err != nil {
+		return &Error{Code: status.InvalidArgument, Message: err.Error()}
 	}
 	return nil
 }
@@ -532,9 +531,29 @@ func (s *Session) serverHandshake(ctx context.Context) error {
 		}
 		principal = p
 	}
+	if s.cfg.SchemaFor != nil {
+		sc, err := s.cfg.SchemaFor(ctx, principal, h)
+		if err == nil {
+			var st *schema.State
+			if st, err = schema.NewState(sc.Canonical()); err == nil {
+				s.setLocal(st)
+			}
+		}
+		if err != nil {
+			code := status.Internal
+			var e *Error
+			if errors.As(err, &e) {
+				code = e.Code
+			}
+			return reject(code, err.Error(), nil)
+		}
+	}
 	var clientState *schema.State
 	if h.ClientSchema != nil {
 		max := s.cfg.MaxClientSchemaSize
+		if s.cfg.ClientSchemaLimit != nil {
+			max = s.cfg.ClientSchemaLimit(principal)
+		}
 		if max == 0 {
 			max = MaxClientSchemaSize
 		}

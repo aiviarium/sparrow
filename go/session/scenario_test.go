@@ -2,6 +2,7 @@ package session
 
 import (
 	"bytes"
+	"errors"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -371,8 +372,23 @@ func (r *scenarioRun) handshake(host *schema.Schema) {
 func (r *scenarioRun) send(lane string, b []byte) {
 	s := r.stream(lane)
 	if err := s.WriteMessage(b); err != nil {
+		if errors.Is(err, transport.ErrClosed) && r.closes() {
+			// The server may close before a message the script sends in
+			// the same flight is written (it then never reads it).
+			return
+		}
 		r.t.Fatalf("send: %v", err)
 	}
+}
+
+// closes reports whether the scenario ends with the session closed.
+func (r *scenarioRun) closes() bool {
+	for _, st := range r.sc.Steps {
+		if st.Expect == "session_closed" || st.Expect == "transport_closed" {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *scenarioRun) clientSend(st *scenarioStep) {

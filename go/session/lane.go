@@ -31,6 +31,10 @@ type lane struct {
 	counted     bool // still counted toward maxStreams
 	idleSince   time.Time
 	inPool      bool
+	// awaitEnd is set on a stream this side opened and reset: its own
+	// direction is aborted and it stays counted until the peer's direction
+	// ends too (4.2 rule 5).
+	awaitEnd bool
 }
 
 // write sends one encoded message on the lane, enforcing the peer's
@@ -91,6 +95,16 @@ func (l *lane) readLoop() {
 
 func (l *lane) readEnded(err error) {
 	s := l.s
+	s.mu.Lock()
+	awaiting := l.awaitEnd
+	s.mu.Unlock()
+	if awaiting {
+		// This side reset the stream; the peer has now ended its own
+		// direction, so both sides have sent and seen both ends.
+		l.st.Reset(status.Cancelled)
+		s.laneClosed(l)
+		return
+	}
 	var tl *wire.TooLargeError
 	if errors.As(err, &tl) {
 		if l.shared {
@@ -200,29 +214,52 @@ func (s *Session) laneBroken(l *lane, err error) {
 }
 
 // resetLane resets a leased stream, fails its call and removes it from the
-// pool. hold keeps it counted for ResetHold.
+// pool (4.2 rule 5). On a stream this side opened only the sending
+// direction is aborted where the binding allows it: the stream stays
+// counted until the peer, having seen the reset, ends its own direction
+// (or ResetWait passes), so a replacement stream never reaches a peer that
+// still counts this one. A stream the peer opened is aborted in both
+// directions and uncounted at once.
 func (s *Session) resetLane(l *lane, code status.Code, failCall bool) {
+	wr, canHalf := l.st.(transport.WriteResetter)
 	s.mu.Lock()
 	c := l.current
 	already := l.broken && l.readClosed && l.writeClosed
-	l.broken, l.readClosed, l.writeClosed = true, true, true
+	l.broken, l.writeClosed = true, true
 	l.current = nil
+	half := l.opened && canHalf && !already && !l.readClosed
+	if half {
+		l.awaitEnd = true
+	} else {
+		l.readClosed = true
+	}
 	if l.opened {
 		s.pool.removeIdle(l)
 	}
 	s.mu.Unlock()
-	if !already {
+	switch {
+	case half:
+		wr.ResetWrite(code)
+	case !already:
 		l.st.Reset(code)
 	}
 	if c != nil && failCall {
 		c.failLocal(&Error{Code: code, Message: "stream reset"})
 	}
-	if l.opened {
-		hold := dur(s.cfg.ResetHold, DefaultResetHold)
-		s.clock.AfterFunc(hold, func() { s.laneClosed(l) })
-	} else {
-		s.laneClosed(l)
+	if half {
+		wait := dur(s.cfg.ResetWait, DefaultResetWait)
+		s.clock.AfterFunc(wait, func() {
+			l.st.Reset(code)
+			s.laneClosed(l)
+		})
+		return
 	}
+	if l.opened && !canHalf {
+		hold := dur(s.cfg.ResetWait, DefaultResetWait)
+		s.clock.AfterFunc(hold, func() { s.laneClosed(l) })
+		return
+	}
+	s.laneClosed(l)
 }
 
 // pool is this side's leased streams (4.2): it only leases streams it

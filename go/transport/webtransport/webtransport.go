@@ -540,6 +540,16 @@ func (s *stream) CloseWrite() error {
 	return s.closeErr
 }
 
+// ResetWrite aborts only the sending direction (RESET_STREAM); the stream
+// keeps reading until the peer ends its own direction.
+func (s *stream) ResetWrite(code status.Code) {
+	wc, err := status.WebTransportCode(code)
+	if err != nil {
+		wc = uint32(status.Internal)
+	}
+	s.s.CancelWrite(wt.StreamErrorCode(wc))
+}
+
 func (s *stream) Reset(code status.Code) {
 	wc, err := status.WebTransportCode(code)
 	if err != nil {
