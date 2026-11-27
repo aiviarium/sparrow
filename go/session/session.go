@@ -81,17 +81,13 @@ type Session struct {
 	optimistic     bool
 	optReject      bool // client: optimistic start rejected
 
-	calls   map[uint64]*call
-	nextID  uint64
-	outOpen int
-	outSig  chan struct{}
-	inOpen  int
-	// inCallerOpen counts incoming calls whose caller's half is open,
-	// counted or not; more than twice maxConcurrentCalls closes the
-	// session (7.6).
-	inCallerOpen int
-	inLeased     int
-	pool         pool
+	calls    map[uint64]*call
+	nextID   uint64
+	outOpen  int
+	outSig   chan struct{}
+	inOpen   int
+	inLeased int
+	pool     pool
 
 	local         *schema.State
 	localAcked    uint64
@@ -448,7 +444,6 @@ type Stats struct {
 	OpenCalls      int // calls this side has open, both roles
 	OutgoingCalls  int // counted toward the peer's maxConcurrentCalls
 	IncomingCalls  int // counted toward this side's maxConcurrentCalls
-	CallerHalfOpen int // incoming calls whose caller's half is still open
 	PoolOpen       int // leased streams this side opened, still counted
 	PoolIdle       int
 	PeerLeased     int // leased streams the peer opened, still counted
@@ -463,7 +458,7 @@ type Stats struct {
 // Stats returns a snapshot.
 func (s *Session) Stats() Stats {
 	s.mu.Lock()
-	st := Stats{OpenCalls: len(s.calls), OutgoingCalls: s.outOpen, IncomingCalls: s.inOpen, CallerHalfOpen: s.inCallerOpen,
+	st := Stats{OpenCalls: len(s.calls), OutgoingCalls: s.outOpen, IncomingCalls: s.inOpen,
 		PoolOpen: s.pool.open, PoolIdle: len(s.pool.idle), PeerLeased: s.inLeased,
 		LocalAcked: s.localAcked, Draining: s.draining, Closed: s.closed}
 	if s.local != nil {
@@ -1002,6 +997,17 @@ func (s *Session) handleCallMessage(l *lane, m wire.Message, b []byte) {
 	c := s.calls[id]
 	s.mu.Unlock()
 	if c == nil || c.ln != l {
+		if c == nil && !l.shared {
+			// A call the callee forgot first: its stream becomes idle with
+			// the caller's End or Cancel (7.1).
+			if k := m.Kind(); k == wire.KindEnd || k == wire.KindCancel {
+				s.mu.Lock()
+				if l.awaitCallerEnd == id {
+					l.awaitCallerEnd = 0
+				}
+				s.mu.Unlock()
+			}
+		}
 		return // unknown or ended call, or the wrong stream: ignored (7.1)
 	}
 	c.deliver(&Msg{Kind: m.Kind(), Raw: b, Message: m, counted: wire.CountedBytes(m, len(b))})

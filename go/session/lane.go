@@ -35,6 +35,15 @@ type lane struct {
 	// direction is aborted and it stays counted until the peer's direction
 	// ends too (4.2 rule 5).
 	awaitEnd bool
+	// awaitCallerEnd is the ID of a call on a stream the peer opened that
+	// this side, the callee, forgot at its own final message: the stream
+	// is idle again only once the caller's End or Cancel for it arrives
+	// (7.1, one flag per stream). 0 for none.
+	awaitCallerEnd uint64
+	// heldCall is a call this side made on a stream it opened and then
+	// reset: it counts toward the peer's maxConcurrentCalls as long as the
+	// stream counts (7.5, 4.2 rule 5).
+	heldCall *call
 }
 
 // write sends one encoded message on the lane, enforcing the peer's
@@ -211,6 +220,10 @@ func (s *Session) uncountLocked(l *lane) {
 		return
 	}
 	l.counted = false
+	if c := l.heldCall; c != nil {
+		l.heldCall = nil
+		s.uncountCallLocked(c)
+	}
 	if l.opened {
 		s.pool.open--
 		s.pool.removeIdle(l)
@@ -249,6 +262,9 @@ func (s *Session) resetLane(l *lane, code status.Code, failCall bool) {
 	l.broken, l.writeClosed = true, true
 	l.current = nil
 	half := canHalf && !already && !l.readClosed
+	if c != nil && c.caller && l.opened && l.counted {
+		l.heldCall = c // counted as long as the stream (7.5)
+	}
 	if half && l.opened {
 		l.awaitEnd = true
 	} else if !half {

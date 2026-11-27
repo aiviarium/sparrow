@@ -69,8 +69,8 @@ type call struct {
 	autoAnswer     bool
 	cancelRecv     bool
 	cancelRecvCode status.Code
-	counted        bool // counts toward maxConcurrentCalls (7.6)
-	callerOpen     bool // callee: the caller's half is open (s.mu; the 2x bound of 7.6)
+	counted        bool // counts toward maxConcurrentCalls (7.6; s.mu)
+	forgetEarly    bool // callee: forgot the call at its final message, the caller's half still open (7.1)
 	giveUpT        Timer
 	brokenT        Timer
 	deadlineT      Timer
@@ -169,19 +169,13 @@ func (c *call) deliver(m *Msg) {
 	var finishes bool
 	if fromCaller {
 		finishes = c.h.callerMsg(k)
-		if finishes {
-			c.s.callerHalfDone(c)
-		}
 	} else {
 		finishes = c.h.calleeMsg(k)
 	}
 	switch {
 	case fromCaller && c.h.calleeDone:
-		// The callee finished first: keep reading and discarding input
-		// until the caller's half is finished (7.1), returning its credit.
-		if !finishes {
-			grant = n
-		}
+		// The callee finished first and is forgetting the call: its input
+		// is ignored and earns no more credit (7.1).
 	case !fromCaller && c.gaveUp:
 		// The application stopped listening after an unanswered Cancel.
 	default:
@@ -342,15 +336,19 @@ func (c *call) send(ctx context.Context, k wire.Kind, b []byte, n uint64, gate b
 		c.h.callerMsg(k)
 	} else if c.h.calleeMsg(k) {
 		// The callee counts a call only until it has sent its own final
-		// message, whether or not the caller's half is still open (7.6),
-		// and stops before the message goes out: the caller frees its slot
-		// once it has seen the message (and finished its own half) and may
-		// start the next call at once, which can arrive before the old
-		// call's End and must not find this one still counted.
+		// message, and then forgets it, whether or not the caller's half is
+		// still open (7.1, 7.6). It stops counting before the message goes
+		// out: the caller frees its slot once it has seen the message (and
+		// finished its own half) and may start the next call at once,
+		// which can arrive before the old call's End.
 		c.s.uncountCall(c)
+		if !c.h.callerDone {
+			c.forgetEarly = true
+			c.s.forgetEarly(c)
+		}
 	}
 	ended := false
-	if c.h.ended() && !c.ended {
+	if (c.h.ended() || c.forgetEarly) && !c.ended {
 		c.ended = true
 		ended = true
 	}
@@ -597,19 +595,21 @@ func (s *Session) endCall(c *call) {
 	}
 }
 
-// callerHalfDone records on the callee side that the caller's half of an
-// incoming call is finished (c.mu held).
-func (s *Session) callerHalfDone(c *call) {
+// forgetEarly drops a call the callee finished while the caller's half is
+// still open (c.mu held), before the final message goes out, so that the
+// caller's End, which may follow at once, finds the call gone: its ID is
+// no longer tracked, later messages for it are ignored, and a leased
+// stream is idle only once that End or Cancel has arrived (7.1).
+func (s *Session) forgetEarly(c *call) {
 	s.mu.Lock()
-	s.callerHalfDoneLocked(c)
-	s.mu.Unlock()
-}
-
-func (s *Session) callerHalfDoneLocked(c *call) {
-	if c.callerOpen {
-		c.callerOpen = false
-		s.inCallerOpen--
+	if s.calls[c.id] == c {
+		delete(s.calls, c.id)
 	}
+	if l := c.ln; l != nil && !l.shared && l.current == c {
+		l.current = nil
+		l.awaitCallerEnd = c.id
+	}
+	s.mu.Unlock()
 }
 
 // uncountCall frees the call's concurrency slot (c.mu held).
@@ -646,8 +646,9 @@ func (s *Session) forgetLocked(c *call) bool {
 	if s.calls[c.id] == c {
 		delete(s.calls, c.id)
 	}
-	s.uncountCallLocked(c)
-	s.callerHalfDoneLocked(c)
+	if c.ln == nil || c.ln.heldCall != c {
+		s.uncountCallLocked(c)
+	}
 	if c.ln != nil && !c.ln.shared && c.ln.current == c {
 		s.releaseLaneLocked(c.ln)
 	}
