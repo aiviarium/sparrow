@@ -1,12 +1,13 @@
 # Spec issues: resolution log
 
 Questions raised while writing the test vectors and the Go reference implementation, and how the
-spec author resolved them. The current spec is `spec/core.md`, revision 377, with the companion
-`spec/hub-admin.md`, revision 38; the scope change S1–S7 below came with core 347 and hub-admin 35,
-and its follow-ups S8–S16 with core 360–377 and hub-admin 36–38. Items P1–P16, raised by the Go hub (phase 3), were decided in core
+spec author resolved them. The current spec is `spec/core.md`, revision 381, with the companion
+`spec/hub-admin.md`, revision 41; the scope change S1–S7 below came with core 347 and hub-admin 35,
+its follow-ups S8–S16 with core 360–377 and hub-admin 36–38, and S17–S21 with core 381 and
+hub-admin 41. Items P1–P16, raised by the Go hub (phase 3), were decided in core
 revision 324 and hub-admin revision 25; items 26–36 are decisions taken since revision 183, and
 items O1–O5, raised while applying them, were decided in core revision 305 and hub-admin revision 18.
-Every item is **resolved**; the vectors, the JavaScript verifier and the Go library follow each
+Every item is **resolved** except the questions Q1–Q3 raised against core 381; the vectors, the JavaScript verifier and the Go library follow each
 decision.
 
 The concept called "part" up to revision 183 is called "facet" since then. The vectors, the
@@ -48,6 +49,26 @@ Follow-ups in core revisions 360–377 and hub-admin revisions 36–38 (S7's 2×
 | S14 | Last known facets only for enabled nodes, none for a node never seen, discarded on removal; a call to a removed or disabled node's facet ID gets `unimplemented`, as do calls waiting for it; dial when configured or enabled, redial "with exponential backoff and jitter, as a client reconnects" | core 10.7 | `TestNeverSeenNodeHasNoFacets`, `TestRemovedNodeDiscardsFacets`, `TestWaitingCallsForRemovedNode` |
 | S15 | Stored facets removed (putFacet, deleteFacet, listFacets, `NodeConfig.facets`, `Hashes`, the stored-facet key); `NodeConfig.link` is the union `Link` = `[0, Dial] / [1, secret-name]`; types 64–79 renumbered, methods 0–8, details `[72, problems]`; every secret a link names is named once and all their values are pairwise distinct | hub-admin 2, 3, 5 | `adminiface`, `admin`; `admin.json` regenerated (new interface hash), `admin/stored-facet-key` removed |
 | S16 | Watch: a NodeEvent's revision "is the revision applied when it was sent"; every configured node is reported after each revision; a disabled node is reported `disabled` until enabled; a removed node once; an offline message is the last connection failure | hub-admin 4 | `admin.Manager.NodeEvent`, `hub` |
+
+Follow-ups in core revision 381 and hub-admin revision 41:
+
+| # | Change | Spec | Go / vectors |
+| --- | --- | --- | --- |
+| S17 | "A `Request` … that arrives on a leased stream that is not idle (both halves of its last call finished), is a `protocol_error`" | core 7.1 | already so (`TestForgottenCallKeepsStreamUntilCallerEnd`); the error text now says "not idle" |
+| S18 | Ending a node's session for a configuration change also "ends every call the node made through the hub (cancelling it downstream)", and sends "`GoAway(unauthenticated)` to a node that dialed in or `GoAway(going_away)` to a node the hub dialed" | core 10.2 | `hub.endLinkNow`; `TestReconfigurationEndsCallsTheNodeMade`, `TestReconfigurationEndsSessionAtOnce` |
+| S19 | "For a node the hub dials, a call that starts waiting makes the hub dial at once unless an attempt is already under way" | core 10.7, reference note 3 | a kick is dropped while an attempt runs; `TestWaitingCallDialsAtOnce`, `TestWaitingCallDuringAttempt` |
+| S20 | "a hub that receives one [`AuthRefresh`] on a link to a node or peer closes that session with `GoAway(unauthenticated)`" | core 5.5 | already so; `TestAuthRefreshOnNodeLink` |
+| S21 | Link variants named `dial` and `credential` in the CDDL comments; a credential clash "is reported at each node after the first in node-ID order" | hub-admin 3 | already so; a validation case in `admin.TestValidate` |
+
+## Raised against core revision 381 (open)
+
+| # | Question | Current reading in the Go hub |
+| --- | --- | --- |
+| Q1 | 5.5 says "a hub that receives one [`AuthRefresh`] on a link to a node or peer closes that session with `GoAway(unauthenticated)`", but the message table gives `AuthRefresh` as "C→S". On a link the hub dialed, the node is the server: is its `AuthRefresh` the 5.5 case or a message in the wrong direction? | The hub receives it only as server (dial-in nodes and peers: `GoAway(unauthenticated)`); a dialed node sending it is refused by the session layer as `protocol_error`, like any server-sent `AuthRefresh` |
+| Q2 | 10.2 "ends every call the node made through the hub (cancelling it downstream)" names no status, while the calls running on the session end "with `Error(unavailable)`" | `Cancel(unavailable)` downstream and `Error(unavailable)` toward the node, as when a link drops (10.5) |
+| Q3 | 10.7 "unless an attempt is already under way": does the attempt include the session it produced while that session is still in its handshake or being relayed (10.2 "New sessions"), and does a call still waiting when that attempt fails start the next one at once? | An attempt runs from the dial until its session ends; a waiting call never starts a second one meanwhile; after a failed attempt the hub dials again within `WaitingRedial` (250 ms) while calls wait |
+
+Also decided here, without a spec change: "waits until every session that sees it has acknowledged it" (10.2) and "acks the node only once each has acked or been closed" (10.3) are read to include a session still in its handshake (its `Welcome` may predate the change) and a session whose earlier, still unacknowledged update already carries the change; both now hold the node's ack (`viewer.refresh`, `session.Unacked`), and the downstream limit applies to them too.
 
 ## Raised against core revision 316 and hub-admin revision 18 (resolved in core revision 324, hub-admin revision 25)
 

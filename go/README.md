@@ -1,7 +1,7 @@
 # Sparrow RPC: Go reference implementation
 
-Module `github.com/aiviarium/sparrow-rpc/go`, Go 1.24, following core spec revision 377
-(`../spec/core.md`) and hub-admin revision 38 (`../spec/hub-admin.md`). Phase 1 is the encoding,
+Module `github.com/aiviarium/sparrow-rpc/go`, Go 1.24, following core spec revision 381
+(`../spec/core.md`) and hub-admin revision 41 (`../spec/hub-admin.md`). Phase 1 is the encoding,
 wire format, schema model and web-profile signing (below); phase 2 the sessions, transports and the
 node library (`session/README.md`); phase 3 the hub, `sparrow.hub.admin` and the `sparrow-hub`
 program (section "Hub" below); phase 4 the Web Profile server (section "Web Profile" below).
@@ -39,6 +39,16 @@ go test ./wire   -run '^$' -fuzz FuzzDecode   -fuzztime 20s
 go test ./schema -run '^$' -fuzz FuzzSchema   -fuzztime 20s
 go test ./value  -run '^$' -fuzz FuzzDecode   -fuzztime 20s
 go test ./admin  -run '^$' -fuzz FuzzDecode   -fuzztime 20s
+```
+
+The suite runs in a few seconds (`go test ./...` about 4 s, `-race` about 11 s on 4 cores): tests run
+in parallel, the protocol timers are set to milliseconds where a test only waits for something to
+happen, and a test that checks a timeout runs it on a fake clock (`internal/testutil.FakeClock`) and
+advances it, so no test sleeps for a protocol timer. `testutil.Eventually`, `Never` and `WaitFor`
+poll with a short tick; the echo-node binary is built once per package (`TestMain`). Loaded:
+
+```sh
+go test -race -count=5 -p 4 ./hub ./cmd/... ./session ./web   # about 30 s
 ```
 
 The conformance suite fails if any vector is left unchecked. Set `SPARROW_VECTORS` to test against
@@ -113,13 +123,18 @@ Choices worth knowing (details in `spec/reference-server.md`):
   again. The last definition of every ID is persisted too: a node reconnecting (or updating) with a
   facet that is not a compatible successor is refused with `schema_mismatch`, also across restarts.
 - A node's update, or the change any new session of a node brings (dialed or dial-in), is relayed to every session whose
-  view changes; the node is acked only after each of them acked or was closed with
+  view changes (a session still in its handshake, or one whose unacknowledged update already
+  carries the change, counts too); the node is acked only after each of them acked or was closed with
   `GoAway(schema_mismatch)` (5 s each, 2 s for an update from a peer hub; `Options.RelayAckTimeout`,
   `PeerRelayAckTimeout`). The node library gives its hub at least 10 s.
 - Dial-in: only an enabled node configured to dial in has a dial-in credential; anything else is
   `GoAway(unauthenticated)`. A node that is removed or disabled, or whose link or `peer` setting
-  changes, has its session ended at once: its running calls end with `unavailable`, then
-  `GoAway(unauthenticated)`; it is dialed anew or waited for while still configured and enabled.
+  changes, has its session ended at once: its running calls end with `unavailable`, so do the calls
+  it made through the hub (cancelled downstream), then `GoAway(unauthenticated)` to a node that
+  dialed in or `GoAway(going_away)` to a node the hub dialed; it is dialed anew or waited for while
+  still configured and enabled. `AuthRefresh` on a dial-in node or peer link is
+  `GoAway(unauthenticated)` (on a dialed link the node is the server, and the session refuses it as
+  `protocol_error`).
   A node that is not yet seen lists no facets. At a node's `maxConcurrentCalls` further calls get
   `resource_exhausted` at once. Calls from a peer hub never carry a `context` (one that does, or that names
   a `peer:` principal, gets `permission_denied`), the hub sends none to a peer, and a call acting for
@@ -139,11 +154,23 @@ Choices worth knowing (details in `spec/reference-server.md`):
   dropped.
 - Dialed nodes: the TLS chain is not verified, only the SHA-256 of the leaf's SubjectPublicKeyInfo
   (the pin); `https` dials WebTransport, `wss` WebSocket. The hub redials with backoff (about
-  500 ms doubling to 30 s), at once and then every 250 ms or sooner while a call waits for the node.
+  500 ms doubling to 30 s); a call that starts waiting for the node makes it dial at once unless an
+  attempt is under way, and then every 250 ms or sooner while calls wait.
 - With `selfSigned`, the certificate's key is kept in the data directory, so the SPKI pin that
   dial-in nodes may check (`echo-node -hub-pin`) survives restarts.
 - Calls (7.1, 7.6): as callee a session stops counting and forgets a call at its own final message,
   also while the caller's half is still open; the caller counts it until it has seen that message.
+
+Timers: every one is an option, with the spec's or this hub's default. `hub.Options`:
+`ConnectTimeout` (10 s), `RelayAckTimeout` / `PeerRelayAckTimeout` (5 s / 2 s), `ContextGrace` (2 s),
+`ExpiryWarning` (60 s), `DialTimeout` (10 s per attempt), `RedialBackoff` / `RedialBackoffMax`
+(500 ms / 30 s), `WaitingRedial` (250 ms), `ShutdownSessionWait` (6 s), `TransportLinger` (3 s),
+`DialLinger` (WebTransport's 2 s); the connect timeout, context grace, authentication expiry and
+confirmation deadlines run on `Options.Clock`. Sessions take theirs from `session.Config` (through
+`Options.Session`), including their own `Clock`; the node library from `node.DialOptions`
+(`Backoff`, `BackoffMax`, `AttemptTimeout`); `echo-node` from `-backoff`, `-backoff-max`,
+`-attempt-timeout`, `-shutdown-wait` and `-linger`; `sparrow-hub` from the static keys
+`connectTimeoutMs`, `redialBackoffMs`, `redialBackoffMaxMs`, `dialTimeoutMs` and `shutdownGraceMs`.
 
 Limitations: the hub presents only `["link", credential]` when dialing (no mutual TLS); the hub never
 calls a client's own facets (they are scoped to the client's session).
