@@ -245,9 +245,9 @@ func adminVectors() O {
 	valueVec("admin/value/event-node-failed", "Event variant 2: NodeEvent for acme.notes under revision 8, failed (70), with a message.", adEvent, "acme.notes failed", []any{2, []any{"acme.notes", 8, sgFailed, "dial failed: pinned key hash does not match"}})
 	problems := []any{
 		[]any{[]any{"nodes", "acme.charts", "facets", "0"}, "stored facet not found"},
-		[]any{[]any{"nodes", "acme.notes", "start"}, "Dial.pin must be 32 bytes"},
+		[]any{[]any{"nodes", "acme.notes", "start", "dial", "pin"}, "Dial.pin must be 32 bytes"},
 	}
-	valueVec("admin/value/problems", "Problems (type 75, alias of list<Problem>): each Problem.path lists the keys from the document root, list positions as decimal strings (\"0\" is the first entry of NodeConfig.facets) (hub-admin 5.1).", adProblems, "two problems", problems)
+	valueVec("admin/value/problems", "Problems (type 75, alias of list<Problem>): each Problem.path lists the keys from the document root following the JSON form: a union variant's name is a key (\"dial\" inside Start), list positions are decimal strings (\"0\" is the first entry of NodeConfig.facets) and byte-string map keys lowercase hex (hub-admin 5.1).", adProblems, "two problems", problems)
 
 	errMsg := []any{20, 10, 9, "invalid configuration", []any{adProblems, problems}}
 	eb := enc(errMsg)

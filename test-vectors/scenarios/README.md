@@ -36,7 +36,7 @@ Every scenario uses the schema of vector `schema/scenario-host` in `schema.json`
 ```json
 {
   "format": 1,
-  "spec_revision": "core rev305 (draft); hub-admin rev18 (draft)",
+  "spec_revision": "core rev324 (draft); hub-admin rev25 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "server-stream-credit",
   "description": "...",

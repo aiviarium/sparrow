@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "spec_revision": "core rev305 (draft); hub-admin rev18 (draft)",
+  "spec_revision": "core rev324 (draft); hub-admin rev25 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "credit-violation",
   "description": "The server set sharedCredit and leaseCredit to the minimum, 16384. The client's first Bytes chunk uses all of it (remaining 0); sending another chunk with data is a credit violation. The callee answers Error(protocol_error), which finishes its half, and the caller sends End next (7.1, 7.4).",

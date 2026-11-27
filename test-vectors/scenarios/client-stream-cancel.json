@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "spec_revision": "core rev305 (draft); hub-admin rev18 (draft)",
+  "spec_revision": "core rev324 (draft); hub-admin rev25 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "client-stream-cancel",
   "description": "The client cancels a client-stream call. Cancel finishes the caller's half; the callee answers with its final message, normally Error(cancelled); the call ends and the leased stream is idle again in a clean state, so the next call reuses it (7.1, 7.5).",

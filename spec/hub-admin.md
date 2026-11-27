@@ -1,6 +1,6 @@
 # Sparrow Hub Administration (sparrow.hub.admin v1)
 
-> Companion to the core specification (`core.md`, section 10.9). Snapshot of the live draft, revision 18, exported for this repository. The live document is the source of truth.
+> Companion to the core specification (`core.md`, section 10.9). Snapshot of the live draft, revision 25, exported for this repository. The live document is the source of truth.
 
 A hub that implements this interface can be configured entirely at run time by a controlling application, such as an orchestrator that runs the hub in a container. The controller pushes one desired-state document; the hub validates it, applies it as a whole, and rolls it back by itself unless the controller confirms it in time. A bootstrap administrator can always reach the interface, so no document can lock the hub out of administration.
 
@@ -17,7 +17,7 @@ The hub's configuration is one document with a **revision** number.
 
 - **Revisions** are unsigned integers, persisted with the document, that go up by one each time the applied document changes, rollbacks included. Revision 0 is a hub that has never been configured, with the document `{nodes: {}}`.
 - **Commits replace the whole document.** There is no patch format; a controller reads the document, changes it and commits the result against the revision it read.
-- **Optimistic concurrency:** a commit names the revision it is based on, and fails with `Error(aborted)` if that is no longer current. When no commit is pending, a commit whose document equals the applied one changes nothing and returns the current revision, whatever its base, so retrying a commit whose reply was lost is safe.
+- **Optimistic concurrency:** a commit names the revision it is based on, and fails with `Error(aborted)` if that is no longer current. When no commit is pending, a commit whose document is byte-for-byte equal to the applied one in canonical encoding changes nothing and returns the current revision, whatever its base, so retrying a commit whose reply was lost is safe.
 - **Validation first:** a commit is validated as a whole before anything changes (section 3). If any problem is found, it fails with `Error(failed_precondition)`, and nothing changes.
 - **Content by reference:** secrets and facet documents are stored separately, cannot be changed once stored, and are referenced from the document by name or hash. The document stays small, and every change to what a node presents goes through a commit, so confirmation and rollback cover it.
 
@@ -32,9 +32,9 @@ The hub's configuration is one document with a **revision** number.
 
 When a commit passes validation, the hub switches to the new document at once and then **reconciles** in the background. `commit` returns after the switch, not after reconciliation; progress is visible in `watch`.
 
-- A node added to the document is started, dialed or accepted when it dials in, as its configuration says.
+- A node added to the document is started, dialed or accepted when it dials in, as its configuration says. A hub MAY instead start a spawned node on its first call, and starts one that exited again on its next call (Hub Profile, section 10.7).
 - A node removed from the document, or disabled, has its session ended with `GoAway(going_away)`; its facets leave every schema through ordinary schema updates. A removed node's facet IDs are retired for good; a disabled node keeps them for when it is enabled again (Hub Profile, section 10.3).
-- A spawned node whose start changed is stopped and started again (Hub Profile, section 10.7). A dialed node whose URL, key hash or credential changed is dialed again, and the new session supersedes the old one. A dial-in node whose credential changed has its session closed with `GoAway(unauthenticated)` and must dial in again (Hub Profile, section 10.2).
+- A spawned node whose start changed is stopped and started again (Hub Profile, section 10.7). A dialed node whose URL, key hash or credential changed is dialed again, and the new session supersedes the old one. The old session ends when the new one is ready or the first new attempt fails, whichever comes first, so a node is never served under a configuration that was replaced. A dial-in node whose credential changed has its session closed with `GoAway(unauthenticated)` and must dial in again (Hub Profile, section 10.2).
 - Changes to listed facets, defaults and policy reach sessions as ordinary schema updates and authorization changes (Hub Profile, sections 10.3 and 10.4).
 
 ### 2.3 Confirmation and rollback
@@ -86,7 +86,8 @@ A document is valid when:
 
 - every node ID follows the node-ID grammar and is not reserved (Hub Profile, section 10.2);
 - every node has exactly one link direction: either a `start`, or a `credential` for dialing in, never both and never neither;
-- every referenced secret and stored facet exists, every listed facet appears once, and no secret named by a `Dial.credential` is also named by a `NodeConfig.credential`, so a credential the hub presents can never be replayed to it;
+- every referenced secret and stored facet exists, every listed facet appears once, and no secret named by a `Dial.credential` is also named by a `NodeConfig.credential`, so a credential the hub presents can never be replayed to it, and no two dial-in nodes name secrets with the same value;
+  - every `Spawn` program is non-empty and every environment variable name is non-empty and contains no `=` or NUL;
 - every `Dial.url` is an `https` (WebTransport) or `wss` (WebSocket) URL, and every `pin` is 32 bytes;
 - every listed facet is named after its node, and no node with `peer` lists facets;
 - every `defaults` key is a 33-byte interface hash and every value a syntactically valid facet name;
@@ -98,8 +99,8 @@ Defaults are preferences, not checked against live facets: where the named facet
 
 `watch` streams the hub's state:
 
-1. The first event is a full `Snapshot`.
-2. Then every `RevisionEvent` and `NodeEvent`, in the order they happen. A `NodeEvent` names the revision whose configuration it reflects, so a controller can tell whether a node is up under the configuration it just committed.
+1. The first event is a full `Snapshot`, followed by one `NodeEvent` for each configured node with its current state.
+2. Then every `RevisionEvent` and `NodeEvent`, in the order they happen. A `NodeEvent` names the revision whose configuration it reflects, so a controller can tell whether a node is up under the configuration it just committed. After each applied revision the hub sends a `NodeEvent` for every configured node, changed or not.
 3. A hub MAY end a watch that falls too far behind with `Error(resource_exhausted)`; the controller starts a new one, which begins with a snapshot again.
 
 ## 5. The interface
@@ -131,7 +132,7 @@ The types and methods below make up the interface `sparrow.hub.admin` v1. The in
 | 82 | `NodeEvent` | struct | 0: node `string`; 1: revision `uint`; 2: state `NodeState`; 3: message `optional string` |
 | 83 | `NodeState` | enum | sigils 67 `starting`, 68 `connected`, 69 `offline`, 70 `failed`, 71 `disabled`, 72 `removed` |
 
-Sigils 64–72 are kind 0 (enum values). `confirmInMs` is the time left before the deadline, measured by the hub when it sent the message, so clocks need not agree. A `Problem.path` lists the keys from the document root to the problem, with list positions as decimal strings, such as `["nodes", "acme.charts", "start"]`.
+Sigils 64–72 are kind 0 (enum values). `confirmInMs` is the time left before the deadline, measured by the hub when it sent the message, so clocks need not agree. A `Problem.path` lists the keys from the document root to the problem, following the JSON form, so a union variant's name is a key, with list positions as decimal strings and byte-string map keys as lowercase hex, such as `["nodes", "acme.charts", "start"]`.
 
 ### 5.2 Methods
 

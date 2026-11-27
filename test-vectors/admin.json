@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev305 (draft); hub-admin rev18 (draft)",
+  "spec_revision": "core rev324 (draft); hub-admin rev25 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "admin",
   "vectors": [
@@ -3851,7 +3851,7 @@
     },
     {
       "name": "admin/value/problems",
-      "description": "Problems (type 75, alias of list<Problem>): each Problem.path lists the keys from the document root, list positions as decimal strings (\"0\" is the first entry of NodeConfig.facets) (hub-admin 5.1).",
+      "description": "Problems (type 75, alias of list<Problem>): each Problem.path lists the keys from the document root following the JSON form: a union variant's name is a key (\"dial\" inside Start), list positions are decimal strings (\"0\" is the first entry of NodeConfig.facets) and byte-string map keys lowercase hex (hub-admin 5.1).",
       "spec": "hub-admin 3, 5.1, core 3.4",
       "type": "admin_value",
       "interface": "admin/interface",
@@ -3872,13 +3872,15 @@
           [
             "nodes",
             "acme.notes",
-            "start"
+            "start",
+            "dial",
+            "pin"
           ],
           "Dial.pin must be 32 bytes"
         ]
       ],
-      "diag": "[[[\"nodes\", \"acme.charts\", \"facets\", \"0\"], \"stored facet not found\"], [[\"nodes\", \"acme.notes\", \"start\"], \"Dial.pin must be 32 bytes\"]]",
-      "cbor": "828284656e6f6465736b61636d652e6368617274736666616365747361307673746f726564206661636574206e6f7420666f756e648283656e6f6465736a61636d652e6e6f74657365737461727478194469616c2e70696e206d757374206265203332206279746573"
+      "diag": "[[[\"nodes\", \"acme.charts\", \"facets\", \"0\"], \"stored facet not found\"], [[\"nodes\", \"acme.notes\", \"start\", \"dial\", \"pin\"], \"Dial.pin must be 32 bytes\"]]",
+      "cbor": "828284656e6f6465736b61636d652e6368617274736666616365747361307673746f726564206661636574206e6f7420666f756e648285656e6f6465736a61636d652e6e6f746573657374617274646469616c6370696e78194469616c2e70696e206d757374206265203332206279746573"
     },
     {
       "name": "admin/commit-invalid",
@@ -3908,17 +3910,19 @@
               [
                 "nodes",
                 "acme.notes",
-                "start"
+                "start",
+                "dial",
+                "pin"
               ],
               "Dial.pin must be 32 bytes"
             ]
           ]
         ]
       ],
-      "diag": "[20, 10, 9, \"invalid configuration\", [75, [[[\"nodes\", \"acme.charts\", \"facets\", \"0\"], \"stored facet not found\"], [[\"nodes\", \"acme.notes\", \"start\"], \"Dial.pin must be 32 bytes\"]]]]",
-      "cbor": "85140a0975696e76616c696420636f6e66696775726174696f6e82184b828284656e6f6465736b61636d652e6368617274736666616365747361307673746f726564206661636574206e6f7420666f756e648283656e6f6465736a61636d652e6e6f74657365737461727478194469616c2e70696e206d757374206265203332206279746573",
-      "length": 134,
-      "framed": "408685140a0975696e76616c696420636f6e66696775726174696f6e82184b828284656e6f6465736b61636d652e6368617274736666616365747361307673746f726564206661636574206e6f7420666f756e648283656e6f6465736a61636d652e6e6f74657365737461727478194469616c2e70696e206d757374206265203332206279746573"
+      "diag": "[20, 10, 9, \"invalid configuration\", [75, [[[\"nodes\", \"acme.charts\", \"facets\", \"0\"], \"stored facet not found\"], [[\"nodes\", \"acme.notes\", \"start\", \"dial\", \"pin\"], \"Dial.pin must be 32 bytes\"]]]]",
+      "cbor": "85140a0975696e76616c696420636f6e66696775726174696f6e82184b828284656e6f6465736b61636d652e6368617274736666616365747361307673746f726564206661636574206e6f7420666f756e648285656e6f6465736a61636d652e6e6f746573657374617274646469616c6370696e78194469616c2e70696e206d757374206265203332206279746573",
+      "length": 143,
+      "framed": "408f85140a0975696e76616c696420636f6e66696775726174696f6e82184b828284656e6f6465736b61636d652e6368617274736666616365747361307673746f726564206661636574206e6f7420666f756e648285656e6f6465736a61636d652e6e6f746573657374617274646469616c6370696e78194469616c2e70696e206d757374206265203332206279746573"
     }
   ]
 }
