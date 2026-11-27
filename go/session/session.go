@@ -463,6 +463,31 @@ func (s *Session) Stats() Stats {
 	return st
 }
 
+// CallInfo describes one open call, for tests and diagnostics.
+type CallInfo struct {
+	ID                     uint64
+	Caller                 bool // this side is the caller
+	Shared                 bool // on the shared lane
+	CallerDone, CalleeDone bool // which halves are finished (7.1)
+}
+
+// Calls returns the calls this side has open, in both roles.
+func (s *Session) Calls() []CallInfo {
+	s.mu.Lock()
+	cs := make([]*call, 0, len(s.calls))
+	for _, c := range s.calls {
+		cs = append(cs, c)
+	}
+	s.mu.Unlock()
+	out := make([]CallInfo, 0, len(cs))
+	for _, c := range cs {
+		c.mu.Lock()
+		out = append(out, CallInfo{ID: c.id, Caller: c.caller, Shared: c.ln.shared, CallerDone: c.h.callerDone, CalleeDone: c.h.calleeDone})
+		c.mu.Unlock()
+	}
+	return out
+}
+
 // ---------------------------------------------------------------------------
 // Handshake
 // ---------------------------------------------------------------------------
