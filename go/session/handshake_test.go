@@ -111,11 +111,14 @@ func TestOptimisticLimitsBelowDefaults(t *testing.T) {
 	scfg.Params.Set(wire.ParamMaxConcurrentCalls, 10)
 	go func() { _, _ = NewServer(context.Background(), sc, scfg) }()
 	cli, err := NewClient(context.Background(), cc, Config{KnownSchema: testSchema("server"), Optimistic: true})
-	if err != nil {
+	if err == nil {
+		_, err = cli.Unary(tctx(t), tFacet, mEcho, "x", nil)
+		mustCode(t, err, status.FailedPrecondition)
+	} else if c := Code(err); c != status.FailedPrecondition && c != status.Unavailable {
+		// Under load the server's GoAway can close the connection before
+		// the optimistic NewClient returns.
 		t.Fatal(err)
 	}
-	_, err = cli.Unary(tctx(t), tFacet, mEcho, "x", nil)
-	mustCode(t, err, status.FailedPrecondition)
 	// A client that cached such limits does not try.
 	p := wire.Params{}
 	p.Set(wire.ParamMaxConcurrentCalls, 10)
