@@ -1,6 +1,6 @@
 # Sparrow Hub Administration (sparrow.hub.admin v1)
 
-> Companion to the core specification (`core.md`, section 10.9). Snapshot of the live draft, revision 16, exported for this repository. The live document is the source of truth.
+> Companion to the core specification (`core.md`, section 10.9). Snapshot of the live draft, revision 18, exported for this repository. The live document is the source of truth.
 
 A hub that implements this interface can be configured entirely at run time by a controlling application, such as an orchestrator that runs the hub in a container. The controller pushes one desired-state document; the hub validates it, applies it as a whole, and rolls it back by itself unless the controller confirms it in time. A bootstrap administrator can always reach the interface, so no document can lock the hub out of administration.
 
@@ -24,7 +24,7 @@ The hub's configuration is one document with a **revision** number.
 ### 2.1 Stored secrets and facets
 
 - `setSecret` stores a secret under a new name. A name that already exists fails with `Error(already_exists)`: to rotate a secret, store it under a new name and commit a document that refers to it. No method ever returns a secret's value.
-- `putFacet` stores a canonical facet document, valid as in core spec section 6.6 rule 3 with its facet ID ignored and set to 0, and returns its **stored-facet key**: `0x01 || SHA-256` of those canonical bytes, name included. Storing the same facet again returns the same key.
+- `putFacet` stores a facet document, which the hub puts into canonical form and which must be valid as in core spec section 6.6 rule 3 with its facet ID ignored and set to 0, and returns its **stored-facet key**: `0x01 || SHA-256` of those canonical bytes, name included. Storing the same facet again returns the same key.
 - `deleteSecret` and `deleteFacet` succeed when the item does not exist, and fail with `Error(failed_precondition)` while the applied document or the rollback target of a pending commit refers to it.
 - Secret names follow the node-ID grammar (Hub Profile, section 10.2).
 
@@ -104,7 +104,7 @@ Defaults are preferences, not checked against live facets: where the named facet
 
 ## 5. The interface
 
-The types and methods below make up the interface `sparrow.hub.admin` v1. Test vectors published with the spec give its canonical encoding and interface hash.
+The types and methods below make up the interface `sparrow.hub.admin` v1. The interface document is named `sparrow.hub.admin` with version `1.0.0` and carries no annotations, and its methods list no errors, since every error they use is a core code. An `optional` field has flag 0x1 and its plain type; `list<T>` is `[0, T]` and `map<K, V>` is `[1, K, V]`. Test vectors published with the spec give its canonical encoding and interface hash.
 
 ### 5.1 Types
 

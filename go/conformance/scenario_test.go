@@ -153,6 +153,10 @@ func checkScenario(t *testing.T, sc *scenarioDoc) {
 				meth, _ = f.Method(x.MethodID)
 			}
 			switch {
+			case meth == nil && x.CallID == 0:
+				if i+1 >= len(sc.Steps) || sc.Steps[i+1].Expect != "no_reply" {
+					t.Fatalf("%s: a notification to a missing facet or method must be dropped", at)
+				}
 			case meth == nil && !answeredUnimplemented[x.CallID]:
 				t.Fatalf("%s: facet %d method %d does not exist and is not answered with unimplemented", at, x.FacetID, x.MethodID)
 			case meth != nil && (x.CallID == 0) != meth.IsNotification():

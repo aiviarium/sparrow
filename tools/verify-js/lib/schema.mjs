@@ -356,6 +356,7 @@ function typeCompatible(pid, ot, nt) {
       const nRem = !!(nf[3] & REMOVED);
       if (oRem && !nRem) bad(`tag ${f0[0]} reused`);
       else if (!same(f0[2], nf[2])) bad(`tag ${f0[0]} type`); // live members and tombstones keep their type
+      else if (oRem && nRem && f0[3] !== nf[3]) bad(`tombstone ${f0[0]} flags`); // a tombstone never changes, apart from name and annotations
       else if (!oRem && nRem) { if (isStruct && !(f0[3] & 1)) bad(`required field ${f0[0]} removed`); }
       else if (!oRem && !nRem && isStruct && (f0[3] & 1) !== (nf[3] & 1)) bad(`field ${f0[0]} optionality changed`);
     }

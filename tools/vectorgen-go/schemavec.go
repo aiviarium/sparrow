@@ -642,9 +642,13 @@ func schemaVectors() O {
 				f := noteField(p, tyNote, 6)
 				f[2], f[3] = tOpt(tString), ffOptional|ffRemoved
 			})}}},
-		{"schema/delta-invalid-existing-tombstone-changes-type", "Replace facet 16 with 1.2.0 where the variant Change.cleared (tag 2), already a tombstone in 1.1.0, changes its type from unit to string. A tombstone keeps its last definition (6.7).",
+		{"schema/delta-invalid-existing-tombstone-changes-type", "Replace facet 16 with 1.2.0 where the variant Change.cleared (tag 2), already a tombstone in 1.1.0, changes its type from unit to string. A tombstone keeps its last definition and never changes again, apart from its name and annotations (6.7).",
 			"schema/delta-1-replace-facet", "incompatible_change", r.a, []any{[]any{0, mod(func(p []any) {
 				noteField(p, tyChange, 2)[2] = tString
+			})}}},
+		{"schema/delta-invalid-tombstone-flags-changed", "Replace facet 16 with 1.2.0 where the tombstone Note.legacyLabel (tag 5, flags 0x5) also gets the deprecated flag (flags 0x7). A tombstone never changes again, apart from its name and annotations (6.7).",
+			"schema/delta-1-replace-facet", "incompatible_change", r.a, []any{[]any{0, mod(func(p []any) {
+				noteField(p, tyNote, 5)[3] = ffOptional | ffRemoved | ffDeprecated
 			})}}},
 		{"schema/delta-invalid-notification-output", "Replace facet 16 with 1.2.0 that adds method 106 'ping' flagged notification (0x2) with output bool. A notification MUST have output unit (6.4).",
 			"schema/delta-1-replace-facet", "invalid_notification", r.a, []any{[]any{0, mod(func(p []any) {

@@ -108,8 +108,9 @@ var (
 	mapOf = schema.MapOf
 )
 
+// opt is an optional field: flag 0x1 and its plain type (section 5).
 func opt(tag uint64, name string, t schema.TypeRef) schema.Field {
-	return schema.Field{Tag: tag, Name: name, Type: schema.Optional(t), Flags: schema.FieldOptional, Annotations: schema.Annotations{}}
+	return schema.Field{Tag: tag, Name: name, Type: t, Flags: schema.FieldOptional, Annotations: schema.Annotations{}}
 }
 
 func req(tag uint64, name string, t schema.TypeRef) schema.Field {
@@ -140,8 +141,8 @@ var (
 	tUnit   = named(schema.TypeUnit)
 )
 
-// Types returns types 64-83. Optional fields are flagged 0x1 and typed
-// [2, T].
+// Types returns types 64-83. An optional field has flag 0x1 and its plain
+// type.
 func Types() []schema.TypeDef {
 	return []schema.TypeDef{
 		strct(TypeConfig, "Config",

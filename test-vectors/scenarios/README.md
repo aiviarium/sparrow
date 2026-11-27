@@ -10,7 +10,7 @@ What is checked where:
   (`go/conformance/scenario_test.go`) check that every message encodes and decodes exactly as stated,
   and that the script is consistent: call-ID parity, stream headers, the credit arithmetic, schema
   epochs and hashes, and that every Request names a method of the scenario schema or is answered with
-  `Error(unimplemented)`.
+  `Error(unimplemented)` (or, for a notification, is dropped).
 - **Later:** the behaviour itself (who sends what, when, and what must not happen) is executed by the
   session tests of the Go reference implementation (`go/session`), which drive a real session over each
   binding with these scripts. Until those tests exist, the outcomes below are a specification, not a
@@ -36,7 +36,7 @@ Every scenario uses the schema of vector `schema/scenario-host` in `schema.json`
 ```json
 {
   "format": 1,
-  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
+  "spec_revision": "core rev305 (draft); hub-admin rev18 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "server-stream-credit",
   "description": "...",
@@ -115,4 +115,5 @@ it; the vector checkers only check that the name is one of these:
 | `schema-update-ack-gating.json` | Messages using IDs of epoch 1 wait for `SchemaAck(1)` | 6.6 |
 | `goaway-drain.json` | `GoAway(going_away)`: a crossing Request gets `Error(going_away)`, running calls finish | 5.6 |
 | `notification-shared-lane.json` | A notification on the shared lane gets no reply | 7.1, 7.3 |
+| `notification-unknown-dropped.json` | Notifications to an unknown facet or method are dropped; the session goes on | 7.1 |
 | `unknown-facet-or-method.json` | `Error(unimplemented)` for an unknown facet and an unknown method | 7.1 |

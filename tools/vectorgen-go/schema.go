@@ -885,8 +885,8 @@ func typeCompatible(pid int64, ot, nt []any) *deltaError {
 			case oRem && !nRem:
 				return bad("tag %d reused after removal", tag)
 			case oRem && nRem:
-				if !refEq(of[2], nf[2]) {
-					return bad("tombstone %d changed type (a tombstone keeps its last definition)", tag)
+				if !refEq(of[2], nf[2]) || num(of[3]) != num(nf[3]) {
+					return bad("tombstone %d changed its type or flags (a tombstone never changes, apart from its name and annotations)", tag)
 				}
 			case nRem:
 				if isStruct && num(of[3])&ffOptional == 0 {

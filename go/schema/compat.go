@@ -22,8 +22,9 @@ func Major(version string) string {
 //   - a type keeps its kind; a struct keeps its sparse flag; an alias keeps
 //     its target;
 //   - struct fields and union variants keep their tags forever: a tag never
-//     disappears, a tombstone stays a tombstone, a member keeps its type
-//     (also when it becomes a tombstone, and as a tombstone), a field never
+//     disappears, a tombstone stays a tombstone and never changes apart from
+//     its name and annotations, a member keeps its type (also when it
+//     becomes a tombstone), a field never
 //     changes between optional and required, only optional fields and
 //     variants may become tombstones, and a new field must be optional;
 //   - an enum keeps every value;
@@ -149,8 +150,8 @@ func typeCompatible(fid uint64, ot, nt *TypeDef) error {
 			case oRem && !nRem:
 				return bad("tag %d reused after removal", of.Tag)
 			case oRem && nRem:
-				if !of.Type.Equal(nf.Type) {
-					return bad("tombstone %d changed type (a tombstone keeps its last definition)", of.Tag)
+				if !of.Type.Equal(nf.Type) || of.Flags != nf.Flags {
+					return bad("tombstone %d changed its type or flags (a tombstone never changes, apart from its name and annotations)", of.Tag)
 				}
 			case nRem:
 				if isStruct && !of.Optional() {

@@ -91,6 +91,8 @@ func TestCompatible(t *testing.T) {
 			f.Types[0].Fields[2].Type = Named(TypeBytes)
 		}, CodeIncompatibleChange},
 		{"change a tombstone's type", func(f *Facet) { f.Types[0].Fields[3].Type = Named(TypeString) }, CodeIncompatibleChange},
+		{"change a tombstone's flags", func(f *Facet) { f.Types[0].Fields[3].Flags |= FieldDeprecated }, CodeIncompatibleChange},
+		{"rename a tombstone", func(f *Facet) { f.Types[0].Fields[3].Name = "oldLegacy" }, ""},
 		{"change a variant's type as it becomes a tombstone", func(f *Facet) {
 			f.Types[3].Fields[1].Flags |= FieldRemoved
 			f.Types[3].Fields[1].Type = Named(TypeString)

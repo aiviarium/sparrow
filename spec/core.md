@@ -2,7 +2,7 @@
 
 Nov 26, 2026 · Christoph Feuerer
 
-> Snapshot of the live draft, revision 302, exported for this repository. The live document is the source of truth; diagrams are not included here.
+> Snapshot of the live draft, revision 305, exported for this repository. The live document is the source of truth; diagrams are not included here.
 
 ## 1. Overview
 
@@ -64,7 +64,7 @@ Every message is a single CBOR data item (RFC 8949) in preferred serialization. 
 | Arrays, maps | MUST be definite length. Map keys MUST be unique. |
 | Tags | Only the tags in section 3.5. An unknown tag is a decode error. |
 | Simple values | `false`, `true`, `null` only. `undefined` MUST NOT appear. |
-| Nesting | Decoders MUST reject a message nested deeper than 64 levels, counting arrays, maps and tags, with the message's own array as level 1. Receivers accept any other valid encoding of an ordinary message, shortest or not; canonical data is checked by recomputing its hash. |
+| Nesting | Decoders MUST reject a message nested deeper than 64 levels, counting arrays, maps and tags, with the message's own array as level 1; a scalar adds no level. Receivers accept any other valid encoding of an ordinary message, shortest or not; canonical data is checked by recomputing its hash. |
 
 ### 3.2 Canonical encoding
 
@@ -499,7 +499,7 @@ Facet IDs and the IDs inside facets SHOULD stay stable across restarts, rebuilds
 | Change the major version, which is the first number of `version` (0 included) | No | A new major version is a new facet (section 10.3). |
 | Rename the facet | No | A facet's name identifies it. |
 | Make a required field optional | No | Older readers still require it. |
-| Change a field's or variant's type when it becomes a tombstone | No | A tombstone keeps its last definition. |
+| Change a field's or variant's type when it becomes a tombstone | No | A tombstone keeps its last definition and never changes again, apart from its name and annotations. |
 
 ## 7. RPC messages
 
@@ -514,7 +514,7 @@ Every call has a call ID chosen by the caller, whether it runs on the shared lan
 - `End`, `Error` and `Cancel` also close every byte token their sender opened in the call. Data not yet marked `fin` is cut off, and the receiver discards any later `Bytes` for the call. A referenced token that was cut off or never sent reaches the application as data_loss.
 - The call **ends** when both halves are finished. Both peers then forget its ID, and a leased stream it ran on is idle again.
 - If the callee finishes first while input is still arriving, it MUST keep reading and discarding that input until the caller's half is finished. When the callee's final message arrives, the caller MUST send `End` (or `Cancel`) next, with no further `Item` or `Bytes`.
-- Messages for an unknown or ended call ID are ignored. A `Request` naming a facet or method the callee does not have is answered with `Error(unimplemented)`.
+- Messages for an unknown or ended call ID are ignored. A `Request` naming a facet or method the callee does not have is answered with `Error(unimplemented)`; a notification naming one is dropped.
 
 ### 7.2 Call messages
 

@@ -45,12 +45,10 @@ const (
 	sgRemoved
 )
 
-func opt(t any) any { return tOpt(t) }
-
-// adminTypes are types 64-83 of section 5.1. Optional fields are flagged
-// 0x1 and typed [2, T], as in every other schema of these vectors.
+// adminTypes are types 64-83 of section 5.1. An optional field has flag 0x1
+// and its plain type (hub-admin 5).
 func adminTypes() []any {
-	of := func(tag int, name string, t any) []any { return field(tag, name, opt(t), ffOptional, nil) }
+	of := func(tag int, name string, t any) []any { return field(tag, name, t, ffOptional, nil) }
 	rf := func(tag int, name string, t any) []any { return field(tag, name, t, 0, nil) }
 	return list(
 		structDef(adConfig, "Config", list(
@@ -193,7 +191,7 @@ func adminVectors() O {
 		panic(e)
 	}
 	ic := canonicalIface(iface)
-	add(o("name", "admin/interface", "description", "The canonical interface document of sparrow.hub.admin v1 (hub-admin section 5): types 64-83, enum sigils 64-72 (kind 0), service 0 Admin with methods 0-11. Method flags: 0x1 (idempotent) on get, validate, confirm, deleteSecret, listSecrets, putFacet, deleteFacet and listFacets; 0x10 on watch, whose output is [3, Event]; no other flags. Optional fields have flag 0x1 and type [2, T]. The interface carries no annotations, every errors list is empty (all errors the methods name are core status codes), and its version is \"1.0.0\".",
+	add(o("name", "admin/interface", "description", "The canonical interface document of sparrow.hub.admin v1 (hub-admin section 5): types 64-83, enum sigils 64-72 (kind 0), service 0 Admin with methods 0-11. Method flags: 0x1 (idempotent) on get, validate, confirm, deleteSecret, listSecrets, putFacet, deleteFacet and listFacets; 0x10 on watch, whose output is [3, Event]; no other flags. An optional field has flag 0x1 and its plain type. The interface document is named sparrow.hub.admin, version \"1.0.0\", carries no annotations, and its methods list no errors, since every error they use is a core code (hub-admin 5).",
 		"spec", "hub-admin 5, core 6.5, 6.6", "type", "interface", "input", tj(iface), "canonical", tj(ic), "canonical_cbor", hx(enc(ic)),
 		"hash", hx(ifaceHash(iface)), "expected_valid", true))
 
@@ -219,7 +217,7 @@ func adminVectors() O {
 	if bytes.Equal(key, facetHash(sf)) {
 		panic("stored-facet key equals facet hash")
 	}
-	add(o("name", "admin/stored-facet-key", "description", "The stored-facet key putFacet returns for facet/acme-charts (hub-admin 2.1): 0x01 || SHA-256 of the canonical facet with its ID set to 0 and its name kept. The facet hash of the same facet blanks the name as well (core 6.6), so the two differ; a hub lists facets by stored-facet key in NodeConfig.facets and by facet hash in schemas.",
+	add(o("name", "admin/stored-facet-key", "description", "The stored-facet key putFacet returns for facet/acme-charts (hub-admin 2.1): the hub puts the document it receives (here unsorted, under facet ID 17) into canonical form with its ID set to 0 and its name kept, and the key is 0x01 || SHA-256 of those bytes. The facet hash of the same facet blanks the name as well (core 6.6), so the two differ; a hub lists facets by stored-facet key in NodeConfig.facets and by facet hash in schemas.",
 		"spec", "hub-admin 2.1, core 6.6", "type", "stored_facet_key",
 		"facet", "facet/acme-charts", "input", tj(sf),
 		"key_input", tj(storedFacetKeyInput(sf)), "key_input_cbor", hx(ki), "stored_facet_key", hx(key),

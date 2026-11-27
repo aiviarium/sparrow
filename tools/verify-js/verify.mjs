@@ -821,7 +821,7 @@ function checkAdminInterface(v, iface) {
   check(eqTJ(types.map((t) => [t[1], t[2], KIND_NAMES[t[0]]]), ADMIN_TYPES), v, 'types 64-83 with names and kinds');
   for (const t of types) {
     if (ADMIN_FIELDS[t[1]]) {
-      const want = ADMIN_FIELDS[t[1]].map(([tag, name, ty, optional]) => [tag, name, optional ? [2, ty] : ty, optional ? 1 : 0, {}]);
+      const want = ADMIN_FIELDS[t[1]].map(([tag, name, ty, optional]) => [tag, name, ty, optional ? 1 : 0, {}]); // optional: flag 0x1, plain type
       check(eqTJ(t[3], want), v, `fields of type ${t[1]} ${t[2]}`);
     }
     if (t[0] === 0) checkEq(t[4], 0, v, `type ${t[1]} is not sparse`);
@@ -930,7 +930,8 @@ function checkScenario(fname, sc) {
       else checkEq(st.stream, 'shared', v, `${at}: notifications use the shared lane`);
       const facet = state.doc[3].find((f) => f[P.id] === m[2]);
       const meth = facet?.[P.services].flatMap((sv) => sv[2]).find((x) => x[0] === m[3]);
-      if (!meth) checkEq(errorFor.get(m[1]), 12, v, `${at}: a Request to a missing facet or method is answered with Error(unimplemented)`);
+      if (!meth && m[1] === 0) check(sc.steps[i + 1]?.expect === 'no_reply', v, `${at}: a notification to a missing facet or method is dropped`);
+      else if (!meth) checkEq(errorFor.get(m[1]), 12, v, `${at}: a Request to a missing facet or method is answered with Error(unimplemented)`);
       else if (m[1] === 0) check(meth[5] & 0x2, v, `${at}: call ID 0 only for notifications`);
     }
     if (m[0] === 1 && m[5][0] === 2) checkEq(hex(schemaHash(m[5][2])), m[5][1].$bytes, v, `${at}: inline schema hash`);

@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
+  "spec_revision": "core rev305 (draft); hub-admin rev18 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "unary-lease-reuse",
   "description": "Two unary calls one after the other on the same leased stream. The first Request opens the stream (header 0x01); when the call ends the stream is idle and the next call reuses it without a header and without opening another stream (4.2).",

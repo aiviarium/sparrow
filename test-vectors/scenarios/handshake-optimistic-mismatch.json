@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
+  "spec_revision": "core rev305 (draft); hub-admin rev18 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "handshake-optimistic-mismatch",
   "description": "Optimistic start with a stale cached schema hash. The server MUST NOT dispatch any call of the session: it sends Welcome with its current schema so the client can update its cache, then GoAway(schema_mismatch) with retry_after_ms 0, and closes. The client reconnects and resends its calls; none of them ran (5.3).",

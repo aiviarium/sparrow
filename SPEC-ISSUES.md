@@ -1,10 +1,10 @@
 # Spec issues: resolution log
 
 Questions raised while writing the test vectors, and how the spec author resolved them. The current
-spec is `spec/core.md`, revision 302, with the companion `spec/hub-admin.md`, revision 16. Items
-26–36 are decisions taken since revision 183; the vectors, the JavaScript verifier and the Go library
-follow them. Items O1–O5 are open questions found while applying them; the vectors follow the
-interpretation stated, which the spec author has not confirmed yet.
+spec is `spec/core.md`, revision 305, with the companion `spec/hub-admin.md`, revision 18. Items
+26–36 are decisions taken since revision 183, and items O1–O5, raised while applying them, were
+decided in core revision 305 and hub-admin revision 18. Every item is **resolved**; the vectors, the
+JavaScript verifier and the Go library follow each decision.
 
 The concept called "part" up to revision 183 is called "facet" since then. The vectors, the
 generator, the verifier and the Go conformance tests now use "facet" for it everywhere: vector names
@@ -14,15 +14,15 @@ generator, the verifier and the Go conformance tests now use "facet" for it ever
 `reserved_facet_id`, …). No CBOR byte changed: the error texts inside `unimplemented/*` messages keep
 the word "part". The table rows below for older revisions keep the names of their time.
 
-## Open in revision 302 (interpretation used by the vectors)
+## Raised against revision 302 (resolved in core revision 305, hub-admin revision 18)
 
-| # | Question | Spec text | Interpretation in the vectors |
+| # | Question | Decision | Vectors |
 | --- | --- | --- | --- |
-| O1 | The admin interface hash depends on details hub-admin section 5 does not state | "Test vectors published with the spec give its canonical encoding and interface hash" (hub-admin 5); "every method carries the hint annotation `"sparrow.level": "manage"`" (hub-admin 1, about the facet); "errors: error codes this method may return, beyond the core set" (core 6.4) | The interface (`admin/interface`) carries no annotations (the facet adds `sparrow.level`, which conformance ignores); every `errors` list is empty, since every error the methods name is a core code; `version` is `"1.0.0"` (the facet's version; the tab says "v1"); optional fields are flagged 0x1 and typed `[2, T]`, as everywhere else. Each choice changes the hash, so the companion should state them. |
-| O2 | Is a scalar inside a level-64 container at level 65? | "Decoders MUST reject a message nested deeper than 64 levels, counting arrays, maps and tags, with the message's own array as level 1" (3.1) | No: only arrays, maps and tags are levels, so 64 nested arrays holding a uint are 64 levels (`depth/64-arrays`). The Go library counted the scalar too before and now follows this reading. |
-| O3 | Does a notification naming an unknown facet or method get an `Error`? | "ID 0 is reserved for notifications, which get no reply" and "A `Request` naming a facet or method the callee does not have is answered with `Error(unimplemented)`" (7.1) | Not decided; no vector or scenario covers it. Presumably the notification is dropped, since there is no call to answer. |
-| O4 | May a field that is already a tombstone change its type? | "Change a field's or variant's type when it becomes a tombstone \| No \| A tombstone keeps its last definition" (6.7) | No: "keeps its last definition" is read as covering later versions too (`schema/delta-invalid-existing-tombstone-changes-type`). Whether a tombstone's other flags (0x1, 0x2) may change is left open; the checkers allow it. |
-| O5 | Does `putFacet` canonicalise its input? | "`putFacet` stores a canonical facet document, valid as in core spec section 6.6 rule 3 with its facet ID ignored and set to 0, and returns its stored-facet key: `0x01 \|\| SHA-256` of those canonical bytes, name included" (hub-admin 2.1) | The key is computed over the canonical form with ID 0 whatever the input's order and ID (`admin/stored-facet-key`), so storing the same facet again gives the same key. Whether non-canonical input is an `invalid_argument` is left to the hub. |
+| O1 | The admin interface hash depended on details hub-admin section 5 did not state (annotations, `errors`, version, how `optional` is typed) | "The interface document is named `sparrow.hub.admin` with version `1.0.0` and carries no annotations, and its methods list no errors, since every error they use is a core code. An `optional` field has flag 0x1 and its plain type; `list<T>` is `[0, T]` and `map<K, V>` is `[1, K, V]`" (hub-admin 5). This changed the interface hash from the first published one: optional fields are no longer typed `[2, T]` | `admin/interface`, `admin/facet` (regenerated) |
+| O2 | Is a scalar inside a level-64 container at level 65? | No: "a scalar adds no level" (3.1) | `depth/*` |
+| O3 | Does a notification naming an unknown facet or method get an `Error`? | No: "a notification naming one is dropped" (7.1) | scenario `notification-unknown-dropped` |
+| O4 | May a tombstone change later? | "A tombstone keeps its last definition and never changes again, apart from its name and annotations" (6.7): its type and flags are frozen | `schema/delta-invalid-existing-tombstone-changes-type`, `schema/delta-invalid-tombstone-flags-changed` |
+| O5 | Does `putFacet` canonicalise its input? | Yes: it "stores a facet document, which the hub puts into canonical form and which must be valid as in core spec section 6.6 rule 3" (hub-admin 2.1) | `admin/stored-facet-key` (input unsorted, facet ID 17) |
 
 ## Decided since revision 183 (applied for revision 302)
 
@@ -33,12 +33,12 @@ the word "part". The table rows below for older revisions keep the names of thei
 | 28 | A method with flag 0x2 MUST have output `unit` and no `[4]` in its input (6.4); otherwise the schema is invalid (`invalid_notification`) | `schema/delta-invalid-notification-output`, `schema/delta-invalid-notification-byte-stream` |
 | 29 | TypeIds 12–31 are reserved for built-ins of later core versions; a schema that uses one is invalid (6.4, `reserved_type_id`) | `schema/delta-invalid-reserved-type-id` |
 | 30 | Making a required field optional is incompatible (6.7) | `schema/delta-invalid-required-made-optional` |
-| 31 | Changing a field's or variant's type when it becomes a tombstone is incompatible (6.7) | `schema/delta-invalid-tombstone-changes-type`, `schema/delta-invalid-existing-tombstone-changes-type` (see O4) |
-| 32 | The nesting limit: a message nested deeper than 64 levels is rejected, arrays, maps and tags all count, the message array is level 1 (3.1) | `depth/64-arrays`, `depth/65-arrays`, `depth/64-mixed`, `depth/65-mixed` (see O2) |
+| 31 | Changing a field's or variant's type when it becomes a tombstone is incompatible (6.7) | `schema/delta-invalid-tombstone-changes-type`, `schema/delta-invalid-existing-tombstone-changes-type` |
+| 32 | The nesting limit: a message nested deeper than 64 levels is rejected, arrays, maps and tags all count, the message array is level 1 (3.1) | `depth/64-arrays`, `depth/65-arrays`, `depth/64-mixed`, `depth/65-mixed` |
 | 33 | Receivers accept any other valid encoding of an ordinary message, shortest or not (3.1) | `non-shortest/credit`, `non-shortest/float-width`, `non-shortest/text-length`, `non-shortest/unsorted-metadata` |
 | 34 | `params`: unknown keys are ignored; `maxMessageSize`, `maxInlineBytes`, `sharedCredit` and `leaseCredit` MUST be ≥ 16384 and `maxConcurrentCalls` ≥ 1; a smaller value gets `GoAway(invalid_argument)` (5.4). Go: `wire.Params.Validate`, `wire.ParamMinimum` | `params/validation`, `hello/unknown-params-key`, `goaway/params-too-small`, scenario `credit-violation` |
 | 35 | Messages that count zero bytes of credit, such as an empty final `Bytes` chunk, are never held back and never a violation (7.4). Go: `wire.CreditWindow.CanSendCounted` | `credit/sequence-zero-byte-messages`, `credit/sequence-violation`, scenario `server-stream-credit` |
-| 36 | The administration interface `sparrow.hub.admin` v1 (hub-admin, core 10.9), with the stored-facet key of hub-admin 2.1. Go: package `adminiface` | `admin.json` (see O1) |
+| 36 | The administration interface `sparrow.hub.admin` v1 (hub-admin, core 10.9), with the stored-facet key of hub-admin 2.1. Go: package `adminiface` | `admin.json` |
 | — | Vector fix: the description of `map/mixed-keys` called its keys metadata symbols, which -1 and -25 cannot be; it is now a generic `any` map (bytes unchanged) | `map/mixed-keys` |
 | — | Behaviour scenarios (scripted message sequences, `test-vectors/scenarios/`) for the reference server's session tests (reference-server design note, section 6) | 13 scenarios |
 

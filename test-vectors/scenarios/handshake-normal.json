@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
+  "spec_revision": "core rev305 (draft); hub-admin rev18 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "handshake-normal",
   "description": "A normal session start: Hello, then Welcome with the full schema inline, then Ready. The client then makes one unary call on a new leased stream.",

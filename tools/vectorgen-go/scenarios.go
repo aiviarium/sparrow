@@ -322,6 +322,17 @@ func scenarios() []*scenario {
 	s.expect("call_ended", "call_id", 2)
 	out = append(out, s)
 
+	s = newScenario("notification-unknown-dropped", "Notifications naming a facet or a method the callee does not have are dropped: no Error is sent (there is no call to answer), and the session goes on (7.1).", "7.1, 7.3",
+		after())
+	s.msg("client", "shared", []any{16, 0, 40, 0, none, "x"}, "note", "facet 40 does not exist")
+	s.expect("no_reply", "call_id", 0)
+	s.msg("client", "shared", []any{16, 0, facetEcho, 99, none, "x"}, "note", "facet 16 has no method 99")
+	s.expect("no_reply", "call_id", 0)
+	s.msg("client", "lease:1", req(2, mEcho, none, "still here"))
+	s.msg("server", "lease:1", []any{17, 2, "still here"})
+	s.expect("call_ended", "call_id", 2)
+	out = append(out, s)
+
 	s = newScenario("unknown-facet-or-method", "A Request naming a facet or a method the callee does not have is answered with Error(unimplemented); the call ends and the stream is idle (7.1).", "7.1, 8",
 		after())
 	s.msg("client", "lease:1", []any{16, 2, 40, 0, none, nil}, "note", "facet 40 does not exist")

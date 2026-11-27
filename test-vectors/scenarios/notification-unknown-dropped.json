@@ -1,0 +1,94 @@
+{
+  "format": 1,
+  "spec_revision": "core rev305 (draft); hub-admin rev18 (draft)",
+  "generator": "tools/vectorgen-go",
+  "name": "notification-unknown-dropped",
+  "description": "Notifications naming a facet or a method the callee does not have are dropped: no Error is sent (there is no call to answer), and the session goes on (7.1).",
+  "spec": "7.1, 7.3",
+  "given": {
+    "schema": "schema/scenario-host",
+    "session": "established as in scenario handshake-normal (steps 1-3), with no call open"
+  },
+  "steps": [
+    {
+      "step": 1,
+      "from": "client",
+      "stream": "shared",
+      "kind_name": "Request",
+      "message": [
+        16,
+        0,
+        40,
+        0,
+        {},
+        "x"
+      ],
+      "diag": "[16, 0, 40, 0, {}, \"x\"]",
+      "cbor": "861000182800a06178",
+      "note": "facet 40 does not exist"
+    },
+    {
+      "step": 2,
+      "expect": "no_reply",
+      "call_id": 0
+    },
+    {
+      "step": 3,
+      "from": "client",
+      "stream": "shared",
+      "kind_name": "Request",
+      "message": [
+        16,
+        0,
+        16,
+        99,
+        {},
+        "x"
+      ],
+      "diag": "[16, 0, 16, 99, {}, \"x\"]",
+      "cbor": "861000101863a06178",
+      "note": "facet 16 has no method 99"
+    },
+    {
+      "step": 4,
+      "expect": "no_reply",
+      "call_id": 0
+    },
+    {
+      "step": 5,
+      "from": "client",
+      "stream": "lease:1",
+      "opens_stream": true,
+      "header": "01",
+      "kind_name": "Request",
+      "message": [
+        16,
+        2,
+        16,
+        0,
+        {},
+        "still here"
+      ],
+      "diag": "[16, 2, 16, 0, {}, \"still here\"]",
+      "cbor": "8610021000a06a7374696c6c2068657265"
+    },
+    {
+      "step": 6,
+      "from": "server",
+      "stream": "lease:1",
+      "kind_name": "Response",
+      "message": [
+        17,
+        2,
+        "still here"
+      ],
+      "diag": "[17, 2, \"still here\"]",
+      "cbor": "8311026a7374696c6c2068657265"
+    },
+    {
+      "step": 7,
+      "expect": "call_ended",
+      "call_id": 2
+    }
+  ]
+}
