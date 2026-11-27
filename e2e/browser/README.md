@@ -17,3 +17,8 @@ launches headless Chromium with Playwright (`require('playwright')`). The page i
 whose address space Chromium cannot place (for example one fulfilled by request interception) has
 its WebTransport and WebSocket connections to 127.0.0.1 refused with
 `ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS`.
+
+Playwright is loaded with `require('playwright')` (set `NODE_PATH` for a global install) and starts
+the Chromium it installed (`npx playwright install chromium`, or `PLAYWRIGHT_BROWSERS_PATH`);
+`SPARROW_CHROMIUM=/path/to/chrome` starts another Chromium or Chrome binary instead. CI installs
+Playwright and its Chromium in the browser job (`.github/workflows/ci.yml`).

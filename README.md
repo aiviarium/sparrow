@@ -23,7 +23,7 @@ tools/vectorgen-go/        Go program that generates the vectors (canonical refe
 tools/verify-js/           Independent Node.js verifier (cbor2 + node:crypto)
 go/                        Go reference implementation (see go/README.md)
 e2e/browser/               Browser end-to-end test: a minimal page in headless Chromium (Playwright)
-.github/workflows/         CI: regenerate, check for drift, verify
+.github/workflows/ci.yml    CI: Go vet/gofmt/race tests, vectors (regenerate, drift, verify-js), fuzzing, browser test
 ```
 
 The core specification defines the protocol. [`spec/hub-admin.md`](spec/hub-admin.md) is the companion
@@ -69,3 +69,12 @@ from the generator's fxamacker/cbor). It recomputes schema canonical forms, delt
 the inputs, re-derives keys, key_ids and Ed25519 signatures with `node:crypto`, and re-runs the
 module acceptance, interface conformance, compatibility and hub forwarding rules. It exits non-zero
 on any disagreement.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request, in four jobs: **go** (`go vet`,
+`gofmt -l`, `go test -race ./...` in `go/`), **vectors** (regenerate with `tools/vectorgen-go`,
+`git diff --exit-code test-vectors`, then `tools/verify-js`), **fuzz** (every Go fuzz target for
+15 s, one job per package; failing inputs are kept as an artifact) and **browser** (`TestBrowser`
+in headless Chromium, installed with Playwright in that job; `SPARROW_CHROMIUM` picks another
+binary). See `go/README.md` for running the fuzzers and the network-fault tests locally.

@@ -7,7 +7,7 @@ its follow-ups S8–S16 with core 360–377 and hub-admin 36–38, and S17–S21
 hub-admin 41. Items P1–P16, raised by the Go hub (phase 3), were decided in core
 revision 324 and hub-admin revision 25; items 26–36 are decisions taken since revision 183, and
 items O1–O5, raised while applying them, were decided in core revision 305 and hub-admin revision 18.
-Every item is **resolved**; Q1–Q3, raised against core 381, were decided in core 387 as the implementation reads them; the vectors, the JavaScript verifier and the Go library follow each
+Every item is **resolved** except Q4 (open, raised against core 387); Q1–Q3, raised against core 381, were decided in core 387 as the implementation reads them; the vectors, the JavaScript verifier and the Go library follow each
 decision.
 
 The concept called "part" up to revision 183 is called "facet" since then. The vectors, the
@@ -59,6 +59,12 @@ Follow-ups in core revision 381 and hub-admin revision 41:
 | S19 | "For a node the hub dials, a call that starts waiting makes the hub dial at once unless an attempt is already under way" | core 10.7, reference note 3 | a kick is dropped while an attempt runs; `TestWaitingCallDialsAtOnce`, `TestWaitingCallDuringAttempt` |
 | S20 | "a hub that receives one [`AuthRefresh`] on a link to a node or peer closes that session with `GoAway(unauthenticated)`" | core 5.5 | already so; `TestAuthRefreshOnNodeLink` |
 | S21 | Link variants named `dial` and `credential` in the CDDL comments; a credential clash "is reported at each node after the first in node-ID order" | hub-admin 3 | already so; a validation case in `admin.TestValidate` |
+
+## Raised against core revision 387 (open)
+
+| # | Question | Current reading in the Go hub |
+| --- | --- | --- |
+| Q4 | 9.2: "`exp` MUST be within 60 s of issue" and "A ticket without `iat` is refused". Does "within" also bound `exp` from below, so that a ticket whose `exp` is before its `iat` is refused? (Found by fuzzing: such a ticket, and one whose `exp - iat` overflowed 64 bits, passed the check.) | `iat <= exp <= iat + 60`, compared without overflow; anything else is refused like an `exp` too far after `iat` (`web.Tickets.Parse`, `FuzzTicket`) |
 
 ## Raised against core revision 381 (open)
 

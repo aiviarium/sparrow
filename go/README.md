@@ -23,6 +23,8 @@ program (section "Hub" below); phase 4 the Web Profile server (section "Web Prof
 | `cmd/sparrow-hub` | The reference server program. |
 | `cmd/sparrow-admin` | A command-line controller for `sparrow.hub.admin`. |
 | `conformance` | Tests only: checks the library against every vector in `../test-vectors`, and the messages of every behaviour scenario in `../test-vectors/scenarios`. |
+| `netsimtest`, `internal/netsim` | Tests only: the hub, clients and nodes through simulated bad networks (section "Network faults"). |
+| `internal/fuzzseed` | Fuzz corpus seeds from the test vectors. |
 
 The vectors and this library use the same error vocabulary (`reserved_facet_id`, `invalid_notification`, ...).
 
@@ -32,16 +34,9 @@ The vectors and this library use the same error vocabulary (`reserved_facet_id`,
 go vet ./...
 go test -race ./...                 # unit tests and all test vectors
 go test ./conformance -v            # prints "vector coverage: N/N vectors checked and passing"
-
-# fuzzing (Go native), e.g. 20 s per target
-go test ./cbor   -run '^$' -fuzz FuzzValidate -fuzztime 20s
-go test ./wire   -run '^$' -fuzz FuzzDecode   -fuzztime 20s
-go test ./schema -run '^$' -fuzz FuzzSchema   -fuzztime 20s
-go test ./value  -run '^$' -fuzz FuzzDecode   -fuzztime 20s
-go test ./admin  -run '^$' -fuzz FuzzDecode   -fuzztime 20s
 ```
 
-The suite runs in a few seconds (`go test ./...` about 4 s, `-race` about 11 s on 4 cores): tests run
+The suite runs in a few seconds (`go test ./...` about 4 s, `-race` about 12 s on 4 cores): tests run
 in parallel, the protocol timers are set to milliseconds where a test only waits for something to
 happen, and a test that checks a timeout runs it on a fake clock (`internal/testutil.FakeClock`) and
 advances it, so no test sleeps for a protocol timer. `testutil.Eventually`, `Never` and `WaitFor`
@@ -54,6 +49,56 @@ go test -race -count=5 -p 4 ./hub ./cmd/... ./session ./web   # about 30 s
 The conformance suite fails if any vector is left unchecked. Set `SPARROW_VECTORS` to test against
 another vector directory. `github.com/fxamacker/cbor/v2` is used only by tests, as a differential
 reference for float widths and Core Deterministic Encoding.
+
+### Fuzzing
+
+Every parser of untrusted input has a Go native fuzz target, seeded from every hex and short text
+string of `../test-vectors` (`internal/fuzzseed`) and from hand-written inputs:
+
+| Package | Targets |
+| --- | --- |
+| `cbor` | `FuzzValidate` (validation, canonical form, tree round trip), `FuzzDifferential` (against fxamacker/cbor), `FuzzDecoder` (the pull decoder) |
+| `wire` | `FuzzDecode` (every message kind, params, metadata, call-ID rewrite, forwarding), `FuzzFrameReader`, `FuzzVarint` |
+| `session` | `FuzzClientHandshake`, `FuzzServerHandshake` (arbitrary first messages each way), `FuzzServerMessages` (an established session) |
+| `schema` | `FuzzSchema` (schema, facet, interface, delta, type ref; canonical form and hashes), `FuzzDelta` (deltas applied to valid schemas), `FuzzFacetPair` (compatibility, conformance) |
+| `value` | `FuzzDecode` (a fixed facet), `FuzzDecodeWithFacet` (arbitrary facet, type and value) |
+| `websign` | `FuzzDecode` (certificates, revocation lists, module entries), `FuzzVerify` (the acceptance verdict), `FuzzVersion` (semver precedence) |
+| `web` | `FuzzTicket` (JWT tickets), `FuzzEntry`, `FuzzTopLevel` (`ref.web`, the loader), `FuzzRange` (hostApi), `FuzzSnapshot` |
+| `names` | `FuzzNames` (every grammar against a regular expression) |
+| `admin` | `FuzzDecode` (document, CommitRequest, validation, JSON form), `FuzzConfigJSON` |
+| `hub` | `FuzzExtensions` (`ref.policy`, `ref.interfaces`) |
+
+The properties: no panic, no hang (the session targets fail an iteration that runs 10 s), allocation
+bounded by the input (the frame reader grows its buffer with the bytes that arrive), and round trips
+(decode, encode, decode gives the same bytes; canonical forms stable) where they apply. `go test`
+runs only the seed corpus and the inputs in `testdata/fuzz` (crashers found earlier, kept as
+regression tests). To fuzz, one target per run:
+
+```sh
+go test ./wire -run '^$' -fuzz '^FuzzFrameReader$' -fuzztime 2m
+go test -list '^Fuzz' ./web                        # a package's targets
+```
+
+A failing input is written to `<package>/testdata/fuzz/<target>/`: commit it with the fix. The
+generated corpus stays in `$(go env GOCACHE)/fuzz`. CI fuzzes every target for 15 s.
+
+### Network faults
+
+`internal/netsim` is a UDP proxy (loss, latency and jitter, reordering, duplication, a black hole in
+one or both directions, NAT rebinding) and a TCP proxy (writes cut into tiny pieces, delays, stalls,
+resets after n bytes). `netsimtest` puts them between an in-process hub, a client and a node on real
+WebTransport and WebSocket listeners: every kind of call over lossy QUIC links, dead links of a
+dial-in node and of a dialed node (offline rules of 10.7, reconnection), NAT rebinding, choppy TCP,
+resets mid-message and mid-handshake, stalls; after each fault no session counts a call and no
+goroutine is left. quic-go's timers come from `webtransport.ServerOptions.QUICConfig`,
+`node.DialOptions.QUICConfig` and `hub.Options.DialQUICConfig`, so a dead link is noticed within a
+second. Faults are seeded from the test name; the seed is logged, and `NETSIM_SEED` repeats a run
+(`NETSIM_LOG=1` prints the hub's log):
+
+```sh
+go test ./netsimtest -v                    # about 3 s
+NETSIM_SEED=123 go test ./netsimtest -run TestLossyWebTransport -v
+```
 
 ## Choices worth knowing
 
