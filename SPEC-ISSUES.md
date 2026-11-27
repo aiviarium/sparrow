@@ -7,7 +7,7 @@ its follow-ups S8–S16 with core 360–377 and hub-admin 36–38, and S17–S21
 hub-admin 41. Items P1–P16, raised by the Go hub (phase 3), were decided in core
 revision 324 and hub-admin revision 25; items 26–36 are decisions taken since revision 183, and
 items O1–O5, raised while applying them, were decided in core revision 305 and hub-admin revision 18.
-Every item is **resolved** except Q4 (open, raised against core 387); Q1–Q3, raised against core 381, were decided in core 387 as the implementation reads them; the vectors, the JavaScript verifier and the Go library follow each
+Every item is **resolved**; Q1–Q3, raised against core 381, were decided in core 387, and Q4 in core 388, as the implementation reads them; the vectors, the JavaScript verifier and the Go library follow each
 decision.
 
 The concept called "part" up to revision 183 is called "facet" since then. The vectors, the

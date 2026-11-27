@@ -2,7 +2,7 @@
 
 Nov 26, 2026 · Christoph Feuerer
 
-> Snapshot of the live draft, revision 387, exported for this repository. The live document is the source of truth; diagrams are not included here.
+> Snapshot of the live draft, revision 388, exported for this repository. The live document is the source of truth; diagrams are not included here.
 
 ## 1. Overview
 
@@ -687,7 +687,7 @@ Because `/connect` returns the schema hash, the client can compare it with its s
 
 - The ticket goes in `Hello` as `["bearer", ticket]`. WebTransport sends no cookies and browsers cannot set headers on WebTransport or WebSocket, so it has to travel inside the protocol.
 - A ticket is a signed token (PASETO `v4.public` or a JWT with EdDSA), so edge servers verify it without calling the host. Claims: `sub`, `sid` (the login session), `aud`, `iat`, `exp`, `jti`, `sexp` (when the login session ends), and optionally `groups` (a list of group names for the host's authorization). A ticket without `iat` is refused.
-- `exp` MUST be within 60 s of issue. It only limits when the ticket may be presented in `Hello` or `AuthRefresh`; the session itself lasts until `sexp` (section 5.5).
+- `exp` MUST be no earlier than `iat` and at most 60 s after it. It only limits when the ticket may be presented in `Hello` or `AuthRefresh`; the session itself lasts until `sexp` (section 5.5).
 - A ticket MUST be single-use: the edge records its `jti` until `exp`. Because one edge cannot see another's records, `aud` MUST name the specific edge instance whose endpoints `/connect` returned; it is a string the edge chooses (the reference uses its WebTransport URL), and each edge accepts only its own. Instances that share one hostname behind a load balancer MUST share a `jti` store.
 - **Refresh:** before `sexp`, the client posts `{"refresh": {"endpoint": "<URL of the endpoint it is connected to>"}}` to `/connect` with its normal HTTP authentication. The response holds only a new ticket with the same `sub` and `sid` and the current edge as `aud`. The client sends it in `AuthRefresh`.
 - Logging out SHOULD close live sessions: the host revokes `sid`, and edges send `GoAway(unauthenticated)`.
