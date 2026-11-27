@@ -13,8 +13,9 @@ const DefaultMaxDepth = 64
 // Options select the rules Validate and Canonical enforce. The zero value is
 // the wire profile of section 3.1 with a depth limit of 64 and tags 1 and 37.
 type Options struct {
-	// MaxDepth is the deepest allowed nesting level; the outermost item is
-	// level 1 and every array, map or tag adds one level for its contents.
+	// MaxDepth is the deepest allowed nesting level. Arrays, maps and tags
+	// count, the outermost one is level 1, and scalars add no level, so a
+	// message of 64 nested arrays holding a uint is nested 64 levels deep.
 	// Zero means DefaultMaxDepth.
 	MaxDepth int
 	// ExtraTags lists tags a profile registered beyond 1 and 37.
@@ -87,14 +88,18 @@ func IsCanonical(b []byte, opt Options) bool {
 // walk validates one item. When emit is set it returns the canonical
 // re-encoding; map keys are always re-encoded canonically to check
 // uniqueness, so duplicate keys in non-preferred form are caught too.
+//
+// depth is the level the item would have if it is an array, map or tag:
+// only those count (section 3.1), so a scalar inside a level-64 array is
+// fine.
 func walk(d *Decoder, opt Options, depth int, emit bool) ([]byte, error) {
-	if depth > opt.maxDepth() {
-		return nil, errAt(d.off, "nesting deeper than %d levels", opt.maxDepth())
-	}
 	start := d.off
 	h, err := d.peek()
 	if err != nil {
 		return nil, err
+	}
+	if (h.major == MajorArray || h.major == MajorMap || h.major == MajorTag) && depth > opt.maxDepth() {
+		return nil, errAt(d.off, "nesting deeper than %d levels", opt.maxDepth())
 	}
 	if opt.RequirePreferred && !h.preferred() {
 		return nil, errAt(start, "integer or length not in shortest form")

@@ -60,7 +60,7 @@ func statusVectors() O {
 		),
 		o(
 			"name", "status/application-error-not-transport",
-			"description", "An application error sigil (here conflict, 65, of part 16) travels only in an Error message; stream resets and transport closes carry core codes only, and Cancel, GoAway and AuthStatus carry core codes only.",
+			"description", "An application error sigil (here conflict, 65, of facet 16) travels only in an Error message; stream resets and transport closes carry core codes only, and Cancel, GoAway and AuthStatus carry core codes only.",
 			"spec", "8",
 			"type", "status_scope",
 			"status", sgConflct,

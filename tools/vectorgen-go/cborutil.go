@@ -20,7 +20,7 @@ import (
 // keys there); for schemas and signed data it is the only valid one.
 var (
 	encMode  = mustMode(cbor.CoreDetEncOptions().EncMode())
-	diagMode = mustMode(cbor.DiagOptions{FloatPrecisionIndicator: true}.DiagMode())
+	diagMode = mustMode(cbor.DiagOptions{FloatPrecisionIndicator: true, MaxNestedLevels: 256}.DiagMode())
 )
 
 func mustMode[T any](m T, err error) T {
@@ -90,6 +90,8 @@ func tj(v any) any {
 		return O{{"$float", fmtFloat(float64(x))}}
 	case []byte:
 		return O{{"$bytes", hx(x)}}
+	case cbor.ByteString:
+		return O{{"$bytes", hx([]byte(x))}}
 	case cbor.Tag:
 		return O{{"$tag", x.Number}, {"value", tj(x.Content)}}
 	case []any:
@@ -281,4 +283,30 @@ func varintValue(b []byte) uint64 {
 		v = v<<8 | uint64(b[i])
 	}
 	return v
+}
+
+// nestDepth is the nesting level of a value tree as section 3.1 counts it:
+// every array, map and tag is one level, the outermost container is level
+// 1, and scalars add nothing.
+func nestDepth(v any) int {
+	inner := 0
+	switch x := v.(type) {
+	case []any:
+		for _, e := range x {
+			inner = max(inner, nestDepth(e))
+		}
+	case map[string]any:
+		for _, e := range x {
+			inner = max(inner, nestDepth(e))
+		}
+	case map[any]any:
+		for k, e := range x {
+			inner = max(inner, nestDepth(k), nestDepth(e))
+		}
+	case cbor.Tag:
+		inner = nestDepth(x.Content)
+	default:
+		return 0
+	}
+	return inner + 1
 }

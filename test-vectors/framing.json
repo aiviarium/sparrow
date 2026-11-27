@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev183 (draft)",
+  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "framing",
   "vectors": [
@@ -286,7 +286,7 @@
     },
     {
       "name": "example-7.7/request",
-      "description": "Section 7.7 example: unary Request, call ID 2, part 16, method 1042 (Panels.open), empty metadata, input struct [\"settings\", true]: 19 bytes. Confirms the spec bytes exactly.",
+      "description": "Section 7.7 example: unary Request, call ID 2, facet 16, method 1042 (Panels.open), empty metadata, input struct [\"settings\", true]: 19 bytes. Confirms the spec bytes exactly.",
       "spec": "7.7",
       "type": "message",
       "kind": 16,

@@ -61,9 +61,9 @@ func typeRefOf(t *testing.T, raw json.RawMessage) schema.TypeRef {
 }
 
 func TestEncoding(t *testing.T) {
-	notes := codecFor(t, decodeFacetField(t, vector(t, "part/acme-notes"), "input"))
+	notes := codecFor(t, decodeFacetField(t, vector(t, "facet/acme-notes"), "input"))
 	panel := codecFor(t, openPanelFacet())
-	facet := decodeFacetField(t, vector(t, "part/acme-notes"), "input")
+	facet := decodeFacetField(t, vector(t, "facet/acme-notes"), "input")
 
 	each(t, "encoding.json", func(t *testing.T, v vectors.Vector) {
 		cb := v.Hex("cbor")
@@ -101,7 +101,7 @@ func TestEncoding(t *testing.T) {
 			}
 			checkMapEntries(t, v, cb)
 			return
-		case "metadata / any map":
+		case "any map":
 			// Not all keys are symbols (-1, -25), so this is not valid
 			// metadata; it checks generic canonical key order.
 			c, err := cbor.Canonical(cb, cbor.Options{})
@@ -143,7 +143,7 @@ func TestEncoding(t *testing.T) {
 			}
 			x, err := c.DecodeInner(r, b)
 			if err != nil {
-				t.Fatalf("decode logical part: %v", err)
+				t.Fatalf("decode logical facet: %v", err)
 			}
 			return x
 		}
@@ -224,6 +224,50 @@ func TestEncoding(t *testing.T) {
 			t.Fatalf("encoding the logical value: %x, %v\nwant %x", got, err, cb)
 		}
 	}, "value", "decode_only")
+
+	each(t, "encoding.json", func(t *testing.T, v vectors.Vector) {
+		cb := v.Hex("cbor")
+		if !bytes.Equal(cb, v.CBOR("message")) {
+			t.Fatalf("cbor differs from typed JSON message")
+		}
+		want := v.Bool("expected_valid")
+		if v.Int("max_depth") != cbor.DefaultMaxDepth || want != (v.Int("depth") <= cbor.DefaultMaxDepth) {
+			t.Fatalf("vector depth fields")
+		}
+		_, err := wire.Decode(cb)
+		if (err == nil) != want {
+			t.Fatalf("Decode = %v, want valid=%v", err, want)
+		}
+		// A limit one level higher accepts it; one lower rejects it.
+		if err := cbor.Validate(cb, cbor.Options{MaxDepth: int(v.Int("depth"))}); err != nil {
+			t.Fatalf("depth %d with MaxDepth %d: %v", v.Int("depth"), v.Int("depth"), err)
+		}
+		if err := cbor.Validate(cb, cbor.Options{MaxDepth: int(v.Int("depth")) - 1}); err == nil {
+			t.Fatalf("depth %d accepted with MaxDepth %d", v.Int("depth"), v.Int("depth")-1)
+		}
+	}, "depth")
+
+	each(t, "encoding.json", func(t *testing.T, v vectors.Vector) {
+		cb := v.Hex("cbor")
+		m, err := wire.Decode(cb)
+		if err != nil {
+			t.Fatalf("non-shortest message rejected: %v", err)
+		}
+		shortest := v.Hex("shortest_cbor")
+		if !bytes.Equal(shortest, v.CBOR("message")) {
+			t.Fatalf("shortest_cbor differs from typed JSON message")
+		}
+		if bytes.Equal(cb, shortest) {
+			t.Fatalf("not a non-shortest form")
+		}
+		if got := wire.Encode(m); !bytes.Equal(got, shortest) {
+			// Metadata keeps its received order; compare canonically.
+			c1, _ := cbor.Canonical(got, cbor.Options{})
+			if !bytes.Equal(c1, shortest) {
+				t.Fatalf("re-encoded %x, want %x", got, shortest)
+			}
+		}
+	}, "non_shortest")
 }
 
 // checkMapEntries checks a map vector's logical entries against its bytes:

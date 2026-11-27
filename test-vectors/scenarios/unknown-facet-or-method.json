@@ -1,0 +1,97 @@
+{
+  "format": 1,
+  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
+  "generator": "tools/vectorgen-go",
+  "name": "unknown-facet-or-method",
+  "description": "A Request naming a facet or a method the callee does not have is answered with Error(unimplemented); the call ends and the stream is idle (7.1).",
+  "spec": "7.1, 8",
+  "given": {
+    "schema": "schema/scenario-host",
+    "session": "established as in scenario handshake-normal (steps 1-3), with no call open"
+  },
+  "steps": [
+    {
+      "step": 1,
+      "from": "client",
+      "stream": "lease:1",
+      "opens_stream": true,
+      "header": "01",
+      "kind_name": "Request",
+      "message": [
+        16,
+        2,
+        40,
+        0,
+        {},
+        null
+      ],
+      "diag": "[16, 2, 40, 0, {}, null]",
+      "cbor": "861002182800a0f6",
+      "note": "facet 40 does not exist"
+    },
+    {
+      "step": 2,
+      "from": "server",
+      "stream": "lease:1",
+      "kind_name": "Error",
+      "message": [
+        20,
+        2,
+        12,
+        "unknown facet 40",
+        null
+      ],
+      "diag": "[20, 2, 12, \"unknown facet 40\", null]",
+      "cbor": "8514020c70756e6b6e6f776e206661636574203430f6",
+      "compare": "status"
+    },
+    {
+      "step": 3,
+      "expect": "call_ended",
+      "call_id": 2
+    },
+    {
+      "step": 4,
+      "from": "client",
+      "stream": "lease:1",
+      "kind_name": "Request",
+      "message": [
+        16,
+        4,
+        16,
+        99,
+        {},
+        null
+      ],
+      "diag": "[16, 4, 16, 99, {}, null]",
+      "cbor": "861004101863a0f6",
+      "note": "facet 16 has no method 99"
+    },
+    {
+      "step": 5,
+      "from": "server",
+      "stream": "lease:1",
+      "kind_name": "Error",
+      "message": [
+        20,
+        4,
+        12,
+        "unknown method 99",
+        null
+      ],
+      "diag": "[20, 4, 12, \"unknown method 99\", null]",
+      "cbor": "8514040c71756e6b6e6f776e206d6574686f64203939f6",
+      "compare": "status"
+    },
+    {
+      "step": 6,
+      "expect": "call_ended",
+      "call_id": 4
+    },
+    {
+      "step": 7,
+      "expect": "stream_idle",
+      "stream": "lease:1"
+    }
+  ]
+}

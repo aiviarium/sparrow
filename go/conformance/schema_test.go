@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"strings"
 	"testing"
 
 	"github.com/aiviarium/sparrow-rpc/go/internal/vectors"
@@ -13,11 +12,9 @@ import (
 	"github.com/aiviarium/sparrow-rpc/go/wire"
 )
 
-// facetCode maps the vectors' error vocabulary ("part") to this library's
-// ("facet").
-func facetCode(code string) schema.Code {
-	return schema.Code(strings.ReplaceAll(code, "part", "facet"))
-}
+// facetCode converts the vectors' error vocabulary to a schema.Code; the two
+// are the same.
+func facetCode(code string) schema.Code { return schema.Code(code) }
 
 func codeOf(t *testing.T, err error) schema.Code {
 	t.Helper()
@@ -58,15 +55,15 @@ func decodeInterfaceField(t *testing.T, v vectors.Vector, field string) *schema.
 }
 
 type facetHashEntry struct {
-	ID   uint64 `json:"part_id"`
-	Name string `json:"part_name"`
-	Hash string `json:"part_hash"`
+	ID   uint64 `json:"facet_id"`
+	Name string `json:"facet_name"`
+	Hash string `json:"facet_hash"`
 }
 
 func checkFacetHashes(t *testing.T, v vectors.Vector, s *schema.Schema) {
 	t.Helper()
 	var want []facetHashEntry
-	v.Into("part_hashes", &want)
+	v.Into("facet_hashes", &want)
 	c := s.Canonical()
 	if len(c.Facets) != len(want) {
 		t.Fatalf("%d facets, want %d", len(c.Facets), len(want))
@@ -98,8 +95,8 @@ func TestSchema(t *testing.T) {
 			t.Fatalf("hash input %x", hi)
 		}
 		h, _ := f.Hash()
-		if !bytes.Equal(h, v.Hex("part_hash")) {
-			t.Fatalf("hash %x, want %x", h, v.Hex("part_hash"))
+		if !bytes.Equal(h, v.Hex("facet_hash")) {
+			t.Fatalf("hash %x, want %x", h, v.Hex("facet_hash"))
 		}
 		// canonical bytes decode and re-encode to themselves
 		g, err := schema.DecodeFacet(cb)
@@ -115,7 +112,7 @@ func TestSchema(t *testing.T) {
 				t.Fatalf("built-in sparrow.web differs from the vector")
 			}
 		}
-	}, "part")
+	}, "facet")
 
 	each(t, "schema.json", func(t *testing.T, v vectors.Vector) {
 		i := decodeInterfaceField(t, v, "input")
@@ -143,7 +140,7 @@ func TestSchema(t *testing.T) {
 
 	each(t, "schema.json", func(t *testing.T, v vectors.Vector) {
 		iface := decodeInterfaceField(t, vector(t, v.String("interface")), "input")
-		f := decodeFacetField(t, v, "part")
+		f := decodeFacetField(t, v, "facet")
 		if err := f.Validate(); err != nil {
 			t.Fatal(err)
 		}
@@ -203,13 +200,27 @@ func TestSchema(t *testing.T) {
 	}, "schema_sent")
 
 	each(t, "schema.json", func(t *testing.T, v vectors.Vector) {
+		s := decodeSchemaField(t, v, "input")
+		err := s.Validate()
+		if v.Bool("expected_valid") || err == nil {
+			t.Fatalf("Validate = %v", err)
+		}
+		if c := codeOf(t, err); c != facetCode(v.String("expected_error")) {
+			t.Fatalf("error %v, want %s", err, v.String("expected_error"))
+		}
+		if h, _ := s.Facets[0].Hash(); !bytes.Equal(h, v.Hex("facet_hash")) || !bytes.Equal(h, schema.WebFacetHash()) {
+			t.Fatalf("facet 1 hash %x", h)
+		}
+	}, "schema_invalid")
+
+	each(t, "schema.json", func(t *testing.T, v vectors.Vector) {
 		a := decodeSchemaField(t, v, "schema_a")
 		b := decodeSchemaField(t, v, "schema_b")
 		for _, s := range []*schema.Schema{a, b} {
 			if err := s.Validate(); err != nil {
 				t.Fatal(err)
 			}
-			if h, _ := s.Facets[0].Hash(); !bytes.Equal(h, v.Hex("part_hash")) {
+			if h, _ := s.Facets[0].Hash(); !bytes.Equal(h, v.Hex("facet_hash")) {
 				t.Fatalf("facet hash %x", h)
 			}
 		}
@@ -218,7 +229,7 @@ func TestSchema(t *testing.T) {
 		if !bytes.Equal(ha, v.Hex("schema_hash_a")) || !bytes.Equal(hb, v.Hex("schema_hash_b")) || bytes.Equal(ha, hb) {
 			t.Fatalf("schema hashes %x %x", ha, hb)
 		}
-	}, "part_hash_invariance")
+	}, "facet_hash_invariance")
 
 	each(t, "schema.json", func(t *testing.T, v vectors.Vector) {
 		from := stateOf(t, v.String("from"))
@@ -251,7 +262,7 @@ func TestSchema(t *testing.T) {
 			t.Fatalf("epoch %d (state %d), want %d", depth, n.Epoch(), v.Int("epoch"))
 		}
 		var removed []uint64
-		v.Into("removed_part_ids_after", &removed)
+		v.Into("removed_facet_ids_after", &removed)
 		if got := n.RemovedFacetIDs(); !equalU64(got, removed) {
 			t.Fatalf("removed %v, want %v", got, removed)
 		}

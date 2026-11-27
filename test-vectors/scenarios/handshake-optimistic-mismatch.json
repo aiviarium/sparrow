@@ -1,0 +1,259 @@
+{
+  "format": 1,
+  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
+  "generator": "tools/vectorgen-go",
+  "name": "handshake-optimistic-mismatch",
+  "description": "Optimistic start with a stale cached schema hash. The server MUST NOT dispatch any call of the session: it sends Welcome with its current schema so the client can update its cache, then GoAway(schema_mismatch) with retry_after_ms 0, and closes. The client reconnects and resends its calls; none of them ran (5.3).",
+  "spec": "5.3, 5.6",
+  "given": {
+    "schema": "schema/scenario-host",
+    "session": "none",
+    "client_cache": {
+      "schema_hash": "01f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3",
+      "note": "the hash of schema/server-base, which this server does not serve"
+    }
+  },
+  "steps": [
+    {
+      "step": 1,
+      "from": "client",
+      "stream": "shared",
+      "opens_stream": true,
+      "header": "00",
+      "kind_name": "Hello",
+      "message": [
+        0,
+        [
+          1
+        ],
+        {},
+        [
+          "bearer",
+          "v4.public.TEST-ONLY-TICKET"
+        ],
+        {
+          "$bytes": "01f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3"
+        },
+        null,
+        {},
+        true
+      ],
+      "diag": "[0, [1], {}, [\"bearer\", \"v4.public.TEST-ONLY-TICKET\"], h'01f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3', null, {}, true]",
+      "cbor": "88008101a08266626561726572781a76342e7075626c69632e544553542d4f4e4c592d5449434b4554582101f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3f6a0f5"
+    },
+    {
+      "step": 2,
+      "from": "client",
+      "stream": "shared",
+      "kind_name": "Ready",
+      "message": [
+        2,
+        {
+          "$bytes": "01f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3"
+        }
+      ],
+      "diag": "[2, h'01f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3']",
+      "cbor": "8202582101f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3"
+    },
+    {
+      "step": 3,
+      "from": "client",
+      "stream": "shared",
+      "kind_name": "Request",
+      "message": [
+        16,
+        2,
+        16,
+        0,
+        {},
+        "early"
+      ],
+      "diag": "[16, 2, 16, 0, {}, \"early\"]",
+      "cbor": "8610021000a0656561726c79"
+    },
+    {
+      "step": 4,
+      "from": "server",
+      "stream": "shared",
+      "kind_name": "Welcome",
+      "message": [
+        1,
+        1,
+        {},
+        {
+          "$bytes": "000102030405060708090a0b0c0d0e0f"
+        },
+        {},
+        [
+          2,
+          {
+            "$bytes": "01059602f9cf76c4d68529a3e9ccef3e6546bc6140308568f10ff46278d4f2a583"
+          },
+          [
+            2,
+            "test.host",
+            "1.0.0",
+            [
+              [
+                16,
+                "test.echo",
+                "1.0.0",
+                [
+                  [
+                    0,
+                    64,
+                    "Upload",
+                    [
+                      [
+                        0,
+                        "name",
+                        6,
+                        0,
+                        {}
+                      ],
+                      [
+                        1,
+                        "data",
+                        [
+                          4
+                        ],
+                        0,
+                        {}
+                      ]
+                    ],
+                    0,
+                    {}
+                  ]
+                ],
+                [
+                  [
+                    0,
+                    "Echo",
+                    [
+                      [
+                        0,
+                        "echo",
+                        6,
+                        6,
+                        [],
+                        1,
+                        {
+                          "doc": "Returns its input."
+                        }
+                      ],
+                      [
+                        1,
+                        "count",
+                        3,
+                        [
+                          3,
+                          3
+                        ],
+                        [],
+                        16,
+                        {
+                          "doc": "Streams the items 1, 2, ..., n, then End."
+                        }
+                      ],
+                      [
+                        2,
+                        "sum",
+                        [
+                          3,
+                          3
+                        ],
+                        3,
+                        [],
+                        8,
+                        {
+                          "doc": "Returns the sum of the items. Fails at once with out_of_range on an item above 1000."
+                        }
+                      ],
+                      [
+                        3,
+                        "upload",
+                        64,
+                        3,
+                        [],
+                        8,
+                        {
+                          "doc": "Returns the number of bytes received for the data token."
+                        }
+                      ],
+                      [
+                        4,
+                        "log",
+                        6,
+                        0,
+                        [],
+                        2,
+                        {
+                          "doc": "Notification: records the text."
+                        }
+                      ],
+                      [
+                        5,
+                        "events",
+                        0,
+                        [
+                          3,
+                          10
+                        ],
+                        [],
+                        20,
+                        {
+                          "doc": "Subscription: streams dynamic values until cancelled or drained."
+                        }
+                      ]
+                    ],
+                    {}
+                  ]
+                ],
+                [],
+                null,
+                [],
+                {}
+              ]
+            ],
+            {}
+          ]
+        ],
+        {}
+      ],
+      "diag": "[1, 1, {}, h'000102030405060708090a0b0c0d0e0f', {}, [2, h'01059602f9cf76c4d68529a3e9ccef3e6546bc6140308568f10ff46278d4f2a583', [2, \"test.host\", \"1.0.0\", [[16, \"test.echo\", \"1.0.0\", [[0, 64, \"Upload\", [[0, \"name\", 6, 0, {}], [1, \"data\", [4], 0, {}]], 0, {}]], [[0, \"Echo\", [[0, \"echo\", 6, 6, [], 1, {\"doc\": \"Returns its input.\"}], [1, \"count\", 3, [3, 3], [], 16, {\"doc\": \"Streams the items 1, 2, ..., n, then End.\"}], [2, \"sum\", [3, 3], 3, [], 8, {\"doc\": \"Returns the sum of the items. Fails at once with out_of_range on an item above 1000.\"}], [3, \"upload\", 64, 3, [], 8, {\"doc\": \"Returns the number of bytes received for the data token.\"}], [4, \"log\", 6, 0, [], 2, {\"doc\": \"Notification: records the text.\"}], [5, \"events\", 0, [3, 10], [], 20, {\"doc\": \"Subscription: streams dynamic values until cancelled or drained.\"}]], {}]], [], null, [], {}]], {}]], {}]",
+      "cbor": "870101a050000102030405060708090a0b0c0d0e0fa08302582101059602f9cf76c4d68529a3e9ccef3e6546bc6140308568f10ff46278d4f2a583850269746573742e686f737465312e302e3081891069746573742e6563686f65312e302e3081860018406655706c6f6164828500646e616d650600a085016464617461810400a000a0818400644563686f868700646563686f06068001a163646f637252657475726e732069747320696e7075742e870165636f756e74038203038010a163646f63782953747265616d7320746865206974656d7320312c20322c202e2e2e2c206e2c207468656e20456e642e87026373756d820303038008a163646f63785452657475726e73207468652073756d206f6620746865206974656d732e204661696c73206174206f6e63652077697468206f75745f6f665f72616e6765206f6e20616e206974656d2061626f766520313030302e87036675706c6f61641840038008a163646f63783852657475726e7320746865206e756d626572206f6620627974657320726563656976656420666f7220746865206461746120746f6b656e2e8704636c6f6706008002a163646f63781f4e6f74696669636174696f6e3a207265636f7264732074686520746578742e8705666576656e74730082030a8014a163646f637840537562736372697074696f6e3a2073747265616d732064796e616d69632076616c75657320756e74696c2063616e63656c6c6564206f7220647261696e65642ea080f680a0a0a0"
+    },
+    {
+      "step": 5,
+      "from": "server",
+      "stream": "shared",
+      "kind_name": "GoAway",
+      "message": [
+        9,
+        18,
+        "schema changed",
+        0,
+        null
+      ],
+      "diag": "[9, 18, \"schema changed\", 0, null]",
+      "cbor": "8509126e736368656d61206368616e67656400f6",
+      "compare": "status"
+    },
+    {
+      "step": 6,
+      "expect": "not_dispatched",
+      "call_id": 2
+    },
+    {
+      "step": 7,
+      "expect": "session_closed",
+      "by": "server"
+    },
+    {
+      "step": 8,
+      "expect": "client_retries",
+      "call_id": 2,
+      "note": "on a new session, not optimistically against the cached hash it just learned was stale: the client may start optimistically with the new hash from this Welcome"
+    }
+  ]
+}

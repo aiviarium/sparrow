@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 // Example data. Inputs are deliberately UNSORTED (types, services, methods,
-// fields, variants, enum values, errors, sigils, retired, parts) so the
+// fields, variants, enum values, errors, sigils, retired, facets) so the
 // canonical form has real work to do.
 
 const (
@@ -24,28 +24,28 @@ const (
 	sgUpdated = 80
 	sgDeleted = 81
 
-	partWeb    = 1
-	partNotes  = 16
-	partCharts = 17
+	facetWeb    = 1
+	facetNotes  = 16
+	facetCharts = 17
 )
 
-// ---- part 1, sparrow.web (section 9.4) ----
+// ---- facet 1, sparrow.web (section 9.4) ----
 
-func webPart() []any {
-	return partDoc(partWeb, "sparrow.web", "1.0.0", nil,
+func webFacet() []any {
+	return facetDoc(facetWeb, "sparrow.web", "1.0.0", nil,
 		list(service(0, "Client", list(
 			method(0, "moduleRejected", tList(tString), tUnit, nil, fNotification, nil),
 		), nil)), nil, nil, nil, nil)
 }
 
-// ---- part 16, acme.notes ----
+// ---- facet 16, acme.notes ----
 
 type notesOpts struct {
 	version string
 	v11     bool // apply the epoch-1 changes
 }
 
-func notesPart(o notesOpts) []any {
+func notesFacet(o notesOpts) []any {
 	colorValues := list(sgBlue, sgRed, sgGreen)
 	if o.v11 {
 		colorValues = list(sgYellow, sgBlue, sgRed, sgGreen)
@@ -129,17 +129,17 @@ func notesPart(o notesOpts) []any {
 	} else {
 		sigils = append(sigils, sigil(sgDeleted, "note.deleted", 2, nil))
 	}
-	return partDoc(partNotes, "acme.notes", o.version, types,
+	return facetDoc(facetNotes, "acme.notes", o.version, types,
 		list(
 			service(1, "Admin", adminMethods, ann{"auth.role": "admin"}),
 			service(0, "Notes", notesMethods, ann{"doc": "Personal notes."}),
 		), sigils, nil, ret, ann{"acme.owner": "notes-team"})
 }
 
-func notesV1() []any  { return notesPart(notesOpts{version: "1.0.0"}) }
-func notesV11() []any { return notesPart(notesOpts{version: "1.1.0", v11: true}) }
+func notesV1() []any  { return notesFacet(notesOpts{version: "1.0.0"}) }
+func notesV11() []any { return notesFacet(notesOpts{version: "1.1.0", v11: true}) }
 
-// ---- interface acme.charts.Renderer and part 17, acme.charts ----
+// ---- interface acme.charts.Renderer and facet 17, acme.charts ----
 
 func rendererIface() []any {
 	return ifaceDoc("acme.charts.Renderer", "1.0.0",
@@ -172,7 +172,7 @@ type chartsOpts struct {
 	implements  bool
 }
 
-func chartsPart(o chartsOpts) []any {
+func chartsFacet(o chartsOpts) []any {
 	if o.pointsType == nil {
 		o.pointsType = tList(tInt)
 	}
@@ -231,23 +231,23 @@ func chartsPart(o chartsOpts) []any {
 	if o.implements {
 		impl = ifaceHash(rendererIface())
 	}
-	return partDoc(o.id, o.name, o.version, types, services, sigils, impl, nil, an)
+	return facetDoc(o.id, o.name, o.version, types, services, sigils, impl, nil, an)
 }
 
 func chartsV1() []any {
-	return chartsPart(chartsOpts{id: partCharts, version: "1.0.0", implements: true})
+	return chartsFacet(chartsOpts{id: facetCharts, version: "1.0.0", implements: true})
 }
 
 // ---- schemas ----
 
 func serverSchemaInput() []any {
-	return schemaDoc("acme.host", "2026.12.1", list(webPart(), notesV1(), chartsV1()),
+	return schemaDoc("acme.host", "2026.12.1", list(webFacet(), notesV1(), chartsV1()),
 		ann{"web.apply": "reload", "web.keys": []any{certByName("cert/acme").full}, "web.revoked": revList.full})
 }
 
 func clientSchemaInput() []any {
 	return schemaDoc("acme.notes.web", "1.4.0", list(
-		partDoc(16, "acme.notes.web", "1.4.0", nil, list(
+		facetDoc(16, "acme.notes.web", "1.4.0", nil, list(
 			service(0, "ClientUi", list(
 				method(65, "navigate", tString, tBool, nil, 0, nil),
 				method(64, "toast", tString, tUnit, nil, fNotification, nil),
@@ -256,8 +256,8 @@ func clientSchemaInput() []any {
 	), nil)
 }
 
-// The schema a node 'acme.charts' publishes on its own link: the same part
-// under node-local part ID 16 (section 10.3).
+// The schema a node 'acme.charts' publishes on its own link: the same facet
+// under node-local facet ID 16 (section 10.3).
 func nodeSchemaInput() []any {
 	p := chartsV1()
 	p[pID] = 16
@@ -269,13 +269,13 @@ func deltaA() []any {
 }
 
 func chartsV2() []any {
-	p := chartsPart(chartsOpts{id: 18, version: "2.0.0", pointsType: tList(tUint)})
+	p := chartsFacet(chartsOpts{id: 18, version: "2.0.0", pointsType: tList(tUint)})
 	return p
 }
 
 func deltaB() []any {
 	return []any{
-		[]any{1, partCharts},
+		[]any{1, facetCharts},
 		[]any{0, chartsV2()},
 		[]any{2, ann{"web.apply": "hot", "web.keys": []any{certByName("cert/acme").full}, "web.revoked": revList.full}},
 	}
@@ -284,7 +284,7 @@ func deltaB() []any {
 func deltaC() []any {
 	return []any{
 		[]any{1, 18},
-		[]any{0, chartsPart(chartsOpts{id: partCharts, version: "1.0.1", implements: true, themeNote: true})},
+		[]any{0, chartsFacet(chartsOpts{id: facetCharts, version: "1.0.1", implements: true, themeNote: true})},
 		[]any{3, "2026.12.3"},
 	}
 }
@@ -336,11 +336,11 @@ func schemas() *schemaResults {
 	return r
 }
 
-func partHashes(doc []any) []any {
+func facetHashes(doc []any) []any {
 	out := []any{}
 	for _, p := range canonicalSchema(doc)[3].([]any) {
 		pd := p.([]any)
-		out = append(out, o("part_id", pd[pID], "part_name", pd[pName], "part_hash", hx(partHash(pd))))
+		out = append(out, o("facet_id", pd[pID], "facet_name", pd[pName], "facet_hash", hx(facetHash(pd))))
 	}
 	return out
 }
@@ -350,19 +350,19 @@ func schemaVectors() O {
 	var vs []any
 	add := func(v O) { vs = append(vs, v) }
 
-	partVec := func(name, desc string, p []any) {
-		if _, e := validatePart(p); e != nil {
+	facetVec := func(name, desc string, p []any) {
+		if _, e := validateFacet(p); e != nil {
 			panic(e)
 		}
-		c := canonicalPart(p)
-		hb := enc(partHashInput(p))
-		add(o("name", name, "description", desc, "spec", "6.2, 6.6", "type", "part",
+		c := canonicalFacet(p)
+		hb := enc(facetHashInput(p))
+		add(o("name", name, "description", desc, "spec", "6.2, 6.6", "type", "facet",
 			"input", tj(p), "canonical", tj(c), "canonical_cbor", hx(enc(c)),
-			"hash_input_diag", diag(hb), "hash_input_cbor", hx(hb), "part_hash", hx(partHash(p))))
+			"hash_input_diag", diag(hb), "hash_input_cbor", hx(hb), "facet_hash", hx(facetHash(p))))
 	}
-	partVec("part/sparrow-web", "Part 1, sparrow.web (section 9.4): service 0 Client, notification method 0 moduleRejected with input [0, 6] and output unit. Every web-profile server includes it.", webPart())
-	partVec("part/acme-notes", "Part 16 'acme.notes': a struct with a tombstoned field (tag 5, flag 0x4) and a deprecated field, a sparse struct, an enum, a union, an alias, two services, method flags incl. 0x8 and 0x10, sigils of all three kinds, retired IDs. Input unsorted.", notesV1())
-	partVec("part/acme-charts", "Part 17 'acme.charts': implements interface acme.charts.Renderer under its own names and annotations, adds a type and a service of its own, and ships a signed web module in its web.modules annotation.", chartsV1())
+	facetVec("facet/sparrow-web", "Facet 1, sparrow.web (section 9.4): service 0 Client, notification method 0 moduleRejected with input [0, 6] and output unit. Every web-profile server includes it.", webFacet())
+	facetVec("facet/acme-notes", "Facet 16 'acme.notes': a struct with a tombstoned field (tag 5, flag 0x4) and a deprecated field, a sparse struct, an enum, a union, an alias, two services, method flags incl. 0x8 and 0x10, sigils of all three kinds, retired IDs. Input unsorted.", notesV1())
+	facetVec("facet/acme-charts", "Facet 17 'acme.charts': implements interface acme.charts.Renderer under its own names and annotations, adds a type and a service of its own, and ships a signed web module in its web.modules annotation.", chartsV1())
 
 	iface := rendererIface()
 	ic := canonicalIface(iface)
@@ -376,6 +376,34 @@ func schemaVectors() O {
 	}
 	add(o("name", "interface/invalid-not-closed", "description", "An interface with a type its services never reach. An interface contains exactly the types and sigils its services reach (section 6.5).",
 		"spec", "6.5", "type", "interface", "input", tj(badIface), "expected_valid", false, "expected_error", "interface_not_closed"))
+
+	// References inside tombstones do not count towards reachability (6.5).
+	withTombstone := func(defineLegacy bool) []any {
+		i := rendererIface()
+		for _, t := range i[2].([]any) {
+			if num(t.([]any)[1]) == 64 {
+				t.([]any)[3] = append(t.([]any)[3].([]any), field(3, "legacy", 90, ffOptional|ffRemoved, nil))
+			}
+		}
+		if defineLegacy {
+			i[2] = append(i[2].([]any), structDef(90, "LegacyStyle", list(field(0, "css", tString, 0, nil)), 0, nil))
+		}
+		return i
+	}
+	tsIface := withTombstone(false)
+	if e := validateIface(tsIface); e != nil {
+		panic(e)
+	}
+	tsc := canonicalIface(tsIface)
+	add(o("name", "interface/tombstone-reference-not-counted", "description", "acme.charts.Renderer with a tombstoned field ChartSpec.legacy (tag 3, flags 0x5) whose type 90 the interface does not contain. References inside tombstones are not checked (6.6 rule 3) and do not count when deciding what the services reach (6.5), so the interface is valid and closed without type 90.",
+		"spec", "6.5, 6.6", "type", "interface", "input", tj(tsIface), "canonical", tj(tsc), "canonical_cbor", hx(enc(tsc)),
+		"hash", hx(ifaceHash(tsIface)), "expected_valid", true))
+	tsBad := withTombstone(true)
+	if e := validateIface(tsBad); e == nil || e.Code != "interface_not_closed" {
+		panic(fmt.Sprint("tombstone interface: ", e))
+	}
+	add(o("name", "interface/invalid-reached-only-through-tombstone", "description", "The same interface also defining type 90, which only the tombstone ChartSpec.legacy refers to. A reference inside a tombstone does not reach anything, so type 90 is not reached and the interface is not closed (6.5).",
+		"spec", "6.5", "type", "interface", "input", tj(tsBad), "expected_valid", false, "expected_error", "interface_not_closed"))
 
 	// Conformance.
 	namesOnly := func() []any {
@@ -404,31 +432,31 @@ func schemaVectors() O {
 		for _, s := range sigs {
 			s.([]any)[1] = "sig." + s.([]any)[1].(string)
 		}
-		return partDoc(20, "acme.altcharts", "3.2.0", types, svcs, sigs, ifaceHash(rendererIface()), nil, ann{"doc": "differs only in names and annotations"})
+		return facetDoc(20, "acme.altcharts", "3.2.0", types, svcs, sigs, ifaceHash(rendererIface()), nil, ann{"doc": "differs only in names and annotations"})
 	}
 	conf := []struct {
 		name, desc string
-		part       []any
+		facet      []any
 		want       []any
 	}{
-		{"conformance/acme-charts", "Part acme.charts conforms: same IDs and wire shapes, different names and annotations, extra type 80 and service 1.", chartsV1(), nil},
-		{"conformance/names-and-annotations-only", "A part that differs from the interface only in names and annotations conforms (byte comparison of wire shapes).", namesOnly(), nil},
+		{"conformance/acme-charts", "Facet acme.charts conforms: same IDs and wire shapes, different names and annotations, extra type 80 and service 1.", chartsV1(), nil},
+		{"conformance/names-and-annotations-only", "A facet that differs from the interface only in names and annotations conforms (byte comparison of wire shapes).", namesOnly(), nil},
 		{"conformance/field-type-differs", "DataSeries.values is [0, uint] instead of [0, int]: type 66 does not conform.",
-			chartsPart(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", pointsType: tList(tUint), implements: true}), []any{spType, 66}},
-		{"conformance/extra-method-in-service", "The part adds a method (2, drawPng) to the interface's service 0. A service's wire shape leaves out its method list and each interface method is compared on its own, so the part conforms.",
-			chartsPart(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", extraMethod: true, implements: true}), nil},
-		{"conformance/hint-flags-differ", "Method draw is not flagged idempotent (0x1) and field heading is flagged deprecated (0x2). Hint flags are cleared in wire shapes, so the part conforms.",
-			chartsPart(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", notIdem: true, deprecate: true, implements: true}), nil},
+			chartsFacet(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", pointsType: tList(tUint), implements: true}), []any{spType, 66}},
+		{"conformance/extra-method-in-service", "The facet adds a method (2, drawPng) to the interface's service 0. A service's wire shape leaves out its method list and each interface method is compared on its own, so the facet conforms.",
+			chartsFacet(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", extraMethod: true, implements: true}), nil},
+		{"conformance/hint-flags-differ", "Method draw is not flagged idempotent (0x1) and field heading is flagged deprecated (0x2). Hint flags are cleared in wire shapes, so the facet conforms.",
+			chartsFacet(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", notIdem: true, deprecate: true, implements: true}), nil},
 		{"conformance/method-output-differs", "Method draw returns string instead of bytes: method 0 does not conform.",
-			chartsPart(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", drawOutput: tString, implements: true}), []any{spMethod, 0}},
+			chartsFacet(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", drawOutput: tString, implements: true}), []any{spMethod, 0}},
 		{"conformance/method-in-other-service", "Method draw sits in service 1 instead of the interface's service 0. Service 0 itself matches, but its method 0 is missing.",
-			chartsPart(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", moveDraw: true, implements: true}), []any{spMethod, 0}},
+			chartsFacet(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", moveDraw: true, implements: true}), []any{spMethod, 0}},
 	}
 	for _, c := range conf {
-		if _, e := validatePart(c.part); e != nil {
+		if _, e := validateFacet(c.facet); e != nil {
 			panic(e)
 		}
-		got := conforms(c.part, iface)
+		got := conforms(c.facet, iface)
 		if (got == nil) != (c.want == nil) || (got != nil && fmt.Sprint(got) != fmt.Sprint(c.want)) {
 			panic(fmt.Sprintf("%s: conforms gave %v, want %v", c.name, got, c.want))
 		}
@@ -437,7 +465,7 @@ func schemaVectors() O {
 			mismatch = got
 		}
 		add(o("name", c.name, "description", c.desc, "spec", "6.5", "type", "conformance",
-			"interface", "interface/acme-charts-renderer", "part", tj(c.part),
+			"interface", "interface/acme-charts-renderer", "facet", tj(c.facet),
 			"expected_conforms", got == nil, "first_mismatch", mismatch))
 	}
 
@@ -450,37 +478,47 @@ func schemaVectors() O {
 		hb := enc(hi)
 		add(o("name", name, "description", desc, "spec", "6.2, 6.6", "type", "schema",
 			"input", tj(input), "canonical", tj(c), "canonical_cbor", hx(enc(c)), "canonical_length", len(enc(c)),
-			"part_hashes", partHashes(input),
+			"facet_hashes", facetHashes(input),
 			"hash_input", tj(hi), "hash_input_diag", diag(hb), "hash_input_cbor", hx(hb), "hash", hx(schemaHash(input))))
 	}
-	schemaVec("schema/server-base", "Server schema 'acme.host' with parts 1 (sparrow.web), 16 (acme.notes) and 17 (acme.charts), listed by ID as 6.1 requires (their contents unsorted), and top-level web.* annotations (web.apply, web.keys with the acme certificate, web.revoked). The schema hash covers [format, name, version, [* [part_id, part_name, part_hash]], annotations].", serverSchemaInput())
+	schemaVec("schema/server-base", "Server schema 'acme.host' with facets 1 (sparrow.web), 16 (acme.notes) and 17 (acme.charts), listed by ID as 6.1 requires (their contents unsorted), and top-level web.* annotations (web.apply, web.keys with the acme certificate, web.revoked). The schema hash covers [format, name, version, [* [facet_id, facet_name, facet_hash]], annotations].", serverSchemaInput())
 	schemaVec("schema/client", "Client schema as sent in Hello.client_schema.", clientSchemaInput())
-	schemaVec("schema/node-acme-charts", "The schema node 'acme.charts' publishes on its own link: the acme.charts part under node-local part ID 16. Its part hash equals that of part 17 in schema/server-base.", nodeSchemaInput())
+	schemaVec("schema/node-acme-charts", "The schema node 'acme.charts' publishes on its own link: the acme.charts facet under node-local facet ID 16. Its facet hash equals that of facet 17 in schema/server-base.", nodeSchemaInput())
+
+	scenarioSchemaVectors(add, schemaVec)
 
 	unsorted := serverSchemaInput()
 	ps := unsorted[3].([]any)
 	unsorted[3] = list(ps[2], ps[1], ps[0])
 	e := validateSentSchema(unsorted)
-	if e == nil || e.Code != "parts_not_sorted" || validateSchema(unsorted) != nil {
-		panic(fmt.Sprint("parts order: ", e))
+	if e == nil || e.Code != "facets_not_sorted" || validateSchema(unsorted) != nil {
+		panic(fmt.Sprint("facets order: ", e))
 	}
-	add(o("name", "schema/sent-parts-out-of-order", "description", "schema/server-base with its parts listed as 17, 16, 1. A schema lists its parts sorted by ID (6.1), and a receiver checks the rules of 6.1 (6.6 rule 3), so as a received document it is invalid. Its contents are otherwise valid, and canonicalisation for hashing would sort it (the hash equals schema/server-base's).",
-		"spec", "6.1, 6.6", "type", "schema_sent", "input", tj(unsorted), "expected_valid", false, "expected_error", "parts_not_sorted",
+	add(o("name", "schema/sent-facets-out-of-order", "description", "schema/server-base with its facets listed as 17, 16, 1. A schema lists its facets sorted by ID (6.1), and a receiver checks the rules of 6.1 (6.6 rule 3), so as a received document it is invalid. Its contents are otherwise valid, and canonicalisation for hashing would sort it (the hash equals schema/server-base's).",
+		"spec", "6.1, 6.6", "type", "schema_sent", "input", tj(unsorted), "expected_valid", false, "expected_error", "facets_not_sorted",
 		"hash_if_canonicalised", hx(schemaHash(unsorted))))
 
-	// Part hash invariance under rename and re-id.
+	renamedWeb := serverSchemaInput()
+	renamedWeb[3].([]any)[0].([]any)[pName] = "acme.web"
+	if e := validateSentSchema(renamedWeb); e == nil || e.Code != "facet1_mismatch" || hx(facetHash(renamedWeb[3].([]any)[0].([]any))) != hx(facetHash(webFacet())) {
+		panic(fmt.Sprint("facet 1 renamed: ", e))
+	}
+	add(o("name", "schema/invalid-facet1-renamed", "description", "schema/server-base with facet 1 named 'acme.web' instead of 'sparrow.web'. Its facet hash still equals that of sparrow.web (names are not hashed), but facet 1 MUST match its definition by name and facet hash (6.1), so the schema is invalid.",
+		"spec", "6.1, 9.4", "type", "schema_invalid", "input", tj(renamedWeb), "facet_hash", hx(facetHash(webFacet())), "expected_valid", false, "expected_error", "facet1_mismatch"))
+
+	// Facet hash invariance under rename and re-id.
 	pa := notesV1()
 	pb := notesV1()
 	pb[pID], pb[pName] = 42, "hub-b/acme.notes"
 	sa := schemaDoc("hub-a", "1.0.0", list(pa), nil)
 	sb := schemaDoc("hub-a", "1.0.0", list(pb), nil)
-	if hx(partHash(pa)) != hx(partHash(pb)) || hx(schemaHash(sa)) == hx(schemaHash(sb)) {
-		panic("part hash invariance")
+	if hx(facetHash(pa)) != hx(facetHash(pb)) || hx(schemaHash(sa)) == hx(schemaHash(sb)) {
+		panic("facet hash invariance")
 	}
-	add(o("name", "schema/part-hash-invariance", "description", "The same part listed as 16 'acme.notes' and as 42 'hub-b/acme.notes' (an imported name, section 10.8): identical part hash, different schema hashes.",
-		"spec", "6.6, 10.8", "type", "part_hash_invariance",
+	add(o("name", "schema/facet-hash-invariance", "description", "The same facet listed as 16 'acme.notes' and as 42 'hub-b/acme.notes' (an imported name, section 10.8): identical facet hash, different schema hashes.",
+		"spec", "6.6, 10.8", "type", "facet_hash_invariance",
 		"schema_a", tj(sa), "schema_b", tj(sb),
-		"part_hash", hx(partHash(pa)), "schema_hash_a", hx(schemaHash(sa)), "schema_hash_b", hx(schemaHash(sb))))
+		"facet_hash", hx(facetHash(pa)), "schema_hash_a", hx(schemaHash(sa)), "schema_hash_b", hx(schemaHash(sb))))
 
 	// Deltas.
 	type dv struct {
@@ -490,11 +528,11 @@ func schemaVectors() O {
 		delta            []any
 	}
 	for _, d := range []dv{
-		{"schema/delta-1-replace-part", "Epoch 1: replace part 16 with compatible version 1.1.0: adds a sigil, an enum value, a struct, a method and an optional field; removes method 113 and sigil 81 (both now in retired); tombstones union variant 2 (flag 0x4). Also sets the schema version.",
+		{"schema/delta-1-replace-facet", "Epoch 1: replace facet 16 with compatible version 1.1.0: adds a sigil, an enum value, a struct, a method and an optional field; removes method 113 and sigil 81 (both now in retired); tombstones union variant 2 (flag 0x4). Also sets the schema version.",
 			"schema/server-base", r.base, 1, deltaA()},
-		{"schema/delta-2-new-major", "Epoch 2: acme.charts moves to major version 2, which is a new part: remove part 17 and add part 18 (no longer implements the interface). Replace top-level annotations.",
-			"schema/delta-1-replace-part", r.a, 2, deltaB()},
-		{"schema/delta-3-readd-part", "Epoch 3: remove part 18 and bring part 17 back as acme.charts 1.0.1, a compatible successor of the 1.0.0 the session last saw (allowed, section 6.1).",
+		{"schema/delta-2-new-major", "Epoch 2: acme.charts moves to major version 2, which is a new facet: remove facet 17 and add facet 18 (no longer implements the interface). Replace top-level annotations.",
+			"schema/delta-1-replace-facet", r.a, 2, deltaB()},
+		{"schema/delta-3-readd-facet", "Epoch 3: remove facet 18 and bring facet 17 back as acme.charts 1.0.1, a compatible successor of the 1.0.0 the session last saw (allowed, section 6.1).",
 			"schema/delta-2-new-major", r.b, 3, deltaC()},
 	} {
 		res, e := d.st.apply(d.delta)
@@ -506,8 +544,8 @@ func schemaVectors() O {
 		ub := enc(upd)
 		add(o("name", d.name, "description", d.desc, "spec", "6.6", "type", "delta",
 			"from", d.from, "from_hash", hx(schemaHash(d.st.doc)), "epoch", d.epoch, "delta", tj(d.delta),
-			"expected_valid", true, "removed_part_ids_after", res.removedIDs(),
-			"canonical_cbor", hx(enc(res.doc)), "part_hashes", partHashes(res.doc), "hash", hx(h),
+			"expected_valid", true, "removed_facet_ids_after", res.removedIDs(),
+			"canonical_cbor", hx(enc(res.doc)), "facet_hashes", facetHashes(res.doc), "hash", hx(h),
 			"schema_update", o("message", tj(upd), "diag", diag(ub), "cbor", hx(ub))))
 	}
 
@@ -519,6 +557,18 @@ func schemaVectors() O {
 			}
 		}
 		panic("no admin")
+	}
+	noteField := func(p []any, typeID int64, tag int64) []any {
+		for _, t := range p[pTypes].([]any) {
+			if num(t.([]any)[1]) == typeID {
+				for _, f := range t.([]any)[3].([]any) {
+					if num(f.([]any)[0]) == tag {
+						return f.([]any)
+					}
+				}
+			}
+		}
+		panic("no such field")
 	}
 	notesSvc := func(p []any) []any {
 		for _, s := range p[pServices].([]any) {
@@ -533,8 +583,8 @@ func schemaVectors() O {
 		st                     *schemaState
 		delta                  []any
 	}{
-		{"schema/delta-invalid-incompatible-replace", "Replace part 16 with 1.2.0 (same major) where Note.updated (tag 4) changes type from timestamp to uint. Not a compatible change (section 6.7).",
-			"schema/delta-1-replace-part", "incompatible_change", r.a, []any{[]any{0, mod(func(p []any) {
+		{"schema/delta-invalid-incompatible-replace", "Replace facet 16 with 1.2.0 (same major) where Note.updated (tag 4) changes type from timestamp to uint. Not a compatible change (section 6.7).",
+			"schema/delta-1-replace-facet", "incompatible_change", r.a, []any{[]any{0, mod(func(p []any) {
 				for _, t := range p[pTypes].([]any) {
 					if num(t.([]any)[1]) == tyNote {
 						for _, f := range t.([]any)[3].([]any) {
@@ -545,17 +595,17 @@ func schemaVectors() O {
 					}
 				}
 			})}}},
-		{"schema/delta-invalid-reuse-retired", "Replace part 16 with a version that defines method 113 again, although [2, 113] is in its retired list.",
-			"schema/delta-1-replace-part", "retired_id_reused", r.a, []any{[]any{0, mod(func(p []any) {
+		{"schema/delta-invalid-reuse-retired", "Replace facet 16 with a version that defines method 113 again, although [2, 113] is in its retired list.",
+			"schema/delta-1-replace-facet", "retired_id_reused", r.a, []any{[]any{0, mod(func(p []any) {
 				s := adminSvc(p)
 				s[2] = append(s[2].([]any), method(113, "touch", tUnit, tUnit, nil, fNotification, nil))
 			})}}},
-		{"schema/delta-invalid-cross-part-reference", "Replace part 16 with a version whose new struct references TypeId 80, which exists only in part 17. No reference crosses a part (section 6.1): dangling.",
-			"schema/delta-1-replace-part", "dangling_reference", r.a, []any{[]any{0, mod(func(p []any) {
+		{"schema/delta-invalid-cross-facet-reference", "Replace facet 16 with a version whose new struct references TypeId 80, which exists only in facet 17. No reference crosses a facet (section 6.1): dangling.",
+			"schema/delta-1-replace-facet", "dangling_reference", r.a, []any{[]any{0, mod(func(p []any) {
 				p[pTypes] = append(p[pTypes].([]any), structDef(76, "Styled", list(field(0, "theme", 80, 0, nil)), 0, nil))
 			})}}},
-		{"schema/delta-invalid-dropped-not-retired", "Replace part 16 with a version that drops method 105 without listing [2, 105] in retired (section 6.6 rule 2).",
-			"schema/delta-1-replace-part", "dropped_id_not_retired", r.a, []any{[]any{0, mod(func(p []any) {
+		{"schema/delta-invalid-dropped-not-retired", "Replace facet 16 with a version that drops method 105 without listing [2, 105] in retired (section 6.6 rule 2).",
+			"schema/delta-1-replace-facet", "dropped_id_not_retired", r.a, []any{[]any{0, mod(func(p []any) {
 				s := notesSvc(p)
 				ms := []any{}
 				for _, m := range s[2].([]any) {
@@ -565,26 +615,53 @@ func schemaVectors() O {
 				}
 				s[2] = ms
 			})}}},
-		{"schema/delta-invalid-part-renamed", "Replace part 16 with a part named 'acme.memos'. Renaming a part is not allowed (section 6.7).",
-			"schema/delta-1-replace-part", "part_renamed", r.a, []any{[]any{0, mod(func(p []any) { p[pName] = "acme.memos" })}}},
-		{"schema/delta-invalid-major-in-place", "Replace part 16 in place with version 2.0.0. A new major version is a new part (section 10.3), so an in-place replace across majors is rejected.",
-			"schema/delta-1-replace-part", "major_version_changed", r.a, []any{[]any{0, mod(func(p []any) { p[pVersion] = "2.0.0" })}}},
+		{"schema/delta-invalid-facet-renamed", "Replace facet 16 with a facet named 'acme.memos'. Renaming a facet is not allowed (section 6.7).",
+			"schema/delta-1-replace-facet", "facet_renamed", r.a, []any{[]any{0, mod(func(p []any) { p[pName] = "acme.memos" })}}},
+		{"schema/delta-invalid-major-in-place", "Replace facet 16 in place with version 2.0.0. A new major version is a new facet (section 10.3), so an in-place replace across majors is rejected.",
+			"schema/delta-1-replace-facet", "major_version_changed", r.a, []any{[]any{0, mod(func(p []any) { p[pVersion] = "2.0.0" })}}},
 		{"schema/delta-invalid-float", "Top-level annotations containing a float. Canonical data MUST NOT contain floats (section 3.2).",
-			"schema/delta-1-replace-part", "float_in_canonical_data", r.a, []any{[]any{2, ann{"web.apply": "hot", "ui.scale": 1.5}}}},
-		{"schema/delta-invalid-reserved-part-id", "Add a part with ID 5. Part IDs 0 and 2-15 MUST NOT appear (6.1).",
-			"schema/delta-1-replace-part", "reserved_part_id", r.a, []any{[]any{0, partDoc(5, "acme.extra", "1.0.0", nil, nil, nil, nil, nil, nil)}}},
-		{"schema/delta-invalid-part-name-non-ascii", "Add a part named 'acme.caf\u00e9'. Part names match [a-z0-9-]+(\\.[a-z0-9-]+)*, ASCII only (6.1).",
-			"schema/delta-1-replace-part", "invalid_name", r.a, []any{[]any{0, partDoc(19, "acme.caf\u00e9", "1.0.0", nil, nil, nil, nil, nil, nil)}}},
-		{"schema/delta-invalid-part-name-uppercase", "Add a part named 'Acme.Tools': upper case is outside the part-name grammar.",
-			"schema/delta-1-replace-part", "invalid_name", r.a, []any{[]any{0, partDoc(19, "Acme.Tools", "1.0.0", nil, nil, nil, nil, nil, nil)}}},
-		{"schema/delta-invalid-type-name-non-ascii", "Add a part whose struct is named 'Gr\u00fc\u00dfe'. Type names are ASCII (6.1).",
-			"schema/delta-1-replace-part", "invalid_name", r.a, []any{[]any{0, partDoc(19, "acme.greetings", "1.0.0", list(structDef(64, "Gr\u00fc\u00dfe", list(field(0, "text", tString, 0, nil)), 0, nil)), nil, nil, nil, nil, nil)}}},
-		{"schema/delta-invalid-variant-name-non-ascii", "Add a part whose union has a variant named 'gel\u00f6scht'. Variant names are ASCII (6.1).",
-			"schema/delta-1-replace-part", "invalid_name", r.a, []any{[]any{0, partDoc(19, "acme.events", "1.0.0", list(unionDef(64, "Event", list(variant(0, "gel\u00f6scht", tUnit, 0, nil)), nil)), nil, nil, nil, nil, nil)}}},
-		{"schema/delta-invalid-part1-mismatch", "Replace part 1 with sparrow.web version 1.0.1. Part 1 MUST match its definition exactly, by part hash (6.1).",
-			"schema/delta-1-replace-part", "part1_mismatch", r.a, []any{[]any{0, func() []any { p := webPart(); p[pVersion] = "1.0.1"; return p }()}}},
-		{"schema/delta-invalid-readd-renamed", "Part 17 was removed in epoch 2. Bringing ID 17 back with a different name ('acme.maps') is not allowed (section 6.1).",
-			"schema/delta-2-new-major", "removed_part_mismatch", r.b, []any{[]any{0, chartsPart(chartsOpts{id: partCharts, name: "acme.maps", version: "1.0.0", noExtras: true})}}},
+			"schema/delta-1-replace-facet", "float_in_canonical_data", r.a, []any{[]any{2, ann{"web.apply": "hot", "ui.scale": 1.5}}}},
+		{"schema/delta-invalid-reserved-facet-id", "Add a facet with ID 5. Facet IDs 0 and 2-15 MUST NOT appear (6.1).",
+			"schema/delta-1-replace-facet", "reserved_facet_id", r.a, []any{[]any{0, facetDoc(5, "acme.extra", "1.0.0", nil, nil, nil, nil, nil, nil)}}},
+		{"schema/delta-invalid-facet-name-non-ascii", "Add a facet named 'acme.caf\u00e9'. Facet names match [a-z0-9-]+(\\.[a-z0-9-]+)*, ASCII only (6.1).",
+			"schema/delta-1-replace-facet", "invalid_name", r.a, []any{[]any{0, facetDoc(19, "acme.caf\u00e9", "1.0.0", nil, nil, nil, nil, nil, nil)}}},
+		{"schema/delta-invalid-facet-name-uppercase", "Add a facet named 'Acme.Tools': upper case is outside the facet-name grammar.",
+			"schema/delta-1-replace-facet", "invalid_name", r.a, []any{[]any{0, facetDoc(19, "Acme.Tools", "1.0.0", nil, nil, nil, nil, nil, nil)}}},
+		{"schema/delta-invalid-type-name-non-ascii", "Add a facet whose struct is named 'Gr\u00fc\u00dfe'. Type names are ASCII (6.1).",
+			"schema/delta-1-replace-facet", "invalid_name", r.a, []any{[]any{0, facetDoc(19, "acme.greetings", "1.0.0", list(structDef(64, "Gr\u00fc\u00dfe", list(field(0, "text", tString, 0, nil)), 0, nil)), nil, nil, nil, nil, nil)}}},
+		{"schema/delta-invalid-variant-name-non-ascii", "Add a facet whose union has a variant named 'gel\u00f6scht'. Variant names are ASCII (6.1).",
+			"schema/delta-1-replace-facet", "invalid_name", r.a, []any{[]any{0, facetDoc(19, "acme.events", "1.0.0", list(unionDef(64, "Event", list(variant(0, "gel\u00f6scht", tUnit, 0, nil)), nil)), nil, nil, nil, nil, nil)}}},
+		{"schema/delta-invalid-facet1-mismatch", "Replace facet 1 with sparrow.web version 1.0.1. Facet 1 MUST match its definition exactly, by facet hash (6.1).",
+			"schema/delta-1-replace-facet", "facet1_mismatch", r.a, []any{[]any{0, func() []any { p := webFacet(); p[pVersion] = "1.0.1"; return p }()}}},
+		{"schema/delta-invalid-required-made-optional", "Replace facet 16 with 1.2.0 where the required field Note.title (tag 1) becomes optional (flag 0x1). Making a required field optional is not allowed: older readers still require it (6.7).",
+			"schema/delta-1-replace-facet", "incompatible_change", r.a, []any{[]any{0, mod(func(p []any) {
+				noteField(p, tyNote, 1)[3] = ffOptional
+			})}}},
+		{"schema/delta-invalid-tombstone-changes-type", "Replace facet 16 with 1.2.0 where the optional field Note.color (tag 6) becomes a tombstone (flags 0x5) and at the same time changes its type from [2, 66] to [2, 6]. A tombstone keeps its last definition (6.7).",
+			"schema/delta-1-replace-facet", "incompatible_change", r.a, []any{[]any{0, mod(func(p []any) {
+				f := noteField(p, tyNote, 6)
+				f[2], f[3] = tOpt(tString), ffOptional|ffRemoved
+			})}}},
+		{"schema/delta-invalid-existing-tombstone-changes-type", "Replace facet 16 with 1.2.0 where the variant Change.cleared (tag 2), already a tombstone in 1.1.0, changes its type from unit to string. A tombstone keeps its last definition (6.7).",
+			"schema/delta-1-replace-facet", "incompatible_change", r.a, []any{[]any{0, mod(func(p []any) {
+				noteField(p, tyChange, 2)[2] = tString
+			})}}},
+		{"schema/delta-invalid-notification-output", "Replace facet 16 with 1.2.0 that adds method 106 'ping' flagged notification (0x2) with output bool. A notification MUST have output unit (6.4).",
+			"schema/delta-1-replace-facet", "invalid_notification", r.a, []any{[]any{0, mod(func(p []any) {
+				s := notesSvc(p)
+				s[2] = append(s[2].([]any), method(106, "ping", tUnit, tBool, nil, fNotification, nil))
+			})}}},
+		{"schema/delta-invalid-notification-byte-stream", "Replace facet 16 with 1.2.0 that adds method 106 'drop' flagged notification (0x2, and 0x8 as its input reaches [4]) whose input is an Attachment, which has a [4] field. A notification MUST NOT have [4] in its input (6.4, 7.3).",
+			"schema/delta-1-replace-facet", "invalid_notification", r.a, []any{[]any{0, mod(func(p []any) {
+				s := notesSvc(p)
+				s[2] = append(s[2].([]any), method(106, "drop", tyAttachment, tUnit, nil, fNotification|fInputEnd, nil))
+			})}}},
+		{"schema/delta-invalid-reserved-type-id", "Replace facet 16 with 1.2.0 that adds a struct whose field has type 12. TypeIds 12-31 are reserved for built-ins of later core versions, so a schema that uses them is invalid (6.4).",
+			"schema/delta-1-replace-facet", "reserved_type_id", r.a, []any{[]any{0, mod(func(p []any) {
+				p[pTypes] = append(p[pTypes].([]any), structDef(76, "Future", list(field(0, "x", 12, 0, nil)), 0, nil))
+			})}}},
+		{"schema/delta-invalid-readd-renamed", "Facet 17 was removed in epoch 2. Bringing ID 17 back with a different name ('acme.maps') is not allowed (section 6.1).",
+			"schema/delta-2-new-major", "removed_facet_mismatch", r.b, []any{[]any{0, chartsFacet(chartsOpts{id: facetCharts, name: "acme.maps", version: "1.0.0", noExtras: true})}}},
 	}
 	for _, d := range invalid {
 		_, e := d.st.apply(d.delta)

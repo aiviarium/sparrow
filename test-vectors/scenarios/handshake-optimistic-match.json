@@ -1,0 +1,123 @@
+{
+  "format": 1,
+  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
+  "generator": "tools/vectorgen-go",
+  "name": "handshake-optimistic-match",
+  "description": "Optimistic start (5.3) with a cached schema the server still serves: Hello, Ready and a call to an idempotent method go out in one flight on the shared lane, before Welcome. The server's schema matches, so it dispatches the call after Ready.",
+  "spec": "5.2, 5.3",
+  "given": {
+    "schema": "schema/scenario-host",
+    "session": "none",
+    "client_cache": {
+      "schema_hash": "01059602f9cf76c4d68529a3e9ccef3e6546bc6140308568f10ff46278d4f2a583",
+      "params": "defaults"
+    }
+  },
+  "steps": [
+    {
+      "step": 1,
+      "from": "client",
+      "stream": "shared",
+      "opens_stream": true,
+      "header": "00",
+      "kind_name": "Hello",
+      "message": [
+        0,
+        [
+          1
+        ],
+        {},
+        [
+          "bearer",
+          "v4.public.TEST-ONLY-TICKET"
+        ],
+        {
+          "$bytes": "01059602f9cf76c4d68529a3e9ccef3e6546bc6140308568f10ff46278d4f2a583"
+        },
+        null,
+        {},
+        true
+      ],
+      "diag": "[0, [1], {}, [\"bearer\", \"v4.public.TEST-ONLY-TICKET\"], h'01059602f9cf76c4d68529a3e9ccef3e6546bc6140308568f10ff46278d4f2a583', null, {}, true]",
+      "cbor": "88008101a08266626561726572781a76342e7075626c69632e544553542d4f4e4c592d5449434b4554582101059602f9cf76c4d68529a3e9ccef3e6546bc6140308568f10ff46278d4f2a583f6a0f5"
+    },
+    {
+      "step": 2,
+      "from": "client",
+      "stream": "shared",
+      "kind_name": "Ready",
+      "message": [
+        2,
+        {
+          "$bytes": "01059602f9cf76c4d68529a3e9ccef3e6546bc6140308568f10ff46278d4f2a583"
+        }
+      ],
+      "diag": "[2, h'01059602f9cf76c4d68529a3e9ccef3e6546bc6140308568f10ff46278d4f2a583']",
+      "cbor": "8202582101059602f9cf76c4d68529a3e9ccef3e6546bc6140308568f10ff46278d4f2a583"
+    },
+    {
+      "step": 3,
+      "from": "client",
+      "stream": "shared",
+      "kind_name": "Request",
+      "message": [
+        16,
+        2,
+        16,
+        0,
+        {},
+        "early"
+      ],
+      "diag": "[16, 2, 16, 0, {}, \"early\"]",
+      "cbor": "8610021000a0656561726c79",
+      "note": "sent before Welcome arrives: shared lane only, within 64 KiB after Hello, default params"
+    },
+    {
+      "step": 4,
+      "from": "server",
+      "stream": "shared",
+      "kind_name": "Welcome",
+      "message": [
+        1,
+        1,
+        {},
+        {
+          "$bytes": "000102030405060708090a0b0c0d0e0f"
+        },
+        {},
+        [
+          0,
+          {
+            "$bytes": "01059602f9cf76c4d68529a3e9ccef3e6546bc6140308568f10ff46278d4f2a583"
+          }
+        ],
+        {}
+      ],
+      "diag": "[1, 1, {}, h'000102030405060708090a0b0c0d0e0f', {}, [0, h'01059602f9cf76c4d68529a3e9ccef3e6546bc6140308568f10ff46278d4f2a583'], {}]",
+      "cbor": "870101a050000102030405060708090a0b0c0d0e0fa08200582101059602f9cf76c4d68529a3e9ccef3e6546bc6140308568f10ff46278d4f2a583a0"
+    },
+    {
+      "step": 5,
+      "expect": "dispatched",
+      "call_id": 2
+    },
+    {
+      "step": 6,
+      "from": "server",
+      "stream": "shared",
+      "kind_name": "Response",
+      "message": [
+        17,
+        2,
+        "early"
+      ],
+      "diag": "[17, 2, \"early\"]",
+      "cbor": "831102656561726c79"
+    },
+    {
+      "step": 7,
+      "expect": "call_ended",
+      "call_id": 2
+    }
+  ]
+}

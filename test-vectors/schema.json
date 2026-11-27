@@ -1,13 +1,13 @@
 {
-  "spec_revision": "core rev183 (draft)",
+  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "schema",
   "vectors": [
     {
-      "name": "part/sparrow-web",
-      "description": "Part 1, sparrow.web (section 9.4): service 0 Client, notification method 0 moduleRejected with input [0, 6] and output unit. Every web-profile server includes it.",
+      "name": "facet/sparrow-web",
+      "description": "Facet 1, sparrow.web (section 9.4): service 0 Client, notification method 0 moduleRejected with input [0, 6] and output unit. Every web-profile server includes it.",
       "spec": "6.2, 6.6",
-      "type": "part",
+      "type": "facet",
       "input": [
         1,
         "sparrow.web",
@@ -73,13 +73,13 @@
       "canonical_cbor": "89016b73706172726f772e77656265312e302e308081840066436c69656e748187006e6d6f64756c6552656a6563746564820006008002a0a080f680a0",
       "hash_input_diag": "[0, \"\", \"1.0.0\", [], [[0, \"Client\", [[0, \"moduleRejected\", [0, 6], 0, [], 2, {}]], {}]], [], null, [], {}]",
       "hash_input_cbor": "89006065312e302e308081840066436c69656e748187006e6d6f64756c6552656a6563746564820006008002a0a080f680a0",
-      "part_hash": "01e85d06f6da94d5dbf3e1a36b217f94aee8c187967b5732e91d72a444c0248bbf"
+      "facet_hash": "01e85d06f6da94d5dbf3e1a36b217f94aee8c187967b5732e91d72a444c0248bbf"
     },
     {
-      "name": "part/acme-notes",
-      "description": "Part 16 'acme.notes': a struct with a tombstoned field (tag 5, flag 0x4) and a deprecated field, a sparse struct, an enum, a union, an alias, two services, method flags incl. 0x8 and 0x10, sigils of all three kinds, retired IDs. Input unsorted.",
+      "name": "facet/acme-notes",
+      "description": "Facet 16 'acme.notes': a struct with a tombstoned field (tag 5, flag 0x4) and a deprecated field, a sparse struct, an enum, a union, an alias, two services, method flags incl. 0x8 and 0x10, sigils of all three kinds, retired IDs. Input unsorted.",
       "spec": "6.2, 6.6",
-      "type": "part",
+      "type": "facet",
       "input": [
         16,
         "acme.notes",
@@ -941,13 +941,13 @@
       "canonical_cbor": "89106a61636d652e6e6f74657365312e302e308686001840644e6f7465888500626964184400a08501657469746c650600a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58503647461677382000600a0850467757064617465640800a085056b6c65676163794c6162656c0605a0850665636f6c6f728202184201a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f7200a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018416a4e6f746546696c74657285850065717565727982020601a0850165636f6c6f728202184201a08502656c696d697482020301a085036573696e636582020801a085046474616773820282000601a001a08501184265436f6c6f7283184618471848a085021843664368616e6765838500687570736572746564184000a085016764656c65746564184400a0850267636c65617265640000a0a085031844664e6f7465496409a0860018456a4174746163686d656e74838500646e616d650600a08501646d696d6582020601a085026464617461810400a000a0828400654e6f7465738587186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718656370757418401844821840184100a08718666577617463681841820318438014a08718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a6970a163646f636f506572736f6e616c206e6f7465732e84016541646d696e8487186e66696d706f7274820318400381184008a087186f6473796e6382031843820318438118411818a087187067726573746f72658104038008a169617574682e726f6c656561646d696e87187165746f75636800008002a0a169617574682e726f6c656561646d696e878418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad84184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418476b436f6c6f722e677265656e00a08418486a436f6c6f722e626c756500a08418506c6e6f74652e7570646174656402a08418516c6e6f74652e64656c6574656402a0f6828200184682031852a16a61636d652e6f776e65726a6e6f7465732d7465616d",
       "hash_input_diag": "[0, \"\", \"1.0.0\", [[0, 64, \"Note\", [[0, \"id\", 68, 0, {}], [1, \"title\", 6, 0, {}], [2, \"body\", [2, 6], 1, {\"ui.maxLength\": 20000, \"ui.multiline\": true}], [3, \"tags\", [0, 6], 0, {}], [4, \"updated\", 8, 0, {}], [5, \"legacyLabel\", 6, 5, {}], [6, \"color\", [2, 66], 1, {}], [7, \"pinned\", 1, 3, {\"deprecated.use\": \"color\"}]], 0, {\"ui.icon\": \"sticky-note\", \"ui.label\": \"Note\"}], [0, 65, \"NoteFilter\", [[0, \"query\", [2, 6], 1, {}], [1, \"color\", [2, 66], 1, {}], [2, \"limit\", [2, 3], 1, {}], [3, \"since\", [2, 8], 1, {}], [4, \"tags\", [2, [0, 6]], 1, {}]], 1, {}], [1, 66, \"Color\", [70, 71, 72], {}], [2, 67, \"Change\", [[0, \"upserted\", 64, 0, {}], [1, \"deleted\", 68, 0, {}], [2, \"cleared\", 0, 0, {}]], {}], [3, 68, \"NoteId\", 9, {}], [0, 69, \"Attachment\", [[0, \"name\", 6, 0, {}], [1, \"mime\", [2, 6], 1, {}], [2, \"data\", [4], 0, {}]], 0, {}]], [[0, \"Notes\", [[100, \"get\", 68, 64, [], 1, {\"doc\": \"Fetch one note by id.\"}], [101, \"put\", 64, 68, [64, 65], 0, {}], [102, \"watch\", 65, [3, 67], [], 20, {}], [103, \"attach\", 69, 0, [64], 8, {\"doc\": \"Attach a file to a note; the data travels as a byte token.\"}], [104, \"export\", 65, [4], [], 17, {\"http.contentType\": \"application/zip\"}]], {\"doc\": \"Personal notes.\"}], [1, \"Admin\", [[110, \"import\", [3, 64], 3, [64], 8, {}], [111, \"sync\", [3, 67], [3, 67], [65], 24, {}], [112, \"restore\", [4], 3, [], 8, {\"auth.role\": \"admin\"}], [113, \"touch\", 0, 0, [], 2, {}]], {\"auth.role\": \"admin\"}]], [[64, \"quota_exceeded\", 1, {\"http.status\": 429}], [65, \"conflict\", 1, {\"http.status\": 409}], [70, \"Color.red\", 0, {}], [71, \"Color.green\", 0, {}], [72, \"Color.blue\", 0, {}], [80, \"note.updated\", 2, {}], [81, \"note.deleted\", 2, {}]], null, [[0, 70], [3, 82]], {\"acme.owner\": \"notes-team\"}]",
       "hash_input_cbor": "89006065312e302e308686001840644e6f7465888500626964184400a08501657469746c650600a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58503647461677382000600a0850467757064617465640800a085056b6c65676163794c6162656c0605a0850665636f6c6f728202184201a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f7200a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018416a4e6f746546696c74657285850065717565727982020601a0850165636f6c6f728202184201a08502656c696d697482020301a085036573696e636582020801a085046474616773820282000601a001a08501184265436f6c6f7283184618471848a085021843664368616e6765838500687570736572746564184000a085016764656c65746564184400a0850267636c65617265640000a0a085031844664e6f7465496409a0860018456a4174746163686d656e74838500646e616d650600a08501646d696d6582020601a085026464617461810400a000a0828400654e6f7465738587186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718656370757418401844821840184100a08718666577617463681841820318438014a08718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a6970a163646f636f506572736f6e616c206e6f7465732e84016541646d696e8487186e66696d706f7274820318400381184008a087186f6473796e6382031843820318438118411818a087187067726573746f72658104038008a169617574682e726f6c656561646d696e87187165746f75636800008002a0a169617574682e726f6c656561646d696e878418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad84184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418476b436f6c6f722e677265656e00a08418486a436f6c6f722e626c756500a08418506c6e6f74652e7570646174656402a08418516c6e6f74652e64656c6574656402a0f6828200184682031852a16a61636d652e6f776e65726a6e6f7465732d7465616d",
-      "part_hash": "013e36a508a2987b02940e9efd890312c7db7d840acf5e8427c55e32547ccc2f46"
+      "facet_hash": "013e36a508a2987b02940e9efd890312c7db7d840acf5e8427c55e32547ccc2f46"
     },
     {
-      "name": "part/acme-charts",
-      "description": "Part 17 'acme.charts': implements interface acme.charts.Renderer under its own names and annotations, adds a type and a service of its own, and ships a signed web module in its web.modules annotation.",
+      "name": "facet/acme-charts",
+      "description": "Facet 17 'acme.charts': implements interface acme.charts.Renderer under its own names and annotations, adds a type and a service of its own, and ships a signed web module in its web.modules annotation.",
       "spec": "6.2, 6.6",
-      "type": "part",
+      "type": "facet",
       "input": [
         17,
         "acme.charts",
@@ -1393,7 +1393,7 @@
       "canonical_cbor": "89116b61636d652e63686172747365312e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738287016a6c6973745468656d657300820018508001a08703687365745468656d6506008002a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32",
       "hash_input_diag": "[0, \"\", \"1.0.0\", [[0, 64, \"Chart\", [[0, \"type\", 65, 0, {}], [1, \"heading\", [2, 6], 1, {\"ui.placeholder\": \"Untitled\"}], [2, \"data\", [0, 66], 0, {}]], 0, {\"doc\": \"What to draw.\"}], [1, 65, \"Kind\", [64, 65], {}], [0, 66, \"DataSeries\", [[0, \"name\", 6, 0, {}], [1, \"values\", [0, 2], 0, {}]], 0, {}], [0, 80, \"Theme\", [[0, \"name\", 6, 0, {}], [1, \"dark\", [2, 1], 1, {}]], 0, {}]], [[0, \"ChartRenderer\", [[0, \"draw\", 64, 7, [66], 1, {\"doc\": \"Returns SVG bytes.\"}]], {\"auth.hint\": \"public\"}], [1, \"Themes\", [[1, \"listThemes\", 0, [0, 80], [], 1, {}], [3, \"setTheme\", 6, 0, [], 2, {}]], {}]], [[64, \"line\", 0, {}], [65, \"bar\", 0, {}], [66, \"chart.unsupported\", 1, {\"http.status\": 422}]], h'016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b1', [], {\"doc\": \"Chart rendering.\", \"web.modules\": [{\"id\": \"acme.charts.ui\", \"sig\": [h'6a3803d5f059902a1c6dafbc9ba47292', h'0228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff03'], \"url\": \"/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js\", \"deps\": [\"acme.core.boot\"], \"hash\": h'017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27', \"load\": \"lazy\", \"assets\": [{\"hash\": h'014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db654987', \"path\": \"charts.css\"}], \"hostApi\": \"^3.1\", \"version\": \"1.4.2\"}]}]",
       "hash_input_cbor": "89006065312e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738287016a6c6973745468656d657300820018508001a08703687365745468656d6506008002a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32",
-      "part_hash": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
+      "facet_hash": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
     },
     {
       "name": "interface/acme-charts-renderer",
@@ -1783,12 +1783,420 @@
       "expected_error": "interface_not_closed"
     },
     {
+      "name": "interface/tombstone-reference-not-counted",
+      "description": "acme.charts.Renderer with a tombstoned field ChartSpec.legacy (tag 3, flags 0x5) whose type 90 the interface does not contain. References inside tombstones are not checked (6.6 rule 3) and do not count when deciding what the services reach (6.5), so the interface is valid and closed without type 90.",
+      "spec": "6.5, 6.6",
+      "type": "interface",
+      "input": [
+        "acme.charts.Renderer",
+        "1.0.0",
+        [
+          [
+            0,
+            66,
+            "Series",
+            [
+              [
+                1,
+                "points",
+                [
+                  0,
+                  2
+                ],
+                0,
+                {}
+              ],
+              [
+                0,
+                "label",
+                6,
+                0,
+                {}
+              ]
+            ],
+            0,
+            {}
+          ],
+          [
+            0,
+            64,
+            "ChartSpec",
+            [
+              [
+                2,
+                "series",
+                [
+                  0,
+                  66
+                ],
+                0,
+                {}
+              ],
+              [
+                0,
+                "kind",
+                65,
+                0,
+                {}
+              ],
+              [
+                1,
+                "title",
+                [
+                  2,
+                  6
+                ],
+                1,
+                {}
+              ],
+              [
+                3,
+                "legacy",
+                90,
+                5,
+                {}
+              ]
+            ],
+            0,
+            {}
+          ],
+          [
+            1,
+            65,
+            "ChartKind",
+            [
+              65,
+              64
+            ],
+            {}
+          ]
+        ],
+        [
+          [
+            0,
+            "Renderer",
+            [
+              [
+                0,
+                "render",
+                64,
+                7,
+                [
+                  66
+                ],
+                1,
+                {}
+              ]
+            ],
+            {}
+          ]
+        ],
+        [
+          [
+            66,
+            "unsupported_kind",
+            1,
+            {}
+          ],
+          [
+            64,
+            "ChartKind.line",
+            0,
+            {}
+          ],
+          [
+            65,
+            "ChartKind.bar",
+            0,
+            {}
+          ]
+        ]
+      ],
+      "canonical": [
+        "acme.charts.Renderer",
+        "1.0.0",
+        [
+          [
+            0,
+            64,
+            "ChartSpec",
+            [
+              [
+                0,
+                "kind",
+                65,
+                0,
+                {}
+              ],
+              [
+                1,
+                "title",
+                [
+                  2,
+                  6
+                ],
+                1,
+                {}
+              ],
+              [
+                2,
+                "series",
+                [
+                  0,
+                  66
+                ],
+                0,
+                {}
+              ],
+              [
+                3,
+                "legacy",
+                90,
+                5,
+                {}
+              ]
+            ],
+            0,
+            {}
+          ],
+          [
+            1,
+            65,
+            "ChartKind",
+            [
+              64,
+              65
+            ],
+            {}
+          ],
+          [
+            0,
+            66,
+            "Series",
+            [
+              [
+                0,
+                "label",
+                6,
+                0,
+                {}
+              ],
+              [
+                1,
+                "points",
+                [
+                  0,
+                  2
+                ],
+                0,
+                {}
+              ]
+            ],
+            0,
+            {}
+          ]
+        ],
+        [
+          [
+            0,
+            "Renderer",
+            [
+              [
+                0,
+                "render",
+                64,
+                7,
+                [
+                  66
+                ],
+                1,
+                {}
+              ]
+            ],
+            {}
+          ]
+        ],
+        [
+          [
+            64,
+            "ChartKind.line",
+            0,
+            {}
+          ],
+          [
+            65,
+            "ChartKind.bar",
+            0,
+            {}
+          ],
+          [
+            66,
+            "unsupported_kind",
+            1,
+            {}
+          ]
+        ]
+      ],
+      "canonical_cbor": "857461636d652e6368617274732e52656e646572657265312e302e30838600184069436861727453706563848500646b696e64184100a08501657469746c6582020601a08502667365726965738200184200a08503666c6567616379185a05a000a0850118416943686172744b696e648218401841a08600184266536572696573828500656c6162656c0600a0850166706f696e747382000200a000a08184006852656e64657265728187006672656e64657218400781184201a0a0838418406e43686172744b696e642e6c696e6500a08418416d43686172744b696e642e62617200a084184270756e737570706f727465645f6b696e6401a0",
+      "hash": "019a95ae34f2595f9e42cf6bb4f82bb3e14195e3749d442f0a16906b3b7e951747",
+      "expected_valid": true
+    },
+    {
+      "name": "interface/invalid-reached-only-through-tombstone",
+      "description": "The same interface also defining type 90, which only the tombstone ChartSpec.legacy refers to. A reference inside a tombstone does not reach anything, so type 90 is not reached and the interface is not closed (6.5).",
+      "spec": "6.5",
+      "type": "interface",
+      "input": [
+        "acme.charts.Renderer",
+        "1.0.0",
+        [
+          [
+            0,
+            66,
+            "Series",
+            [
+              [
+                1,
+                "points",
+                [
+                  0,
+                  2
+                ],
+                0,
+                {}
+              ],
+              [
+                0,
+                "label",
+                6,
+                0,
+                {}
+              ]
+            ],
+            0,
+            {}
+          ],
+          [
+            0,
+            64,
+            "ChartSpec",
+            [
+              [
+                2,
+                "series",
+                [
+                  0,
+                  66
+                ],
+                0,
+                {}
+              ],
+              [
+                0,
+                "kind",
+                65,
+                0,
+                {}
+              ],
+              [
+                1,
+                "title",
+                [
+                  2,
+                  6
+                ],
+                1,
+                {}
+              ],
+              [
+                3,
+                "legacy",
+                90,
+                5,
+                {}
+              ]
+            ],
+            0,
+            {}
+          ],
+          [
+            1,
+            65,
+            "ChartKind",
+            [
+              65,
+              64
+            ],
+            {}
+          ],
+          [
+            0,
+            90,
+            "LegacyStyle",
+            [
+              [
+                0,
+                "css",
+                6,
+                0,
+                {}
+              ]
+            ],
+            0,
+            {}
+          ]
+        ],
+        [
+          [
+            0,
+            "Renderer",
+            [
+              [
+                0,
+                "render",
+                64,
+                7,
+                [
+                  66
+                ],
+                1,
+                {}
+              ]
+            ],
+            {}
+          ]
+        ],
+        [
+          [
+            66,
+            "unsupported_kind",
+            1,
+            {}
+          ],
+          [
+            64,
+            "ChartKind.line",
+            0,
+            {}
+          ],
+          [
+            65,
+            "ChartKind.bar",
+            0,
+            {}
+          ]
+        ]
+      ],
+      "expected_valid": false,
+      "expected_error": "interface_not_closed"
+    },
+    {
       "name": "conformance/acme-charts",
-      "description": "Part acme.charts conforms: same IDs and wire shapes, different names and annotations, extra type 80 and service 1.",
+      "description": "Facet acme.charts conforms: same IDs and wire shapes, different names and annotations, extra type 80 and service 1.",
       "spec": "6.5",
       "type": "conformance",
       "interface": "interface/acme-charts-renderer",
-      "part": [
+      "facet": [
         17,
         "acme.charts",
         "1.0.0",
@@ -2014,11 +2422,11 @@
     },
     {
       "name": "conformance/names-and-annotations-only",
-      "description": "A part that differs from the interface only in names and annotations conforms (byte comparison of wire shapes).",
+      "description": "A facet that differs from the interface only in names and annotations conforms (byte comparison of wire shapes).",
       "spec": "6.5",
       "type": "conformance",
       "interface": "interface/acme-charts-renderer",
-      "part": [
+      "facet": [
         20,
         "acme.altcharts",
         "3.2.0",
@@ -2161,7 +2569,7 @@
       "spec": "6.5",
       "type": "conformance",
       "interface": "interface/acme-charts-renderer",
-      "part": [
+      "facet": [
         21,
         "acme.badcharts",
         "1.0.0",
@@ -2390,11 +2798,11 @@
     },
     {
       "name": "conformance/extra-method-in-service",
-      "description": "The part adds a method (2, drawPng) to the interface's service 0. A service's wire shape leaves out its method list and each interface method is compared on its own, so the part conforms.",
+      "description": "The facet adds a method (2, drawPng) to the interface's service 0. A service's wire shape leaves out its method list and each interface method is compared on its own, so the facet conforms.",
       "spec": "6.5",
       "type": "conformance",
       "interface": "interface/acme-charts-renderer",
-      "part": [
+      "facet": [
         21,
         "acme.badcharts",
         "1.0.0",
@@ -2631,11 +3039,11 @@
     },
     {
       "name": "conformance/hint-flags-differ",
-      "description": "Method draw is not flagged idempotent (0x1) and field heading is flagged deprecated (0x2). Hint flags are cleared in wire shapes, so the part conforms.",
+      "description": "Method draw is not flagged idempotent (0x1) and field heading is flagged deprecated (0x2). Hint flags are cleared in wire shapes, so the facet conforms.",
       "spec": "6.5",
       "type": "conformance",
       "interface": "interface/acme-charts-renderer",
-      "part": [
+      "facet": [
         21,
         "acme.badcharts",
         "1.0.0",
@@ -2865,7 +3273,7 @@
       "spec": "6.5",
       "type": "conformance",
       "interface": "interface/acme-charts-renderer",
-      "part": [
+      "facet": [
         21,
         "acme.badcharts",
         "1.0.0",
@@ -3098,7 +3506,7 @@
       "spec": "6.5",
       "type": "conformance",
       "interface": "interface/acme-charts-renderer",
-      "part": [
+      "facet": [
         21,
         "acme.badcharts",
         "1.0.0",
@@ -3326,7 +3734,7 @@
     },
     {
       "name": "schema/server-base",
-      "description": "Server schema 'acme.host' with parts 1 (sparrow.web), 16 (acme.notes) and 17 (acme.charts), listed by ID as 6.1 requires (their contents unsorted), and top-level web.* annotations (web.apply, web.keys with the acme certificate, web.revoked). The schema hash covers [format, name, version, [* [part_id, part_name, part_hash]], annotations].",
+      "description": "Server schema 'acme.host' with facets 1 (sparrow.web), 16 (acme.notes) and 17 (acme.charts), listed by ID as 6.1 requires (their contents unsorted), and top-level web.* annotations (web.apply, web.keys with the acme certificate, web.revoked). The schema hash covers [format, name, version, [* [facet_id, facet_name, facet_hash]], annotations].",
       "spec": "6.2, 6.6",
       "type": "schema",
       "input": [
@@ -4777,21 +5185,21 @@
       ],
       "canonical_cbor": "85026961636d652e686f737469323032362e31322e318389016b73706172726f772e77656265312e302e308081840066436c69656e748187006e6d6f64756c6552656a6563746564820006008002a0a080f680a089106a61636d652e6e6f74657365312e302e308686001840644e6f7465888500626964184400a08501657469746c650600a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58503647461677382000600a0850467757064617465640800a085056b6c65676163794c6162656c0605a0850665636f6c6f728202184201a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f7200a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018416a4e6f746546696c74657285850065717565727982020601a0850165636f6c6f728202184201a08502656c696d697482020301a085036573696e636582020801a085046474616773820282000601a001a08501184265436f6c6f7283184618471848a085021843664368616e6765838500687570736572746564184000a085016764656c65746564184400a0850267636c65617265640000a0a085031844664e6f7465496409a0860018456a4174746163686d656e74838500646e616d650600a08501646d696d6582020601a085026464617461810400a000a0828400654e6f7465738587186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718656370757418401844821840184100a08718666577617463681841820318438014a08718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a6970a163646f636f506572736f6e616c206e6f7465732e84016541646d696e8487186e66696d706f7274820318400381184008a087186f6473796e6382031843820318438118411818a087187067726573746f72658104038008a169617574682e726f6c656561646d696e87187165746f75636800008002a0a169617574682e726f6c656561646d696e878418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad84184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418476b436f6c6f722e677265656e00a08418486a436f6c6f722e626c756500a08418506c6e6f74652e7570646174656402a08418516c6e6f74652e64656c6574656402a0f6828200184682031852a16a61636d652e6f776e65726a6e6f7465732d7465616d89116b61636d652e63686172747365312e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738287016a6c6973745468656d657300820018508001a08703687365745468656d6506008002a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32a3687765622e6b657973818558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909697765622e6170706c796672656c6f61646b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d",
       "canonical_length": 2127,
-      "part_hashes": [
+      "facet_hashes": [
         {
-          "part_id": 1,
-          "part_name": "sparrow.web",
-          "part_hash": "01e85d06f6da94d5dbf3e1a36b217f94aee8c187967b5732e91d72a444c0248bbf"
+          "facet_id": 1,
+          "facet_name": "sparrow.web",
+          "facet_hash": "01e85d06f6da94d5dbf3e1a36b217f94aee8c187967b5732e91d72a444c0248bbf"
         },
         {
-          "part_id": 16,
-          "part_name": "acme.notes",
-          "part_hash": "013e36a508a2987b02940e9efd890312c7db7d840acf5e8427c55e32547ccc2f46"
+          "facet_id": 16,
+          "facet_name": "acme.notes",
+          "facet_hash": "013e36a508a2987b02940e9efd890312c7db7d840acf5e8427c55e32547ccc2f46"
         },
         {
-          "part_id": 17,
-          "part_name": "acme.charts",
-          "part_hash": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
+          "facet_id": 17,
+          "facet_name": "acme.charts",
+          "facet_hash": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
         }
       ],
       "hash_input": [
@@ -4958,11 +5366,11 @@
       ],
       "canonical_cbor": "85026e61636d652e6e6f7465732e77656265312e342e308189106e61636d652e6e6f7465732e77656265312e342e308081840068436c69656e7455698287184065746f61737406008002a0871841686e6176696761746506018000a0a080f680a0a0",
       "canonical_length": 98,
-      "part_hashes": [
+      "facet_hashes": [
         {
-          "part_id": 16,
-          "part_name": "acme.notes.web",
-          "part_hash": "010d6b9cb836e00d3a27912a5cb8055514e2ee7d2336846b49e7f2c960225825d2"
+          "facet_id": 16,
+          "facet_name": "acme.notes.web",
+          "facet_hash": "010d6b9cb836e00d3a27912a5cb8055514e2ee7d2336846b49e7f2c960225825d2"
         }
       ],
       "hash_input": [
@@ -4986,7 +5394,7 @@
     },
     {
       "name": "schema/node-acme-charts",
-      "description": "The schema node 'acme.charts' publishes on its own link: the acme.charts part under node-local part ID 16. Its part hash equals that of part 17 in schema/server-base.",
+      "description": "The schema node 'acme.charts' publishes on its own link: the acme.charts facet under node-local facet ID 16. Its facet hash equals that of facet 17 in schema/server-base.",
       "spec": "6.2, 6.6",
       "type": "schema",
       "input": [
@@ -5449,11 +5857,11 @@
       ],
       "canonical_cbor": "85026b61636d652e63686172747365312e302e308189106b61636d652e63686172747365312e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738287016a6c6973745468656d657300820018508001a08703687365745468656d6506008002a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32a0",
       "canonical_length": 817,
-      "part_hashes": [
+      "facet_hashes": [
         {
-          "part_id": 16,
-          "part_name": "acme.charts",
-          "part_hash": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
+          "facet_id": 16,
+          "facet_name": "acme.charts",
+          "facet_hash": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
         }
       ],
       "hash_input": [
@@ -5476,8 +5884,632 @@
       "hash": "0156bb0a8d51ef257b8adc794435645dd3c92b769e50861fa5f5c6545b1e5180e5"
     },
     {
-      "name": "schema/sent-parts-out-of-order",
-      "description": "schema/server-base with its parts listed as 17, 16, 1. A schema lists its parts sorted by ID (6.1), and a receiver checks the rules of 6.1 (6.6 rule 3), so as a received document it is invalid. Its contents are otherwise valid, and canonicalisation for hashing would sort it (the hash equals schema/server-base's).",
+      "name": "schema/scenario-host",
+      "description": "The schema of the server in every behaviour scenario (test-vectors/scenarios): facet 16 test.echo with methods echo (unary), count (server stream), sum (client stream), upload (byte upload by reference), log (notification) and events (shared subscription of dynamic values). The annotations document each method's behaviour.",
+      "spec": "6.2, 6.6",
+      "type": "schema",
+      "input": [
+        2,
+        "test.host",
+        "1.0.0",
+        [
+          [
+            16,
+            "test.echo",
+            "1.0.0",
+            [
+              [
+                0,
+                64,
+                "Upload",
+                [
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    1,
+                    "data",
+                    [
+                      4
+                    ],
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ]
+            ],
+            [
+              [
+                0,
+                "Echo",
+                [
+                  [
+                    0,
+                    "echo",
+                    6,
+                    6,
+                    [],
+                    1,
+                    {
+                      "doc": "Returns its input."
+                    }
+                  ],
+                  [
+                    1,
+                    "count",
+                    3,
+                    [
+                      3,
+                      3
+                    ],
+                    [],
+                    16,
+                    {
+                      "doc": "Streams the items 1, 2, ..., n, then End."
+                    }
+                  ],
+                  [
+                    2,
+                    "sum",
+                    [
+                      3,
+                      3
+                    ],
+                    3,
+                    [],
+                    8,
+                    {
+                      "doc": "Returns the sum of the items. Fails at once with out_of_range on an item above 1000."
+                    }
+                  ],
+                  [
+                    3,
+                    "upload",
+                    64,
+                    3,
+                    [],
+                    8,
+                    {
+                      "doc": "Returns the number of bytes received for the data token."
+                    }
+                  ],
+                  [
+                    4,
+                    "log",
+                    6,
+                    0,
+                    [],
+                    2,
+                    {
+                      "doc": "Notification: records the text."
+                    }
+                  ],
+                  [
+                    5,
+                    "events",
+                    0,
+                    [
+                      3,
+                      10
+                    ],
+                    [],
+                    20,
+                    {
+                      "doc": "Subscription: streams dynamic values until cancelled or drained."
+                    }
+                  ]
+                ],
+                {}
+              ]
+            ],
+            [],
+            null,
+            [],
+            {}
+          ]
+        ],
+        {}
+      ],
+      "canonical": [
+        2,
+        "test.host",
+        "1.0.0",
+        [
+          [
+            16,
+            "test.echo",
+            "1.0.0",
+            [
+              [
+                0,
+                64,
+                "Upload",
+                [
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    1,
+                    "data",
+                    [
+                      4
+                    ],
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ]
+            ],
+            [
+              [
+                0,
+                "Echo",
+                [
+                  [
+                    0,
+                    "echo",
+                    6,
+                    6,
+                    [],
+                    1,
+                    {
+                      "doc": "Returns its input."
+                    }
+                  ],
+                  [
+                    1,
+                    "count",
+                    3,
+                    [
+                      3,
+                      3
+                    ],
+                    [],
+                    16,
+                    {
+                      "doc": "Streams the items 1, 2, ..., n, then End."
+                    }
+                  ],
+                  [
+                    2,
+                    "sum",
+                    [
+                      3,
+                      3
+                    ],
+                    3,
+                    [],
+                    8,
+                    {
+                      "doc": "Returns the sum of the items. Fails at once with out_of_range on an item above 1000."
+                    }
+                  ],
+                  [
+                    3,
+                    "upload",
+                    64,
+                    3,
+                    [],
+                    8,
+                    {
+                      "doc": "Returns the number of bytes received for the data token."
+                    }
+                  ],
+                  [
+                    4,
+                    "log",
+                    6,
+                    0,
+                    [],
+                    2,
+                    {
+                      "doc": "Notification: records the text."
+                    }
+                  ],
+                  [
+                    5,
+                    "events",
+                    0,
+                    [
+                      3,
+                      10
+                    ],
+                    [],
+                    20,
+                    {
+                      "doc": "Subscription: streams dynamic values until cancelled or drained."
+                    }
+                  ]
+                ],
+                {}
+              ]
+            ],
+            [],
+            null,
+            [],
+            {}
+          ]
+        ],
+        {}
+      ],
+      "canonical_cbor": "850269746573742e686f737465312e302e3081891069746573742e6563686f65312e302e3081860018406655706c6f6164828500646e616d650600a085016464617461810400a000a0818400644563686f868700646563686f06068001a163646f637252657475726e732069747320696e7075742e870165636f756e74038203038010a163646f63782953747265616d7320746865206974656d7320312c20322c202e2e2e2c206e2c207468656e20456e642e87026373756d820303038008a163646f63785452657475726e73207468652073756d206f6620746865206974656d732e204661696c73206174206f6e63652077697468206f75745f6f665f72616e6765206f6e20616e206974656d2061626f766520313030302e87036675706c6f61641840038008a163646f63783852657475726e7320746865206e756d626572206f6620627974657320726563656976656420666f7220746865206461746120746f6b656e2e8704636c6f6706008002a163646f63781f4e6f74696669636174696f6e3a207265636f7264732074686520746578742e8705666576656e74730082030a8014a163646f637840537562736372697074696f6e3a2073747265616d732064796e616d69632076616c75657320756e74696c2063616e63656c6c6564206f7220647261696e65642ea080f680a0a0",
+      "canonical_length": 499,
+      "facet_hashes": [
+        {
+          "facet_id": 16,
+          "facet_name": "test.echo",
+          "facet_hash": "017336abea287162c7c2d39e40e090ab2f9d480d07c0095968e637a05fb79d2c87"
+        }
+      ],
+      "hash_input": [
+        2,
+        "test.host",
+        "1.0.0",
+        [
+          [
+            16,
+            "test.echo",
+            {
+              "$bytes": "017336abea287162c7c2d39e40e090ab2f9d480d07c0095968e637a05fb79d2c87"
+            }
+          ]
+        ],
+        {}
+      ],
+      "hash_input_diag": "[2, \"test.host\", \"1.0.0\", [[16, \"test.echo\", h'017336abea287162c7c2d39e40e090ab2f9d480d07c0095968e637a05fb79d2c87']], {}]",
+      "hash_input_cbor": "850269746573742e686f737465312e302e3081831069746573742e6563686f5821017336abea287162c7c2d39e40e090ab2f9d480d07c0095968e637a05fb79d2c87a0",
+      "hash": "01059602f9cf76c4d68529a3e9ccef3e6546bc6140308568f10ff46278d4f2a583"
+    },
+    {
+      "name": "schema/scenario-delta-1",
+      "description": "Epoch 1 of the scenario schema: test.echo 1.1.0 adds type 65 Note and method 6 note. Used by scenario schema-update-ack-gating.",
+      "spec": "6.6",
+      "type": "delta",
+      "from": "schema/scenario-host",
+      "from_hash": "01059602f9cf76c4d68529a3e9ccef3e6546bc6140308568f10ff46278d4f2a583",
+      "epoch": 1,
+      "delta": [
+        [
+          0,
+          [
+            16,
+            "test.echo",
+            "1.1.0",
+            [
+              [
+                0,
+                64,
+                "Upload",
+                [
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    1,
+                    "data",
+                    [
+                      4
+                    ],
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ],
+              [
+                0,
+                65,
+                "Note",
+                [
+                  [
+                    0,
+                    "title",
+                    6,
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ]
+            ],
+            [
+              [
+                0,
+                "Echo",
+                [
+                  [
+                    0,
+                    "echo",
+                    6,
+                    6,
+                    [],
+                    1,
+                    {
+                      "doc": "Returns its input."
+                    }
+                  ],
+                  [
+                    1,
+                    "count",
+                    3,
+                    [
+                      3,
+                      3
+                    ],
+                    [],
+                    16,
+                    {
+                      "doc": "Streams the items 1, 2, ..., n, then End."
+                    }
+                  ],
+                  [
+                    2,
+                    "sum",
+                    [
+                      3,
+                      3
+                    ],
+                    3,
+                    [],
+                    8,
+                    {
+                      "doc": "Returns the sum of the items. Fails at once with out_of_range on an item above 1000."
+                    }
+                  ],
+                  [
+                    3,
+                    "upload",
+                    64,
+                    3,
+                    [],
+                    8,
+                    {
+                      "doc": "Returns the number of bytes received for the data token."
+                    }
+                  ],
+                  [
+                    4,
+                    "log",
+                    6,
+                    0,
+                    [],
+                    2,
+                    {
+                      "doc": "Notification: records the text."
+                    }
+                  ],
+                  [
+                    5,
+                    "events",
+                    0,
+                    [
+                      3,
+                      10
+                    ],
+                    [],
+                    20,
+                    {
+                      "doc": "Subscription: streams dynamic values until cancelled or drained."
+                    }
+                  ],
+                  [
+                    6,
+                    "note",
+                    6,
+                    65,
+                    [],
+                    0,
+                    {
+                      "doc": "Returns a Note with the given title."
+                    }
+                  ]
+                ],
+                {}
+              ]
+            ],
+            [],
+            null,
+            [],
+            {}
+          ]
+        ]
+      ],
+      "expected_valid": true,
+      "removed_facet_ids_after": [],
+      "canonical_cbor": "850269746573742e686f737465312e302e3081891069746573742e6563686f65312e312e3082860018406655706c6f6164828500646e616d650600a085016464617461810400a000a086001841644e6f7465818500657469746c650600a000a0818400644563686f878700646563686f06068001a163646f637252657475726e732069747320696e7075742e870165636f756e74038203038010a163646f63782953747265616d7320746865206974656d7320312c20322c202e2e2e2c206e2c207468656e20456e642e87026373756d820303038008a163646f63785452657475726e73207468652073756d206f6620746865206974656d732e204661696c73206174206f6e63652077697468206f75745f6f665f72616e6765206f6e20616e206974656d2061626f766520313030302e87036675706c6f61641840038008a163646f63783852657475726e7320746865206e756d626572206f6620627974657320726563656976656420666f7220746865206461746120746f6b656e2e8704636c6f6706008002a163646f63781f4e6f74696669636174696f6e3a207265636f7264732074686520746578742e8705666576656e74730082030a8014a163646f637840537562736372697074696f6e3a2073747265616d732064796e616d69632076616c75657320756e74696c2063616e63656c6c6564206f7220647261696e65642e8706646e6f74650618418000a163646f63782452657475726e732061204e6f746520776974682074686520676976656e207469746c652ea080f680a0a0",
+      "facet_hashes": [
+        {
+          "facet_id": 16,
+          "facet_name": "test.echo",
+          "facet_hash": "0112870f2980223b0d31f87cf3295aa0d83075a1b0810e383ea76be96f8a1b5155"
+        }
+      ],
+      "hash": "01b471e170a8bcba051b6137417053e5e79b3f7befda1d701cc950879e9ba31840",
+      "schema_update": {
+        "message": [
+          3,
+          1,
+          {
+            "$bytes": "01b471e170a8bcba051b6137417053e5e79b3f7befda1d701cc950879e9ba31840"
+          },
+          [
+            [
+              0,
+              [
+                16,
+                "test.echo",
+                "1.1.0",
+                [
+                  [
+                    0,
+                    64,
+                    "Upload",
+                    [
+                      [
+                        0,
+                        "name",
+                        6,
+                        0,
+                        {}
+                      ],
+                      [
+                        1,
+                        "data",
+                        [
+                          4
+                        ],
+                        0,
+                        {}
+                      ]
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    65,
+                    "Note",
+                    [
+                      [
+                        0,
+                        "title",
+                        6,
+                        0,
+                        {}
+                      ]
+                    ],
+                    0,
+                    {}
+                  ]
+                ],
+                [
+                  [
+                    0,
+                    "Echo",
+                    [
+                      [
+                        0,
+                        "echo",
+                        6,
+                        6,
+                        [],
+                        1,
+                        {
+                          "doc": "Returns its input."
+                        }
+                      ],
+                      [
+                        1,
+                        "count",
+                        3,
+                        [
+                          3,
+                          3
+                        ],
+                        [],
+                        16,
+                        {
+                          "doc": "Streams the items 1, 2, ..., n, then End."
+                        }
+                      ],
+                      [
+                        2,
+                        "sum",
+                        [
+                          3,
+                          3
+                        ],
+                        3,
+                        [],
+                        8,
+                        {
+                          "doc": "Returns the sum of the items. Fails at once with out_of_range on an item above 1000."
+                        }
+                      ],
+                      [
+                        3,
+                        "upload",
+                        64,
+                        3,
+                        [],
+                        8,
+                        {
+                          "doc": "Returns the number of bytes received for the data token."
+                        }
+                      ],
+                      [
+                        4,
+                        "log",
+                        6,
+                        0,
+                        [],
+                        2,
+                        {
+                          "doc": "Notification: records the text."
+                        }
+                      ],
+                      [
+                        5,
+                        "events",
+                        0,
+                        [
+                          3,
+                          10
+                        ],
+                        [],
+                        20,
+                        {
+                          "doc": "Subscription: streams dynamic values until cancelled or drained."
+                        }
+                      ],
+                      [
+                        6,
+                        "note",
+                        6,
+                        65,
+                        [],
+                        0,
+                        {
+                          "doc": "Returns a Note with the given title."
+                        }
+                      ]
+                    ],
+                    {}
+                  ]
+                ],
+                [],
+                null,
+                [],
+                {}
+              ]
+            ]
+          ]
+        ],
+        "diag": "[3, 1, h'01b471e170a8bcba051b6137417053e5e79b3f7befda1d701cc950879e9ba31840', [[0, [16, \"test.echo\", \"1.1.0\", [[0, 64, \"Upload\", [[0, \"name\", 6, 0, {}], [1, \"data\", [4], 0, {}]], 0, {}], [0, 65, \"Note\", [[0, \"title\", 6, 0, {}]], 0, {}]], [[0, \"Echo\", [[0, \"echo\", 6, 6, [], 1, {\"doc\": \"Returns its input.\"}], [1, \"count\", 3, [3, 3], [], 16, {\"doc\": \"Streams the items 1, 2, ..., n, then End.\"}], [2, \"sum\", [3, 3], 3, [], 8, {\"doc\": \"Returns the sum of the items. Fails at once with out_of_range on an item above 1000.\"}], [3, \"upload\", 64, 3, [], 8, {\"doc\": \"Returns the number of bytes received for the data token.\"}], [4, \"log\", 6, 0, [], 2, {\"doc\": \"Notification: records the text.\"}], [5, \"events\", 0, [3, 10], [], 20, {\"doc\": \"Subscription: streams dynamic values until cancelled or drained.\"}], [6, \"note\", 6, 65, [], 0, {\"doc\": \"Returns a Note with the given title.\"}]], {}]], [], null, [], {}]]]]",
+        "cbor": "840301582101b471e170a8bcba051b6137417053e5e79b3f7befda1d701cc950879e9ba31840818200891069746573742e6563686f65312e312e3082860018406655706c6f6164828500646e616d650600a085016464617461810400a000a086001841644e6f7465818500657469746c650600a000a0818400644563686f878700646563686f06068001a163646f637252657475726e732069747320696e7075742e870165636f756e74038203038010a163646f63782953747265616d7320746865206974656d7320312c20322c202e2e2e2c206e2c207468656e20456e642e87026373756d820303038008a163646f63785452657475726e73207468652073756d206f6620746865206974656d732e204661696c73206174206f6e63652077697468206f75745f6f665f72616e6765206f6e20616e206974656d2061626f766520313030302e87036675706c6f61641840038008a163646f63783852657475726e7320746865206e756d626572206f6620627974657320726563656976656420666f7220746865206461746120746f6b656e2e8704636c6f6706008002a163646f63781f4e6f74696669636174696f6e3a207265636f7264732074686520746578742e8705666576656e74730082030a8014a163646f637840537562736372697074696f6e3a2073747265616d732064796e616d69632076616c75657320756e74696c2063616e63656c6c6564206f7220647261696e65642e8706646e6f74650618418000a163646f63782452657475726e732061204e6f746520776974682074686520676976656e207469746c652ea080f680a0"
+      }
+    },
+    {
+      "name": "schema/sent-facets-out-of-order",
+      "description": "schema/server-base with its facets listed as 17, 16, 1. A schema lists its facets sorted by ID (6.1), and a receiver checks the rules of 6.1 (6.6 rule 3), so as a received document it is invalid. Its contents are otherwise valid, and canonicalisation for hashing would sort it (the hash equals schema/server-base's).",
       "spec": "6.1, 6.6",
       "type": "schema_sent",
       "input": [
@@ -6204,14 +7236,746 @@
         }
       ],
       "expected_valid": false,
-      "expected_error": "parts_not_sorted",
+      "expected_error": "facets_not_sorted",
       "hash_if_canonicalised": "01f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3"
     },
     {
-      "name": "schema/part-hash-invariance",
-      "description": "The same part listed as 16 'acme.notes' and as 42 'hub-b/acme.notes' (an imported name, section 10.8): identical part hash, different schema hashes.",
+      "name": "schema/invalid-facet1-renamed",
+      "description": "schema/server-base with facet 1 named 'acme.web' instead of 'sparrow.web'. Its facet hash still equals that of sparrow.web (names are not hashed), but facet 1 MUST match its definition by name and facet hash (6.1), so the schema is invalid.",
+      "spec": "6.1, 9.4",
+      "type": "schema_invalid",
+      "input": [
+        2,
+        "acme.host",
+        "2026.12.1",
+        [
+          [
+            1,
+            "acme.web",
+            "1.0.0",
+            [],
+            [
+              [
+                0,
+                "Client",
+                [
+                  [
+                    0,
+                    "moduleRejected",
+                    [
+                      0,
+                      6
+                    ],
+                    0,
+                    [],
+                    2,
+                    {}
+                  ]
+                ],
+                {}
+              ]
+            ],
+            [],
+            null,
+            [],
+            {}
+          ],
+          [
+            16,
+            "acme.notes",
+            "1.0.0",
+            [
+              [
+                1,
+                66,
+                "Color",
+                [
+                  72,
+                  70,
+                  71
+                ],
+                {}
+              ],
+              [
+                0,
+                64,
+                "Note",
+                [
+                  [
+                    3,
+                    "tags",
+                    [
+                      0,
+                      6
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "id",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    7,
+                    "pinned",
+                    1,
+                    3,
+                    {
+                      "deprecated.use": "color"
+                    }
+                  ],
+                  [
+                    5,
+                    "legacyLabel",
+                    6,
+                    5,
+                    {}
+                  ],
+                  [
+                    2,
+                    "body",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {
+                      "ui.maxLength": 20000,
+                      "ui.multiline": true
+                    }
+                  ],
+                  [
+                    1,
+                    "title",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    6,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    4,
+                    "updated",
+                    8,
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {
+                  "ui.icon": "sticky-note",
+                  "ui.label": "Note"
+                }
+              ],
+              [
+                0,
+                69,
+                "Attachment",
+                [
+                  [
+                    2,
+                    "data",
+                    [
+                      4
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    1,
+                    "mime",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ],
+              [
+                2,
+                67,
+                "Change",
+                [
+                  [
+                    1,
+                    "deleted",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    2,
+                    "cleared",
+                    0,
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "upserted",
+                    64,
+                    0,
+                    {}
+                  ]
+                ],
+                {}
+              ],
+              [
+                0,
+                65,
+                "NoteFilter",
+                [
+                  [
+                    2,
+                    "limit",
+                    [
+                      2,
+                      3
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    0,
+                    "query",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    4,
+                    "tags",
+                    [
+                      2,
+                      [
+                        0,
+                        6
+                      ]
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    1,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    3,
+                    "since",
+                    [
+                      2,
+                      8
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                1,
+                {}
+              ],
+              [
+                3,
+                68,
+                "NoteId",
+                9,
+                {}
+              ]
+            ],
+            [
+              [
+                1,
+                "Admin",
+                [
+                  [
+                    113,
+                    "touch",
+                    0,
+                    0,
+                    [],
+                    2,
+                    {}
+                  ],
+                  [
+                    111,
+                    "sync",
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      65
+                    ],
+                    24,
+                    {}
+                  ],
+                  [
+                    110,
+                    "import",
+                    [
+                      3,
+                      64
+                    ],
+                    3,
+                    [
+                      64
+                    ],
+                    8,
+                    {}
+                  ],
+                  [
+                    112,
+                    "restore",
+                    [
+                      4
+                    ],
+                    3,
+                    [],
+                    8,
+                    {
+                      "auth.role": "admin"
+                    }
+                  ]
+                ],
+                {
+                  "auth.role": "admin"
+                }
+              ],
+              [
+                0,
+                "Notes",
+                [
+                  [
+                    103,
+                    "attach",
+                    69,
+                    0,
+                    [
+                      64
+                    ],
+                    8,
+                    {
+                      "doc": "Attach a file to a note; the data travels as a byte token."
+                    }
+                  ],
+                  [
+                    101,
+                    "put",
+                    64,
+                    68,
+                    [
+                      65,
+                      64
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    104,
+                    "export",
+                    65,
+                    [
+                      4
+                    ],
+                    [],
+                    17,
+                    {
+                      "http.contentType": "application/zip"
+                    }
+                  ],
+                  [
+                    100,
+                    "get",
+                    68,
+                    64,
+                    [],
+                    1,
+                    {
+                      "doc": "Fetch one note by id."
+                    }
+                  ],
+                  [
+                    102,
+                    "watch",
+                    65,
+                    [
+                      3,
+                      67
+                    ],
+                    [],
+                    20,
+                    {}
+                  ]
+                ],
+                {
+                  "doc": "Personal notes."
+                }
+              ]
+            ],
+            [
+              [
+                80,
+                "note.updated",
+                2,
+                {}
+              ],
+              [
+                71,
+                "Color.green",
+                0,
+                {}
+              ],
+              [
+                65,
+                "conflict",
+                1,
+                {
+                  "http.status": 409
+                }
+              ],
+              [
+                70,
+                "Color.red",
+                0,
+                {}
+              ],
+              [
+                64,
+                "quota_exceeded",
+                1,
+                {
+                  "http.status": 429
+                }
+              ],
+              [
+                72,
+                "Color.blue",
+                0,
+                {}
+              ],
+              [
+                81,
+                "note.deleted",
+                2,
+                {}
+              ]
+            ],
+            null,
+            [
+              [
+                3,
+                82
+              ],
+              [
+                0,
+                70
+              ]
+            ],
+            {
+              "acme.owner": "notes-team"
+            }
+          ],
+          [
+            17,
+            "acme.charts",
+            "1.0.0",
+            [
+              [
+                0,
+                64,
+                "Chart",
+                [
+                  [
+                    1,
+                    "heading",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {
+                      "ui.placeholder": "Untitled"
+                    }
+                  ],
+                  [
+                    0,
+                    "type",
+                    65,
+                    0,
+                    {}
+                  ],
+                  [
+                    2,
+                    "data",
+                    [
+                      0,
+                      66
+                    ],
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {
+                  "doc": "What to draw."
+                }
+              ],
+              [
+                1,
+                65,
+                "Kind",
+                [
+                  64,
+                  65
+                ],
+                {}
+              ],
+              [
+                0,
+                66,
+                "DataSeries",
+                [
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    1,
+                    "values",
+                    [
+                      0,
+                      2
+                    ],
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ],
+              [
+                0,
+                80,
+                "Theme",
+                [
+                  [
+                    1,
+                    "dark",
+                    [
+                      2,
+                      1
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ]
+            ],
+            [
+              [
+                0,
+                "ChartRenderer",
+                [
+                  [
+                    0,
+                    "draw",
+                    64,
+                    7,
+                    [
+                      66
+                    ],
+                    1,
+                    {
+                      "doc": "Returns SVG bytes."
+                    }
+                  ]
+                ],
+                {
+                  "auth.hint": "public"
+                }
+              ],
+              [
+                1,
+                "Themes",
+                [
+                  [
+                    1,
+                    "listThemes",
+                    0,
+                    [
+                      0,
+                      80
+                    ],
+                    [],
+                    1,
+                    {}
+                  ],
+                  [
+                    3,
+                    "setTheme",
+                    6,
+                    0,
+                    [],
+                    2,
+                    {}
+                  ]
+                ],
+                {}
+              ]
+            ],
+            [
+              [
+                66,
+                "chart.unsupported",
+                1,
+                {
+                  "http.status": 422
+                }
+              ],
+              [
+                64,
+                "line",
+                0,
+                {}
+              ],
+              [
+                65,
+                "bar",
+                0,
+                {}
+              ]
+            ],
+            {
+              "$bytes": "016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b1"
+            },
+            [],
+            {
+              "doc": "Chart rendering.",
+              "web.modules": [
+                {
+                  "id": "acme.charts.ui",
+                  "sig": [
+                    {
+                      "$bytes": "6a3803d5f059902a1c6dafbc9ba47292"
+                    },
+                    {
+                      "$bytes": "0228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff03"
+                    }
+                  ],
+                  "url": "/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js",
+                  "deps": [
+                    "acme.core.boot"
+                  ],
+                  "hash": {
+                    "$bytes": "017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27"
+                  },
+                  "load": "lazy",
+                  "assets": [
+                    {
+                      "hash": {
+                        "$bytes": "014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db654987"
+                      },
+                      "path": "charts.css"
+                    }
+                  ],
+                  "hostApi": "^3.1",
+                  "version": "1.4.2"
+                }
+              ]
+            }
+          ]
+        ],
+        {
+          "web.keys": [
+            [
+              {
+                "$bytes": "8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394"
+              },
+              "acme.",
+              {
+                "$tag": 1,
+                "value": 1798761600
+              },
+              {
+                "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+              },
+              {
+                "$bytes": "8b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909"
+              }
+            ]
+          ],
+          "web.apply": "reload",
+          "web.revoked": [
+            3,
+            [
+              {
+                "$bytes": "b62e867fa2f33afe62d5d6b1642e1621"
+              }
+            ],
+            {
+              "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+            },
+            {
+              "$bytes": "c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d"
+            }
+          ]
+        }
+      ],
+      "facet_hash": "01e85d06f6da94d5dbf3e1a36b217f94aee8c187967b5732e91d72a444c0248bbf",
+      "expected_valid": false,
+      "expected_error": "facet1_mismatch"
+    },
+    {
+      "name": "schema/facet-hash-invariance",
+      "description": "The same facet listed as 16 'acme.notes' and as 42 'hub-b/acme.notes' (an imported name, section 10.8): identical facet hash, different schema hashes.",
       "spec": "6.6, 10.8",
-      "type": "part_hash_invariance",
+      "type": "facet_hash_invariance",
       "schema_a": [
         2,
         "hub-a",
@@ -7086,13 +8850,13 @@
         ],
         {}
       ],
-      "part_hash": "013e36a508a2987b02940e9efd890312c7db7d840acf5e8427c55e32547ccc2f46",
+      "facet_hash": "013e36a508a2987b02940e9efd890312c7db7d840acf5e8427c55e32547ccc2f46",
       "schema_hash_a": "0171576c96691b6a2f69b64b57f50c5f478137b129925e75adf689efc14129a914",
       "schema_hash_b": "01b0b5cb4f2445f6a552a0099268202b4f182a28dec2614d0447fc4471793ca0c3"
     },
     {
-      "name": "schema/delta-1-replace-part",
-      "description": "Epoch 1: replace part 16 with compatible version 1.1.0: adds a sigil, an enum value, a struct, a method and an optional field; removes method 113 and sigil 81 (both now in retired); tombstones union variant 2 (flag 0x4). Also sets the schema version.",
+      "name": "schema/delta-1-replace-facet",
+      "description": "Epoch 1: replace facet 16 with compatible version 1.1.0: adds a sigil, an enum value, a struct, a method and an optional field; removes method 113 and sigil 81 (both now in retired); tombstones union variant 2 (flag 0x4). Also sets the schema version.",
       "spec": "6.6",
       "type": "delta",
       "from": "schema/server-base",
@@ -7582,23 +9346,23 @@
         ]
       ],
       "expected_valid": true,
-      "removed_part_ids_after": [],
+      "removed_facet_ids_after": [],
       "canonical_cbor": "85026961636d652e686f737469323032362e31322e328389016b73706172726f772e77656265312e302e308081840066436c69656e748187006e6d6f64756c6552656a6563746564820006008002a0a080f680a089106a61636d652e6e6f74657365312e312e308786001840644e6f7465898500626964184400a08501657469746c650600a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58503647461677382000600a0850467757064617465640800a085056b6c65676163794c6162656c0605a0850665636f6c6f728202184201a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f72850868617263686976656482020101a000a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018416a4e6f746546696c74657285850065717565727982020601a0850165636f6c6f728202184201a08502656c696d697482020301a085036573696e636582020801a085046474616773820282000601a001a08501184265436f6c6f72841846184718481849a085021843664368616e6765838500687570736572746564184000a085016764656c65746564184400a0850267636c65617265640004a0a085031844664e6f7465496409a0860018456a4174746163686d656e74838500646e616d650600a08501646d696d6582020601a085026464617461810400a000a08600184b68546167436f756e74828500637461670600a0850165636f756e740300a000a0828400654e6f7465738687186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718656370757418401844821840184100a08718666577617463681841820318438014a08718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a697087186969746167436f756e7473008200184b8001a0a163646f636f506572736f6e616c206e6f7465732e84016541646d696e8387186e66696d706f7274820318400381184008a087186f6473796e6382031843820318438118411818a087187067726573746f72658104038008a169617574682e726f6c656561646d696ea169617574682e726f6c656561646d696e878418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad84184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418476b436f6c6f722e677265656e00a08418486a436f6c6f722e626c756500a08418496c436f6c6f722e79656c6c6f7700a08418506c6e6f74652e7570646174656402a0f68482001846820218718203185182031852a16a61636d652e6f776e65726a6e6f7465732d7465616d89116b61636d652e63686172747365312e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738287016a6c6973745468656d657300820018508001a08703687365745468656d6506008002a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32a3687765622e6b657973818558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909697765622e6170706c796672656c6f61646b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d",
-      "part_hashes": [
+      "facet_hashes": [
         {
-          "part_id": 1,
-          "part_name": "sparrow.web",
-          "part_hash": "01e85d06f6da94d5dbf3e1a36b217f94aee8c187967b5732e91d72a444c0248bbf"
+          "facet_id": 1,
+          "facet_name": "sparrow.web",
+          "facet_hash": "01e85d06f6da94d5dbf3e1a36b217f94aee8c187967b5732e91d72a444c0248bbf"
         },
         {
-          "part_id": 16,
-          "part_name": "acme.notes",
-          "part_hash": "016ca60ae2163c9629464d5a4ea779ad6a7275775a79dfb0e25d3a9a1e9bd35158"
+          "facet_id": 16,
+          "facet_name": "acme.notes",
+          "facet_hash": "016ca60ae2163c9629464d5a4ea779ad6a7275775a79dfb0e25d3a9a1e9bd35158"
         },
         {
-          "part_id": 17,
-          "part_name": "acme.charts",
-          "part_hash": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
+          "facet_id": 17,
+          "facet_name": "acme.charts",
+          "facet_hash": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
         }
       ],
       "hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
@@ -8099,10 +9863,10 @@
     },
     {
       "name": "schema/delta-2-new-major",
-      "description": "Epoch 2: acme.charts moves to major version 2, which is a new part: remove part 17 and add part 18 (no longer implements the interface). Replace top-level annotations.",
+      "description": "Epoch 2: acme.charts moves to major version 2, which is a new facet: remove facet 17 and add facet 18 (no longer implements the interface). Replace top-level annotations.",
       "spec": "6.6",
       "type": "delta",
-      "from": "schema/delta-1-replace-part",
+      "from": "schema/delta-1-replace-facet",
       "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "epoch": 2,
       "delta": [
@@ -8372,25 +10136,25 @@
         ]
       ],
       "expected_valid": true,
-      "removed_part_ids_after": [
+      "removed_facet_ids_after": [
         17
       ],
       "canonical_cbor": "85026961636d652e686f737469323032362e31322e328389016b73706172726f772e77656265312e302e308081840066436c69656e748187006e6d6f64756c6552656a6563746564820006008002a0a080f680a089106a61636d652e6e6f74657365312e312e308786001840644e6f7465898500626964184400a08501657469746c650600a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58503647461677382000600a0850467757064617465640800a085056b6c65676163794c6162656c0605a0850665636f6c6f728202184201a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f72850868617263686976656482020101a000a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018416a4e6f746546696c74657285850065717565727982020601a0850165636f6c6f728202184201a08502656c696d697482020301a085036573696e636582020801a085046474616773820282000601a001a08501184265436f6c6f72841846184718481849a085021843664368616e6765838500687570736572746564184000a085016764656c65746564184400a0850267636c65617265640004a0a085031844664e6f7465496409a0860018456a4174746163686d656e74838500646e616d650600a08501646d696d6582020601a085026464617461810400a000a08600184b68546167436f756e74828500637461670600a0850165636f756e740300a000a0828400654e6f7465738687186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718656370757418401844821840184100a08718666577617463681841820318438014a08718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a697087186969746167436f756e7473008200184b8001a0a163646f636f506572736f6e616c206e6f7465732e84016541646d696e8387186e66696d706f7274820318400381184008a087186f6473796e6382031843820318438118411818a087187067726573746f72658104038008a169617574682e726f6c656561646d696ea169617574682e726f6c656561646d696e878418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad84184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418476b436f6c6f722e677265656e00a08418486a436f6c6f722e626c756500a08418496c436f6c6f722e79656c6c6f7700a08418506c6e6f74652e7570646174656402a0f68482001846820218718203185182031852a16a61636d652e6f776e65726a6e6f7465732d7465616d89126b61636d652e63686172747365322e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000300a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738287016a6c6973745468656d657300820018508001a08703687365745468656d6506008002a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a6f680a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32a3687765622e6b657973818558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909697765622e6170706c7963686f746b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d",
-      "part_hashes": [
+      "facet_hashes": [
         {
-          "part_id": 1,
-          "part_name": "sparrow.web",
-          "part_hash": "01e85d06f6da94d5dbf3e1a36b217f94aee8c187967b5732e91d72a444c0248bbf"
+          "facet_id": 1,
+          "facet_name": "sparrow.web",
+          "facet_hash": "01e85d06f6da94d5dbf3e1a36b217f94aee8c187967b5732e91d72a444c0248bbf"
         },
         {
-          "part_id": 16,
-          "part_name": "acme.notes",
-          "part_hash": "016ca60ae2163c9629464d5a4ea779ad6a7275775a79dfb0e25d3a9a1e9bd35158"
+          "facet_id": 16,
+          "facet_name": "acme.notes",
+          "facet_hash": "016ca60ae2163c9629464d5a4ea779ad6a7275775a79dfb0e25d3a9a1e9bd35158"
         },
         {
-          "part_id": 18,
-          "part_name": "acme.charts",
-          "part_hash": "01d7f4b6f3ea02f643e42eae564e44ca52898297be93f8dfe4ed1873d37c7c839c"
+          "facet_id": 18,
+          "facet_name": "acme.charts",
+          "facet_hash": "01d7f4b6f3ea02f643e42eae564e44ca52898297be93f8dfe4ed1873d37c7c839c"
         }
       ],
       "hash": "01ddacfa540b100d084c0ebecb5a06d6d52ab4c3af060eefd103abd22684f4f212",
@@ -8673,8 +10437,8 @@
       }
     },
     {
-      "name": "schema/delta-3-readd-part",
-      "description": "Epoch 3: remove part 18 and bring part 17 back as acme.charts 1.0.1, a compatible successor of the 1.0.0 the session last saw (allowed, section 6.1).",
+      "name": "schema/delta-3-readd-facet",
+      "description": "Epoch 3: remove facet 18 and bring facet 17 back as acme.charts 1.0.1, a compatible successor of the 1.0.0 the session last saw (allowed, section 6.1).",
       "spec": "6.6",
       "type": "delta",
       "from": "schema/delta-2-new-major",
@@ -8917,25 +10681,25 @@
         ]
       ],
       "expected_valid": true,
-      "removed_part_ids_after": [
+      "removed_facet_ids_after": [
         18
       ],
       "canonical_cbor": "85026961636d652e686f737469323032362e31322e338389016b73706172726f772e77656265312e302e308081840066436c69656e748187006e6d6f64756c6552656a6563746564820006008002a0a080f680a089106a61636d652e6e6f74657365312e312e308786001840644e6f7465898500626964184400a08501657469746c650600a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58503647461677382000600a0850467757064617465640800a085056b6c65676163794c6162656c0605a0850665636f6c6f728202184201a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f72850868617263686976656482020101a000a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018416a4e6f746546696c74657285850065717565727982020601a0850165636f6c6f728202184201a08502656c696d697482020301a085036573696e636582020801a085046474616773820282000601a001a08501184265436f6c6f72841846184718481849a085021843664368616e6765838500687570736572746564184000a085016764656c65746564184400a0850267636c65617265640004a0a085031844664e6f7465496409a0860018456a4174746163686d656e74838500646e616d650600a08501646d696d6582020601a085026464617461810400a000a08600184b68546167436f756e74828500637461670600a0850165636f756e740300a000a0828400654e6f7465738687186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718656370757418401844821840184100a08718666577617463681841820318438014a08718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a697087186969746167436f756e7473008200184b8001a0a163646f636f506572736f6e616c206e6f7465732e84016541646d696e8387186e66696d706f7274820318400381184008a087186f6473796e6382031843820318438118411818a087187067726573746f72658104038008a169617574682e726f6c656561646d696ea169617574682e726f6c656561646d696e878418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad84184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418476b436f6c6f722e677265656e00a08418486a436f6c6f722e626c756500a08418496c436f6c6f722e79656c6c6f7700a08418506c6e6f74652e7570646174656402a0f68482001846820218718203185182031852a16a61636d652e6f776e65726a6e6f7465732d7465616d89116b61636d652e63686172747365312e302e3184860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a163646f636f4120636f6c6f7572207468656d652e8284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738287016a6c6973745468656d657300820018508001a08703687365745468656d6506008002a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32a3687765622e6b657973818558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909697765622e6170706c7963686f746b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d",
-      "part_hashes": [
+      "facet_hashes": [
         {
-          "part_id": 1,
-          "part_name": "sparrow.web",
-          "part_hash": "01e85d06f6da94d5dbf3e1a36b217f94aee8c187967b5732e91d72a444c0248bbf"
+          "facet_id": 1,
+          "facet_name": "sparrow.web",
+          "facet_hash": "01e85d06f6da94d5dbf3e1a36b217f94aee8c187967b5732e91d72a444c0248bbf"
         },
         {
-          "part_id": 16,
-          "part_name": "acme.notes",
-          "part_hash": "016ca60ae2163c9629464d5a4ea779ad6a7275775a79dfb0e25d3a9a1e9bd35158"
+          "facet_id": 16,
+          "facet_name": "acme.notes",
+          "facet_hash": "016ca60ae2163c9629464d5a4ea779ad6a7275775a79dfb0e25d3a9a1e9bd35158"
         },
         {
-          "part_id": 17,
-          "part_name": "acme.charts",
-          "part_hash": "01907f9cc35873213b1ff197b28b36086753459d31dc7e801f6b2dc1a5075cd44b"
+          "facet_id": 17,
+          "facet_name": "acme.charts",
+          "facet_hash": "01907f9cc35873213b1ff197b28b36086753459d31dc7e801f6b2dc1a5075cd44b"
         }
       ],
       "hash": "01c544e4d7e952d43c42d11ba8e601f5c61f2e9d3bc0fd1160bcb4c9d585acb33b",
@@ -9189,10 +10953,10 @@
     },
     {
       "name": "schema/delta-invalid-incompatible-replace",
-      "description": "Replace part 16 with 1.2.0 (same major) where Note.updated (tag 4) changes type from timestamp to uint. Not a compatible change (section 6.7).",
+      "description": "Replace facet 16 with 1.2.0 (same major) where Note.updated (tag 4) changes type from timestamp to uint. Not a compatible change (section 6.7).",
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
-      "from": "schema/delta-1-replace-part",
+      "from": "schema/delta-1-replace-facet",
       "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
@@ -9675,14 +11439,14 @@
       ],
       "expected_valid": false,
       "expected_error": "incompatible_change",
-      "error_detail": "part 16: type 64: tag 4 changed type"
+      "error_detail": "facet 16: type 64: tag 4 changed type"
     },
     {
       "name": "schema/delta-invalid-reuse-retired",
-      "description": "Replace part 16 with a version that defines method 113 again, although [2, 113] is in its retired list.",
+      "description": "Replace facet 16 with a version that defines method 113 again, although [2, 113] is in its retired list.",
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
-      "from": "schema/delta-1-replace-part",
+      "from": "schema/delta-1-replace-facet",
       "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
@@ -10174,14 +11938,14 @@
       ],
       "expected_valid": false,
       "expected_error": "retired_id_reused",
-      "error_detail": "part 16: method 113 is retired"
+      "error_detail": "facet 16: method 113 is retired"
     },
     {
-      "name": "schema/delta-invalid-cross-part-reference",
-      "description": "Replace part 16 with a version whose new struct references TypeId 80, which exists only in part 17. No reference crosses a part (section 6.1): dangling.",
+      "name": "schema/delta-invalid-cross-facet-reference",
+      "description": "Replace facet 16 with a version whose new struct references TypeId 80, which exists only in facet 17. No reference crosses a facet (section 6.1): dangling.",
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
-      "from": "schema/delta-1-replace-part",
+      "from": "schema/delta-1-replace-facet",
       "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
@@ -10680,14 +12444,14 @@
       ],
       "expected_valid": false,
       "expected_error": "dangling_reference",
-      "error_detail": "part 16: type 76 references type 80, not defined in this part"
+      "error_detail": "facet 16: type 76 references type 80, not defined in this facet"
     },
     {
       "name": "schema/delta-invalid-dropped-not-retired",
-      "description": "Replace part 16 with a version that drops method 105 without listing [2, 105] in retired (section 6.6 rule 2).",
+      "description": "Replace facet 16 with a version that drops method 105 without listing [2, 105] in retired (section 6.6 rule 2).",
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
-      "from": "schema/delta-1-replace-part",
+      "from": "schema/delta-1-replace-facet",
       "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
@@ -11158,14 +12922,14 @@
       ],
       "expected_valid": false,
       "expected_error": "dropped_id_not_retired",
-      "error_detail": "part 16: [2, 105] was removed but is not in retired"
+      "error_detail": "facet 16: [2, 105] was removed but is not in retired"
     },
     {
-      "name": "schema/delta-invalid-part-renamed",
-      "description": "Replace part 16 with a part named 'acme.memos'. Renaming a part is not allowed (section 6.7).",
+      "name": "schema/delta-invalid-facet-renamed",
+      "description": "Replace facet 16 with a facet named 'acme.memos'. Renaming a facet is not allowed (section 6.7).",
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
-      "from": "schema/delta-1-replace-part",
+      "from": "schema/delta-1-replace-facet",
       "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
@@ -11647,15 +13411,15 @@
         ]
       ],
       "expected_valid": false,
-      "expected_error": "part_renamed",
-      "error_detail": "part 16: \"acme.notes\" -> \"acme.memos\""
+      "expected_error": "facet_renamed",
+      "error_detail": "facet 16: \"acme.notes\" -> \"acme.memos\""
     },
     {
       "name": "schema/delta-invalid-major-in-place",
-      "description": "Replace part 16 in place with version 2.0.0. A new major version is a new part (section 10.3), so an in-place replace across majors is rejected.",
+      "description": "Replace facet 16 in place with version 2.0.0. A new major version is a new facet (section 10.3), so an in-place replace across majors is rejected.",
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
-      "from": "schema/delta-1-replace-part",
+      "from": "schema/delta-1-replace-facet",
       "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
@@ -12138,14 +13902,14 @@
       ],
       "expected_valid": false,
       "expected_error": "major_version_changed",
-      "error_detail": "part 16: 1.1.0 -> 2.0.0; a new major version is a new part"
+      "error_detail": "facet 16: 1.1.0 -> 2.0.0; a new major version is a new facet"
     },
     {
       "name": "schema/delta-invalid-float",
       "description": "Top-level annotations containing a float. Canonical data MUST NOT contain floats (section 3.2).",
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
-      "from": "schema/delta-1-replace-part",
+      "from": "schema/delta-1-replace-facet",
       "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
@@ -12163,11 +13927,11 @@
       "error_detail": "schema contains a float"
     },
     {
-      "name": "schema/delta-invalid-reserved-part-id",
-      "description": "Add a part with ID 5. Part IDs 0 and 2-15 MUST NOT appear (6.1).",
+      "name": "schema/delta-invalid-reserved-facet-id",
+      "description": "Add a facet with ID 5. Facet IDs 0 and 2-15 MUST NOT appear (6.1).",
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
-      "from": "schema/delta-1-replace-part",
+      "from": "schema/delta-1-replace-facet",
       "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
@@ -12186,15 +13950,15 @@
         ]
       ],
       "expected_valid": false,
-      "expected_error": "reserved_part_id",
-      "error_detail": "part 5 (\"acme.extra\"): IDs 0 and 2-15 MUST NOT appear"
+      "expected_error": "reserved_facet_id",
+      "error_detail": "facet 5 (\"acme.extra\"): IDs 0 and 2-15 MUST NOT appear"
     },
     {
-      "name": "schema/delta-invalid-part-name-non-ascii",
-      "description": "Add a part named 'acme.café'. Part names match [a-z0-9-]+(\\.[a-z0-9-]+)*, ASCII only (6.1).",
+      "name": "schema/delta-invalid-facet-name-non-ascii",
+      "description": "Add a facet named 'acme.café'. Facet names match [a-z0-9-]+(\\.[a-z0-9-]+)*, ASCII only (6.1).",
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
-      "from": "schema/delta-1-replace-part",
+      "from": "schema/delta-1-replace-facet",
       "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
@@ -12214,14 +13978,14 @@
       ],
       "expected_valid": false,
       "expected_error": "invalid_name",
-      "error_detail": "part 19: part name \"acme.café\" does not match the part-name grammar"
+      "error_detail": "facet 19: facet name \"acme.café\" does not match the facet-name grammar"
     },
     {
-      "name": "schema/delta-invalid-part-name-uppercase",
-      "description": "Add a part named 'Acme.Tools': upper case is outside the part-name grammar.",
+      "name": "schema/delta-invalid-facet-name-uppercase",
+      "description": "Add a facet named 'Acme.Tools': upper case is outside the facet-name grammar.",
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
-      "from": "schema/delta-1-replace-part",
+      "from": "schema/delta-1-replace-facet",
       "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
@@ -12241,14 +14005,14 @@
       ],
       "expected_valid": false,
       "expected_error": "invalid_name",
-      "error_detail": "part 19: part name \"Acme.Tools\" does not match the part-name grammar"
+      "error_detail": "facet 19: facet name \"Acme.Tools\" does not match the facet-name grammar"
     },
     {
       "name": "schema/delta-invalid-type-name-non-ascii",
-      "description": "Add a part whose struct is named 'Grüße'. Type names are ASCII (6.1).",
+      "description": "Add a facet whose struct is named 'Grüße'. Type names are ASCII (6.1).",
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
-      "from": "schema/delta-1-replace-part",
+      "from": "schema/delta-1-replace-facet",
       "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
@@ -12285,14 +14049,14 @@
       ],
       "expected_valid": false,
       "expected_error": "invalid_name",
-      "error_detail": "part 19: type name \"Grüße\" is not ASCII"
+      "error_detail": "facet 19: type name \"Grüße\" is not ASCII"
     },
     {
       "name": "schema/delta-invalid-variant-name-non-ascii",
-      "description": "Add a part whose union has a variant named 'gelöscht'. Variant names are ASCII (6.1).",
+      "description": "Add a facet whose union has a variant named 'gelöscht'. Variant names are ASCII (6.1).",
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
-      "from": "schema/delta-1-replace-part",
+      "from": "schema/delta-1-replace-facet",
       "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
@@ -12328,14 +14092,14 @@
       ],
       "expected_valid": false,
       "expected_error": "invalid_name",
-      "error_detail": "part 19: field or variant name \"gelöscht\" is not ASCII"
+      "error_detail": "facet 19: field or variant name \"gelöscht\" is not ASCII"
     },
     {
-      "name": "schema/delta-invalid-part1-mismatch",
-      "description": "Replace part 1 with sparrow.web version 1.0.1. Part 1 MUST match its definition exactly, by part hash (6.1).",
+      "name": "schema/delta-invalid-facet1-mismatch",
+      "description": "Replace facet 1 with sparrow.web version 1.0.1. Facet 1 MUST match its definition exactly, by facet hash (6.1).",
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
-      "from": "schema/delta-1-replace-part",
+      "from": "schema/delta-1-replace-facet",
       "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
@@ -12374,12 +14138,2986 @@
         ]
       ],
       "expected_valid": false,
-      "expected_error": "part1_mismatch",
-      "error_detail": "part 1 does not match the spec's definition of sparrow.web by part hash"
+      "expected_error": "facet1_mismatch",
+      "error_detail": "facet 1 does not match the spec's definition of sparrow.web by name and facet hash"
+    },
+    {
+      "name": "schema/delta-invalid-required-made-optional",
+      "description": "Replace facet 16 with 1.2.0 where the required field Note.title (tag 1) becomes optional (flag 0x1). Making a required field optional is not allowed: older readers still require it (6.7).",
+      "spec": "6.1, 6.6, 6.7",
+      "type": "delta",
+      "from": "schema/delta-1-replace-facet",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
+      "delta": [
+        [
+          0,
+          [
+            16,
+            "acme.notes",
+            "1.2.0",
+            [
+              [
+                1,
+                66,
+                "Color",
+                [
+                  73,
+                  72,
+                  70,
+                  71
+                ],
+                {}
+              ],
+              [
+                0,
+                64,
+                "Note",
+                [
+                  [
+                    3,
+                    "tags",
+                    [
+                      0,
+                      6
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "id",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    7,
+                    "pinned",
+                    1,
+                    3,
+                    {
+                      "deprecated.use": "color"
+                    }
+                  ],
+                  [
+                    5,
+                    "legacyLabel",
+                    6,
+                    5,
+                    {}
+                  ],
+                  [
+                    2,
+                    "body",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {
+                      "ui.maxLength": 20000,
+                      "ui.multiline": true
+                    }
+                  ],
+                  [
+                    1,
+                    "title",
+                    6,
+                    1,
+                    {}
+                  ],
+                  [
+                    6,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    4,
+                    "updated",
+                    8,
+                    0,
+                    {}
+                  ],
+                  [
+                    8,
+                    "archived",
+                    [
+                      2,
+                      1
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                0,
+                {
+                  "ui.icon": "sticky-note",
+                  "ui.label": "Note"
+                }
+              ],
+              [
+                0,
+                69,
+                "Attachment",
+                [
+                  [
+                    2,
+                    "data",
+                    [
+                      4
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    1,
+                    "mime",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ],
+              [
+                2,
+                67,
+                "Change",
+                [
+                  [
+                    1,
+                    "deleted",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    2,
+                    "cleared",
+                    0,
+                    4,
+                    {}
+                  ],
+                  [
+                    0,
+                    "upserted",
+                    64,
+                    0,
+                    {}
+                  ]
+                ],
+                {}
+              ],
+              [
+                0,
+                65,
+                "NoteFilter",
+                [
+                  [
+                    2,
+                    "limit",
+                    [
+                      2,
+                      3
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    0,
+                    "query",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    4,
+                    "tags",
+                    [
+                      2,
+                      [
+                        0,
+                        6
+                      ]
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    1,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    3,
+                    "since",
+                    [
+                      2,
+                      8
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                1,
+                {}
+              ],
+              [
+                3,
+                68,
+                "NoteId",
+                9,
+                {}
+              ],
+              [
+                0,
+                75,
+                "TagCount",
+                [
+                  [
+                    1,
+                    "count",
+                    3,
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "tag",
+                    6,
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ]
+            ],
+            [
+              [
+                1,
+                "Admin",
+                [
+                  [
+                    111,
+                    "sync",
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      65
+                    ],
+                    24,
+                    {}
+                  ],
+                  [
+                    110,
+                    "import",
+                    [
+                      3,
+                      64
+                    ],
+                    3,
+                    [
+                      64
+                    ],
+                    8,
+                    {}
+                  ],
+                  [
+                    112,
+                    "restore",
+                    [
+                      4
+                    ],
+                    3,
+                    [],
+                    8,
+                    {
+                      "auth.role": "admin"
+                    }
+                  ]
+                ],
+                {
+                  "auth.role": "admin"
+                }
+              ],
+              [
+                0,
+                "Notes",
+                [
+                  [
+                    103,
+                    "attach",
+                    69,
+                    0,
+                    [
+                      64
+                    ],
+                    8,
+                    {
+                      "doc": "Attach a file to a note; the data travels as a byte token."
+                    }
+                  ],
+                  [
+                    101,
+                    "put",
+                    64,
+                    68,
+                    [
+                      65,
+                      64
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    104,
+                    "export",
+                    65,
+                    [
+                      4
+                    ],
+                    [],
+                    17,
+                    {
+                      "http.contentType": "application/zip"
+                    }
+                  ],
+                  [
+                    100,
+                    "get",
+                    68,
+                    64,
+                    [],
+                    1,
+                    {
+                      "doc": "Fetch one note by id."
+                    }
+                  ],
+                  [
+                    102,
+                    "watch",
+                    65,
+                    [
+                      3,
+                      67
+                    ],
+                    [],
+                    20,
+                    {}
+                  ],
+                  [
+                    105,
+                    "tagCounts",
+                    0,
+                    [
+                      0,
+                      75
+                    ],
+                    [],
+                    1,
+                    {}
+                  ]
+                ],
+                {
+                  "doc": "Personal notes."
+                }
+              ]
+            ],
+            [
+              [
+                80,
+                "note.updated",
+                2,
+                {}
+              ],
+              [
+                71,
+                "Color.green",
+                0,
+                {}
+              ],
+              [
+                65,
+                "conflict",
+                1,
+                {
+                  "http.status": 409
+                }
+              ],
+              [
+                70,
+                "Color.red",
+                0,
+                {}
+              ],
+              [
+                64,
+                "quota_exceeded",
+                1,
+                {
+                  "http.status": 429
+                }
+              ],
+              [
+                72,
+                "Color.blue",
+                0,
+                {}
+              ],
+              [
+                73,
+                "Color.yellow",
+                0,
+                {}
+              ]
+            ],
+            null,
+            [
+              [
+                3,
+                82
+              ],
+              [
+                2,
+                113
+              ],
+              [
+                0,
+                70
+              ],
+              [
+                3,
+                81
+              ]
+            ],
+            {
+              "acme.owner": "notes-team"
+            }
+          ]
+        ]
+      ],
+      "expected_valid": false,
+      "expected_error": "incompatible_change",
+      "error_detail": "facet 16: type 64: required field 1 made optional"
+    },
+    {
+      "name": "schema/delta-invalid-tombstone-changes-type",
+      "description": "Replace facet 16 with 1.2.0 where the optional field Note.color (tag 6) becomes a tombstone (flags 0x5) and at the same time changes its type from [2, 66] to [2, 6]. A tombstone keeps its last definition (6.7).",
+      "spec": "6.1, 6.6, 6.7",
+      "type": "delta",
+      "from": "schema/delta-1-replace-facet",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
+      "delta": [
+        [
+          0,
+          [
+            16,
+            "acme.notes",
+            "1.2.0",
+            [
+              [
+                1,
+                66,
+                "Color",
+                [
+                  73,
+                  72,
+                  70,
+                  71
+                ],
+                {}
+              ],
+              [
+                0,
+                64,
+                "Note",
+                [
+                  [
+                    3,
+                    "tags",
+                    [
+                      0,
+                      6
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "id",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    7,
+                    "pinned",
+                    1,
+                    3,
+                    {
+                      "deprecated.use": "color"
+                    }
+                  ],
+                  [
+                    5,
+                    "legacyLabel",
+                    6,
+                    5,
+                    {}
+                  ],
+                  [
+                    2,
+                    "body",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {
+                      "ui.maxLength": 20000,
+                      "ui.multiline": true
+                    }
+                  ],
+                  [
+                    1,
+                    "title",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    6,
+                    "color",
+                    [
+                      2,
+                      6
+                    ],
+                    5,
+                    {}
+                  ],
+                  [
+                    4,
+                    "updated",
+                    8,
+                    0,
+                    {}
+                  ],
+                  [
+                    8,
+                    "archived",
+                    [
+                      2,
+                      1
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                0,
+                {
+                  "ui.icon": "sticky-note",
+                  "ui.label": "Note"
+                }
+              ],
+              [
+                0,
+                69,
+                "Attachment",
+                [
+                  [
+                    2,
+                    "data",
+                    [
+                      4
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    1,
+                    "mime",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ],
+              [
+                2,
+                67,
+                "Change",
+                [
+                  [
+                    1,
+                    "deleted",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    2,
+                    "cleared",
+                    0,
+                    4,
+                    {}
+                  ],
+                  [
+                    0,
+                    "upserted",
+                    64,
+                    0,
+                    {}
+                  ]
+                ],
+                {}
+              ],
+              [
+                0,
+                65,
+                "NoteFilter",
+                [
+                  [
+                    2,
+                    "limit",
+                    [
+                      2,
+                      3
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    0,
+                    "query",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    4,
+                    "tags",
+                    [
+                      2,
+                      [
+                        0,
+                        6
+                      ]
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    1,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    3,
+                    "since",
+                    [
+                      2,
+                      8
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                1,
+                {}
+              ],
+              [
+                3,
+                68,
+                "NoteId",
+                9,
+                {}
+              ],
+              [
+                0,
+                75,
+                "TagCount",
+                [
+                  [
+                    1,
+                    "count",
+                    3,
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "tag",
+                    6,
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ]
+            ],
+            [
+              [
+                1,
+                "Admin",
+                [
+                  [
+                    111,
+                    "sync",
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      65
+                    ],
+                    24,
+                    {}
+                  ],
+                  [
+                    110,
+                    "import",
+                    [
+                      3,
+                      64
+                    ],
+                    3,
+                    [
+                      64
+                    ],
+                    8,
+                    {}
+                  ],
+                  [
+                    112,
+                    "restore",
+                    [
+                      4
+                    ],
+                    3,
+                    [],
+                    8,
+                    {
+                      "auth.role": "admin"
+                    }
+                  ]
+                ],
+                {
+                  "auth.role": "admin"
+                }
+              ],
+              [
+                0,
+                "Notes",
+                [
+                  [
+                    103,
+                    "attach",
+                    69,
+                    0,
+                    [
+                      64
+                    ],
+                    8,
+                    {
+                      "doc": "Attach a file to a note; the data travels as a byte token."
+                    }
+                  ],
+                  [
+                    101,
+                    "put",
+                    64,
+                    68,
+                    [
+                      65,
+                      64
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    104,
+                    "export",
+                    65,
+                    [
+                      4
+                    ],
+                    [],
+                    17,
+                    {
+                      "http.contentType": "application/zip"
+                    }
+                  ],
+                  [
+                    100,
+                    "get",
+                    68,
+                    64,
+                    [],
+                    1,
+                    {
+                      "doc": "Fetch one note by id."
+                    }
+                  ],
+                  [
+                    102,
+                    "watch",
+                    65,
+                    [
+                      3,
+                      67
+                    ],
+                    [],
+                    20,
+                    {}
+                  ],
+                  [
+                    105,
+                    "tagCounts",
+                    0,
+                    [
+                      0,
+                      75
+                    ],
+                    [],
+                    1,
+                    {}
+                  ]
+                ],
+                {
+                  "doc": "Personal notes."
+                }
+              ]
+            ],
+            [
+              [
+                80,
+                "note.updated",
+                2,
+                {}
+              ],
+              [
+                71,
+                "Color.green",
+                0,
+                {}
+              ],
+              [
+                65,
+                "conflict",
+                1,
+                {
+                  "http.status": 409
+                }
+              ],
+              [
+                70,
+                "Color.red",
+                0,
+                {}
+              ],
+              [
+                64,
+                "quota_exceeded",
+                1,
+                {
+                  "http.status": 429
+                }
+              ],
+              [
+                72,
+                "Color.blue",
+                0,
+                {}
+              ],
+              [
+                73,
+                "Color.yellow",
+                0,
+                {}
+              ]
+            ],
+            null,
+            [
+              [
+                3,
+                82
+              ],
+              [
+                2,
+                113
+              ],
+              [
+                0,
+                70
+              ],
+              [
+                3,
+                81
+              ]
+            ],
+            {
+              "acme.owner": "notes-team"
+            }
+          ]
+        ]
+      ],
+      "expected_valid": false,
+      "expected_error": "incompatible_change",
+      "error_detail": "facet 16: type 64: tag 6 changed type as it became a tombstone"
+    },
+    {
+      "name": "schema/delta-invalid-existing-tombstone-changes-type",
+      "description": "Replace facet 16 with 1.2.0 where the variant Change.cleared (tag 2), already a tombstone in 1.1.0, changes its type from unit to string. A tombstone keeps its last definition (6.7).",
+      "spec": "6.1, 6.6, 6.7",
+      "type": "delta",
+      "from": "schema/delta-1-replace-facet",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
+      "delta": [
+        [
+          0,
+          [
+            16,
+            "acme.notes",
+            "1.2.0",
+            [
+              [
+                1,
+                66,
+                "Color",
+                [
+                  73,
+                  72,
+                  70,
+                  71
+                ],
+                {}
+              ],
+              [
+                0,
+                64,
+                "Note",
+                [
+                  [
+                    3,
+                    "tags",
+                    [
+                      0,
+                      6
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "id",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    7,
+                    "pinned",
+                    1,
+                    3,
+                    {
+                      "deprecated.use": "color"
+                    }
+                  ],
+                  [
+                    5,
+                    "legacyLabel",
+                    6,
+                    5,
+                    {}
+                  ],
+                  [
+                    2,
+                    "body",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {
+                      "ui.maxLength": 20000,
+                      "ui.multiline": true
+                    }
+                  ],
+                  [
+                    1,
+                    "title",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    6,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    4,
+                    "updated",
+                    8,
+                    0,
+                    {}
+                  ],
+                  [
+                    8,
+                    "archived",
+                    [
+                      2,
+                      1
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                0,
+                {
+                  "ui.icon": "sticky-note",
+                  "ui.label": "Note"
+                }
+              ],
+              [
+                0,
+                69,
+                "Attachment",
+                [
+                  [
+                    2,
+                    "data",
+                    [
+                      4
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    1,
+                    "mime",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ],
+              [
+                2,
+                67,
+                "Change",
+                [
+                  [
+                    1,
+                    "deleted",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    2,
+                    "cleared",
+                    6,
+                    4,
+                    {}
+                  ],
+                  [
+                    0,
+                    "upserted",
+                    64,
+                    0,
+                    {}
+                  ]
+                ],
+                {}
+              ],
+              [
+                0,
+                65,
+                "NoteFilter",
+                [
+                  [
+                    2,
+                    "limit",
+                    [
+                      2,
+                      3
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    0,
+                    "query",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    4,
+                    "tags",
+                    [
+                      2,
+                      [
+                        0,
+                        6
+                      ]
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    1,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    3,
+                    "since",
+                    [
+                      2,
+                      8
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                1,
+                {}
+              ],
+              [
+                3,
+                68,
+                "NoteId",
+                9,
+                {}
+              ],
+              [
+                0,
+                75,
+                "TagCount",
+                [
+                  [
+                    1,
+                    "count",
+                    3,
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "tag",
+                    6,
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ]
+            ],
+            [
+              [
+                1,
+                "Admin",
+                [
+                  [
+                    111,
+                    "sync",
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      65
+                    ],
+                    24,
+                    {}
+                  ],
+                  [
+                    110,
+                    "import",
+                    [
+                      3,
+                      64
+                    ],
+                    3,
+                    [
+                      64
+                    ],
+                    8,
+                    {}
+                  ],
+                  [
+                    112,
+                    "restore",
+                    [
+                      4
+                    ],
+                    3,
+                    [],
+                    8,
+                    {
+                      "auth.role": "admin"
+                    }
+                  ]
+                ],
+                {
+                  "auth.role": "admin"
+                }
+              ],
+              [
+                0,
+                "Notes",
+                [
+                  [
+                    103,
+                    "attach",
+                    69,
+                    0,
+                    [
+                      64
+                    ],
+                    8,
+                    {
+                      "doc": "Attach a file to a note; the data travels as a byte token."
+                    }
+                  ],
+                  [
+                    101,
+                    "put",
+                    64,
+                    68,
+                    [
+                      65,
+                      64
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    104,
+                    "export",
+                    65,
+                    [
+                      4
+                    ],
+                    [],
+                    17,
+                    {
+                      "http.contentType": "application/zip"
+                    }
+                  ],
+                  [
+                    100,
+                    "get",
+                    68,
+                    64,
+                    [],
+                    1,
+                    {
+                      "doc": "Fetch one note by id."
+                    }
+                  ],
+                  [
+                    102,
+                    "watch",
+                    65,
+                    [
+                      3,
+                      67
+                    ],
+                    [],
+                    20,
+                    {}
+                  ],
+                  [
+                    105,
+                    "tagCounts",
+                    0,
+                    [
+                      0,
+                      75
+                    ],
+                    [],
+                    1,
+                    {}
+                  ]
+                ],
+                {
+                  "doc": "Personal notes."
+                }
+              ]
+            ],
+            [
+              [
+                80,
+                "note.updated",
+                2,
+                {}
+              ],
+              [
+                71,
+                "Color.green",
+                0,
+                {}
+              ],
+              [
+                65,
+                "conflict",
+                1,
+                {
+                  "http.status": 409
+                }
+              ],
+              [
+                70,
+                "Color.red",
+                0,
+                {}
+              ],
+              [
+                64,
+                "quota_exceeded",
+                1,
+                {
+                  "http.status": 429
+                }
+              ],
+              [
+                72,
+                "Color.blue",
+                0,
+                {}
+              ],
+              [
+                73,
+                "Color.yellow",
+                0,
+                {}
+              ]
+            ],
+            null,
+            [
+              [
+                3,
+                82
+              ],
+              [
+                2,
+                113
+              ],
+              [
+                0,
+                70
+              ],
+              [
+                3,
+                81
+              ]
+            ],
+            {
+              "acme.owner": "notes-team"
+            }
+          ]
+        ]
+      ],
+      "expected_valid": false,
+      "expected_error": "incompatible_change",
+      "error_detail": "facet 16: type 67: tombstone 2 changed type (a tombstone keeps its last definition)"
+    },
+    {
+      "name": "schema/delta-invalid-notification-output",
+      "description": "Replace facet 16 with 1.2.0 that adds method 106 'ping' flagged notification (0x2) with output bool. A notification MUST have output unit (6.4).",
+      "spec": "6.1, 6.6, 6.7",
+      "type": "delta",
+      "from": "schema/delta-1-replace-facet",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
+      "delta": [
+        [
+          0,
+          [
+            16,
+            "acme.notes",
+            "1.2.0",
+            [
+              [
+                1,
+                66,
+                "Color",
+                [
+                  73,
+                  72,
+                  70,
+                  71
+                ],
+                {}
+              ],
+              [
+                0,
+                64,
+                "Note",
+                [
+                  [
+                    3,
+                    "tags",
+                    [
+                      0,
+                      6
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "id",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    7,
+                    "pinned",
+                    1,
+                    3,
+                    {
+                      "deprecated.use": "color"
+                    }
+                  ],
+                  [
+                    5,
+                    "legacyLabel",
+                    6,
+                    5,
+                    {}
+                  ],
+                  [
+                    2,
+                    "body",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {
+                      "ui.maxLength": 20000,
+                      "ui.multiline": true
+                    }
+                  ],
+                  [
+                    1,
+                    "title",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    6,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    4,
+                    "updated",
+                    8,
+                    0,
+                    {}
+                  ],
+                  [
+                    8,
+                    "archived",
+                    [
+                      2,
+                      1
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                0,
+                {
+                  "ui.icon": "sticky-note",
+                  "ui.label": "Note"
+                }
+              ],
+              [
+                0,
+                69,
+                "Attachment",
+                [
+                  [
+                    2,
+                    "data",
+                    [
+                      4
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    1,
+                    "mime",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ],
+              [
+                2,
+                67,
+                "Change",
+                [
+                  [
+                    1,
+                    "deleted",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    2,
+                    "cleared",
+                    0,
+                    4,
+                    {}
+                  ],
+                  [
+                    0,
+                    "upserted",
+                    64,
+                    0,
+                    {}
+                  ]
+                ],
+                {}
+              ],
+              [
+                0,
+                65,
+                "NoteFilter",
+                [
+                  [
+                    2,
+                    "limit",
+                    [
+                      2,
+                      3
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    0,
+                    "query",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    4,
+                    "tags",
+                    [
+                      2,
+                      [
+                        0,
+                        6
+                      ]
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    1,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    3,
+                    "since",
+                    [
+                      2,
+                      8
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                1,
+                {}
+              ],
+              [
+                3,
+                68,
+                "NoteId",
+                9,
+                {}
+              ],
+              [
+                0,
+                75,
+                "TagCount",
+                [
+                  [
+                    1,
+                    "count",
+                    3,
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "tag",
+                    6,
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ]
+            ],
+            [
+              [
+                1,
+                "Admin",
+                [
+                  [
+                    111,
+                    "sync",
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      65
+                    ],
+                    24,
+                    {}
+                  ],
+                  [
+                    110,
+                    "import",
+                    [
+                      3,
+                      64
+                    ],
+                    3,
+                    [
+                      64
+                    ],
+                    8,
+                    {}
+                  ],
+                  [
+                    112,
+                    "restore",
+                    [
+                      4
+                    ],
+                    3,
+                    [],
+                    8,
+                    {
+                      "auth.role": "admin"
+                    }
+                  ]
+                ],
+                {
+                  "auth.role": "admin"
+                }
+              ],
+              [
+                0,
+                "Notes",
+                [
+                  [
+                    103,
+                    "attach",
+                    69,
+                    0,
+                    [
+                      64
+                    ],
+                    8,
+                    {
+                      "doc": "Attach a file to a note; the data travels as a byte token."
+                    }
+                  ],
+                  [
+                    101,
+                    "put",
+                    64,
+                    68,
+                    [
+                      65,
+                      64
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    104,
+                    "export",
+                    65,
+                    [
+                      4
+                    ],
+                    [],
+                    17,
+                    {
+                      "http.contentType": "application/zip"
+                    }
+                  ],
+                  [
+                    100,
+                    "get",
+                    68,
+                    64,
+                    [],
+                    1,
+                    {
+                      "doc": "Fetch one note by id."
+                    }
+                  ],
+                  [
+                    102,
+                    "watch",
+                    65,
+                    [
+                      3,
+                      67
+                    ],
+                    [],
+                    20,
+                    {}
+                  ],
+                  [
+                    105,
+                    "tagCounts",
+                    0,
+                    [
+                      0,
+                      75
+                    ],
+                    [],
+                    1,
+                    {}
+                  ],
+                  [
+                    106,
+                    "ping",
+                    0,
+                    1,
+                    [],
+                    2,
+                    {}
+                  ]
+                ],
+                {
+                  "doc": "Personal notes."
+                }
+              ]
+            ],
+            [
+              [
+                80,
+                "note.updated",
+                2,
+                {}
+              ],
+              [
+                71,
+                "Color.green",
+                0,
+                {}
+              ],
+              [
+                65,
+                "conflict",
+                1,
+                {
+                  "http.status": 409
+                }
+              ],
+              [
+                70,
+                "Color.red",
+                0,
+                {}
+              ],
+              [
+                64,
+                "quota_exceeded",
+                1,
+                {
+                  "http.status": 429
+                }
+              ],
+              [
+                72,
+                "Color.blue",
+                0,
+                {}
+              ],
+              [
+                73,
+                "Color.yellow",
+                0,
+                {}
+              ]
+            ],
+            null,
+            [
+              [
+                3,
+                82
+              ],
+              [
+                2,
+                113
+              ],
+              [
+                0,
+                70
+              ],
+              [
+                3,
+                81
+              ]
+            ],
+            {
+              "acme.owner": "notes-team"
+            }
+          ]
+        ]
+      ],
+      "expected_valid": false,
+      "expected_error": "invalid_notification",
+      "error_detail": "facet 16: method 106: a notification (flag 0x2) must have output unit"
+    },
+    {
+      "name": "schema/delta-invalid-notification-byte-stream",
+      "description": "Replace facet 16 with 1.2.0 that adds method 106 'drop' flagged notification (0x2, and 0x8 as its input reaches [4]) whose input is an Attachment, which has a [4] field. A notification MUST NOT have [4] in its input (6.4, 7.3).",
+      "spec": "6.1, 6.6, 6.7",
+      "type": "delta",
+      "from": "schema/delta-1-replace-facet",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
+      "delta": [
+        [
+          0,
+          [
+            16,
+            "acme.notes",
+            "1.2.0",
+            [
+              [
+                1,
+                66,
+                "Color",
+                [
+                  73,
+                  72,
+                  70,
+                  71
+                ],
+                {}
+              ],
+              [
+                0,
+                64,
+                "Note",
+                [
+                  [
+                    3,
+                    "tags",
+                    [
+                      0,
+                      6
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "id",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    7,
+                    "pinned",
+                    1,
+                    3,
+                    {
+                      "deprecated.use": "color"
+                    }
+                  ],
+                  [
+                    5,
+                    "legacyLabel",
+                    6,
+                    5,
+                    {}
+                  ],
+                  [
+                    2,
+                    "body",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {
+                      "ui.maxLength": 20000,
+                      "ui.multiline": true
+                    }
+                  ],
+                  [
+                    1,
+                    "title",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    6,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    4,
+                    "updated",
+                    8,
+                    0,
+                    {}
+                  ],
+                  [
+                    8,
+                    "archived",
+                    [
+                      2,
+                      1
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                0,
+                {
+                  "ui.icon": "sticky-note",
+                  "ui.label": "Note"
+                }
+              ],
+              [
+                0,
+                69,
+                "Attachment",
+                [
+                  [
+                    2,
+                    "data",
+                    [
+                      4
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    1,
+                    "mime",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ],
+              [
+                2,
+                67,
+                "Change",
+                [
+                  [
+                    1,
+                    "deleted",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    2,
+                    "cleared",
+                    0,
+                    4,
+                    {}
+                  ],
+                  [
+                    0,
+                    "upserted",
+                    64,
+                    0,
+                    {}
+                  ]
+                ],
+                {}
+              ],
+              [
+                0,
+                65,
+                "NoteFilter",
+                [
+                  [
+                    2,
+                    "limit",
+                    [
+                      2,
+                      3
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    0,
+                    "query",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    4,
+                    "tags",
+                    [
+                      2,
+                      [
+                        0,
+                        6
+                      ]
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    1,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    3,
+                    "since",
+                    [
+                      2,
+                      8
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                1,
+                {}
+              ],
+              [
+                3,
+                68,
+                "NoteId",
+                9,
+                {}
+              ],
+              [
+                0,
+                75,
+                "TagCount",
+                [
+                  [
+                    1,
+                    "count",
+                    3,
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "tag",
+                    6,
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ]
+            ],
+            [
+              [
+                1,
+                "Admin",
+                [
+                  [
+                    111,
+                    "sync",
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      65
+                    ],
+                    24,
+                    {}
+                  ],
+                  [
+                    110,
+                    "import",
+                    [
+                      3,
+                      64
+                    ],
+                    3,
+                    [
+                      64
+                    ],
+                    8,
+                    {}
+                  ],
+                  [
+                    112,
+                    "restore",
+                    [
+                      4
+                    ],
+                    3,
+                    [],
+                    8,
+                    {
+                      "auth.role": "admin"
+                    }
+                  ]
+                ],
+                {
+                  "auth.role": "admin"
+                }
+              ],
+              [
+                0,
+                "Notes",
+                [
+                  [
+                    103,
+                    "attach",
+                    69,
+                    0,
+                    [
+                      64
+                    ],
+                    8,
+                    {
+                      "doc": "Attach a file to a note; the data travels as a byte token."
+                    }
+                  ],
+                  [
+                    101,
+                    "put",
+                    64,
+                    68,
+                    [
+                      65,
+                      64
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    104,
+                    "export",
+                    65,
+                    [
+                      4
+                    ],
+                    [],
+                    17,
+                    {
+                      "http.contentType": "application/zip"
+                    }
+                  ],
+                  [
+                    100,
+                    "get",
+                    68,
+                    64,
+                    [],
+                    1,
+                    {
+                      "doc": "Fetch one note by id."
+                    }
+                  ],
+                  [
+                    102,
+                    "watch",
+                    65,
+                    [
+                      3,
+                      67
+                    ],
+                    [],
+                    20,
+                    {}
+                  ],
+                  [
+                    105,
+                    "tagCounts",
+                    0,
+                    [
+                      0,
+                      75
+                    ],
+                    [],
+                    1,
+                    {}
+                  ],
+                  [
+                    106,
+                    "drop",
+                    69,
+                    0,
+                    [],
+                    10,
+                    {}
+                  ]
+                ],
+                {
+                  "doc": "Personal notes."
+                }
+              ]
+            ],
+            [
+              [
+                80,
+                "note.updated",
+                2,
+                {}
+              ],
+              [
+                71,
+                "Color.green",
+                0,
+                {}
+              ],
+              [
+                65,
+                "conflict",
+                1,
+                {
+                  "http.status": 409
+                }
+              ],
+              [
+                70,
+                "Color.red",
+                0,
+                {}
+              ],
+              [
+                64,
+                "quota_exceeded",
+                1,
+                {
+                  "http.status": 429
+                }
+              ],
+              [
+                72,
+                "Color.blue",
+                0,
+                {}
+              ],
+              [
+                73,
+                "Color.yellow",
+                0,
+                {}
+              ]
+            ],
+            null,
+            [
+              [
+                3,
+                82
+              ],
+              [
+                2,
+                113
+              ],
+              [
+                0,
+                70
+              ],
+              [
+                3,
+                81
+              ]
+            ],
+            {
+              "acme.owner": "notes-team"
+            }
+          ]
+        ]
+      ],
+      "expected_valid": false,
+      "expected_error": "invalid_notification",
+      "error_detail": "facet 16: method 106: a notification (flag 0x2) must not have [4] in its input"
+    },
+    {
+      "name": "schema/delta-invalid-reserved-type-id",
+      "description": "Replace facet 16 with 1.2.0 that adds a struct whose field has type 12. TypeIds 12-31 are reserved for built-ins of later core versions, so a schema that uses them is invalid (6.4).",
+      "spec": "6.1, 6.6, 6.7",
+      "type": "delta",
+      "from": "schema/delta-1-replace-facet",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
+      "delta": [
+        [
+          0,
+          [
+            16,
+            "acme.notes",
+            "1.2.0",
+            [
+              [
+                1,
+                66,
+                "Color",
+                [
+                  73,
+                  72,
+                  70,
+                  71
+                ],
+                {}
+              ],
+              [
+                0,
+                64,
+                "Note",
+                [
+                  [
+                    3,
+                    "tags",
+                    [
+                      0,
+                      6
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "id",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    7,
+                    "pinned",
+                    1,
+                    3,
+                    {
+                      "deprecated.use": "color"
+                    }
+                  ],
+                  [
+                    5,
+                    "legacyLabel",
+                    6,
+                    5,
+                    {}
+                  ],
+                  [
+                    2,
+                    "body",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {
+                      "ui.maxLength": 20000,
+                      "ui.multiline": true
+                    }
+                  ],
+                  [
+                    1,
+                    "title",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    6,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    4,
+                    "updated",
+                    8,
+                    0,
+                    {}
+                  ],
+                  [
+                    8,
+                    "archived",
+                    [
+                      2,
+                      1
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                0,
+                {
+                  "ui.icon": "sticky-note",
+                  "ui.label": "Note"
+                }
+              ],
+              [
+                0,
+                69,
+                "Attachment",
+                [
+                  [
+                    2,
+                    "data",
+                    [
+                      4
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    1,
+                    "mime",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ],
+              [
+                2,
+                67,
+                "Change",
+                [
+                  [
+                    1,
+                    "deleted",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    2,
+                    "cleared",
+                    0,
+                    4,
+                    {}
+                  ],
+                  [
+                    0,
+                    "upserted",
+                    64,
+                    0,
+                    {}
+                  ]
+                ],
+                {}
+              ],
+              [
+                0,
+                65,
+                "NoteFilter",
+                [
+                  [
+                    2,
+                    "limit",
+                    [
+                      2,
+                      3
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    0,
+                    "query",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    4,
+                    "tags",
+                    [
+                      2,
+                      [
+                        0,
+                        6
+                      ]
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    1,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    3,
+                    "since",
+                    [
+                      2,
+                      8
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                1,
+                {}
+              ],
+              [
+                3,
+                68,
+                "NoteId",
+                9,
+                {}
+              ],
+              [
+                0,
+                75,
+                "TagCount",
+                [
+                  [
+                    1,
+                    "count",
+                    3,
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "tag",
+                    6,
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ],
+              [
+                0,
+                76,
+                "Future",
+                [
+                  [
+                    0,
+                    "x",
+                    12,
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ]
+            ],
+            [
+              [
+                1,
+                "Admin",
+                [
+                  [
+                    111,
+                    "sync",
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      65
+                    ],
+                    24,
+                    {}
+                  ],
+                  [
+                    110,
+                    "import",
+                    [
+                      3,
+                      64
+                    ],
+                    3,
+                    [
+                      64
+                    ],
+                    8,
+                    {}
+                  ],
+                  [
+                    112,
+                    "restore",
+                    [
+                      4
+                    ],
+                    3,
+                    [],
+                    8,
+                    {
+                      "auth.role": "admin"
+                    }
+                  ]
+                ],
+                {
+                  "auth.role": "admin"
+                }
+              ],
+              [
+                0,
+                "Notes",
+                [
+                  [
+                    103,
+                    "attach",
+                    69,
+                    0,
+                    [
+                      64
+                    ],
+                    8,
+                    {
+                      "doc": "Attach a file to a note; the data travels as a byte token."
+                    }
+                  ],
+                  [
+                    101,
+                    "put",
+                    64,
+                    68,
+                    [
+                      65,
+                      64
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    104,
+                    "export",
+                    65,
+                    [
+                      4
+                    ],
+                    [],
+                    17,
+                    {
+                      "http.contentType": "application/zip"
+                    }
+                  ],
+                  [
+                    100,
+                    "get",
+                    68,
+                    64,
+                    [],
+                    1,
+                    {
+                      "doc": "Fetch one note by id."
+                    }
+                  ],
+                  [
+                    102,
+                    "watch",
+                    65,
+                    [
+                      3,
+                      67
+                    ],
+                    [],
+                    20,
+                    {}
+                  ],
+                  [
+                    105,
+                    "tagCounts",
+                    0,
+                    [
+                      0,
+                      75
+                    ],
+                    [],
+                    1,
+                    {}
+                  ]
+                ],
+                {
+                  "doc": "Personal notes."
+                }
+              ]
+            ],
+            [
+              [
+                80,
+                "note.updated",
+                2,
+                {}
+              ],
+              [
+                71,
+                "Color.green",
+                0,
+                {}
+              ],
+              [
+                65,
+                "conflict",
+                1,
+                {
+                  "http.status": 409
+                }
+              ],
+              [
+                70,
+                "Color.red",
+                0,
+                {}
+              ],
+              [
+                64,
+                "quota_exceeded",
+                1,
+                {
+                  "http.status": 429
+                }
+              ],
+              [
+                72,
+                "Color.blue",
+                0,
+                {}
+              ],
+              [
+                73,
+                "Color.yellow",
+                0,
+                {}
+              ]
+            ],
+            null,
+            [
+              [
+                3,
+                82
+              ],
+              [
+                2,
+                113
+              ],
+              [
+                0,
+                70
+              ],
+              [
+                3,
+                81
+              ]
+            ],
+            {
+              "acme.owner": "notes-team"
+            }
+          ]
+        ]
+      ],
+      "expected_valid": false,
+      "expected_error": "reserved_type_id",
+      "error_detail": "facet 16: type 76 references type 12; TypeIds 12-31 are reserved for later built-ins (6.4)"
     },
     {
       "name": "schema/delta-invalid-readd-renamed",
-      "description": "Part 17 was removed in epoch 2. Bringing ID 17 back with a different name ('acme.maps') is not allowed (section 6.1).",
+      "description": "Facet 17 was removed in epoch 2. Bringing ID 17 back with a different name ('acme.maps') is not allowed (section 6.1).",
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
       "from": "schema/delta-2-new-major",
@@ -12522,8 +17260,8 @@
         ]
       ],
       "expected_valid": false,
-      "expected_error": "removed_part_mismatch",
-      "error_detail": "part 17 was \"acme.charts\" 1.0.0; it may only come back with the same name and major version (got \"acme.maps\" 1.0.0)"
+      "expected_error": "removed_facet_mismatch",
+      "error_detail": "facet 17 was \"acme.charts\" 1.0.0; it may only come back with the same name and major version (got \"acme.maps\" 1.0.0)"
     }
   ]
 }

@@ -139,11 +139,11 @@ func TestHub(t *testing.T) {
 		fm, fb := hubMessage(t, v, "forwarded_request")
 		req, fwd := cm.(*wire.Request), fm.(*wire.Request)
 		var pm struct {
-			Hub  uint64 `json:"hub_part_id"`
-			Node uint64 `json:"node_part_id"`
-			Hash string `json:"part_hash"`
+			Hub  uint64 `json:"hub_facet_id"`
+			Node uint64 `json:"node_facet_id"`
+			Hash string `json:"facet_hash"`
 		}
-		v.Into("part_map", &pm)
+		v.Into("facet_map", &pm)
 		if req.FacetID != pm.Hub {
 			t.Fatalf("caller facet %d", req.FacetID)
 		}
@@ -192,10 +192,10 @@ func TestHub(t *testing.T) {
 		fm, fb := hubMessage(t, v, "forwarded_request")
 		req, fwd := cm.(*wire.Request), fm.(*wire.Request)
 		var pm struct {
-			Hub  uint64 `json:"hub_part_id"`
-			Node uint64 `json:"node_part_id"`
+			Hub  uint64 `json:"hub_facet_id"`
+			Node uint64 `json:"node_facet_id"`
 		}
-		v.Into("part_map", &pm)
+		v.Into("facet_map", &pm)
 		md := wire.Metadata{}
 		md.SetPrincipal(v.String("session_principal")) // no context on notifications
 		out := wire.ForwardRequest(req, wire.NotificationID, pm.Node, md)
@@ -254,7 +254,7 @@ func TestHub(t *testing.T) {
 	each(t, "hub.json", func(t *testing.T, v vectors.Vector) {
 		base := stateOf(t, v.String("from")).Schema()
 		var omit []uint64
-		v.Into("omitted_part_ids", &omit)
+		v.Into("omitted_facet_ids", &omit)
 		view := base.View(omit...)
 		if err := view.Validate(); err != nil {
 			t.Fatal(err)
@@ -284,7 +284,7 @@ func TestHub(t *testing.T) {
 	each(t, "hub.json", func(t *testing.T, v vectors.Vector) {
 		var es []struct {
 			Node    string `json:"node_id"`
-			Name    string `json:"part_name"`
+			Name    string `json:"facet_name"`
 			Allowed bool   `json:"allowed"`
 		}
 		v.Into("entries", &es)
@@ -293,14 +293,14 @@ func TestHub(t *testing.T) {
 				t.Errorf("OwnedBy(%q, %q)", e.Node, e.Name)
 			}
 		}
-	}, "part_owner_table")
+	}, "facet_owner_table")
 
 	each(t, "hub.json", func(t *testing.T, v vectors.Vector) {
-		got := names.Imported(v.String("peer_id"), v.String("part_name"))
+		got := names.Imported(v.String("peer_id"), v.String("facet_name"))
 		if got != v.String("imported_name") || !names.IsFacetName(got) {
 			t.Fatalf("Imported = %q", got)
 		}
-		if p, l := names.SplitPeer(got); p != v.String("peer_id") || l != v.String("part_name") {
+		if p, l := names.SplitPeer(got); p != v.String("peer_id") || l != v.String("facet_name") {
 			t.Fatal("SplitPeer")
 		}
 	}, "imported_name")

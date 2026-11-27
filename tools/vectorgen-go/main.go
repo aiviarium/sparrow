@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 )
 
-const specRevision = "core rev183 (draft)"
+const specRevision = "core rev302 (draft); hub-admin rev16 (draft)"
 
 func main() {
 	out := flag.String("out", "../../test-vectors", "output directory")
@@ -32,21 +32,28 @@ func main() {
 		{"signing.json", signingVectors},
 		{"status.json", statusVectors},
 		{"hub.json", hubVectors},
+		{"admin.json", adminVectors},
 	}
 	must(os.MkdirAll(*out, 0o755))
 	for _, f := range files {
 		doc := append(o("spec_revision", specRevision, "generator", "tools/vectorgen-go"), f.build()...)
-		raw, err := marshalNoEscape(doc)
-		must(err)
-		var buf bytes.Buffer
-		must(json.Indent(&buf, raw, "", "  "))
-		buf.WriteByte('\n')
-		path := filepath.Join(*out, f.name)
-		must(os.WriteFile(path, buf.Bytes(), 0o644))
+		buf := writeJSON(filepath.Join(*out, f.name), doc)
 		var n struct {
 			Vectors []json.RawMessage `json:"vectors"`
 		}
-		must(json.Unmarshal(buf.Bytes(), &n))
+		must(json.Unmarshal(buf, &n))
 		fmt.Printf("%-16s %3d vectors\n", f.name, len(n.Vectors))
 	}
+	writeScenarios(*out)
+}
+
+// writeJSON writes an indented JSON document and returns its bytes.
+func writeJSON(path string, doc any) []byte {
+	raw, err := marshalNoEscape(doc)
+	must(err)
+	var buf bytes.Buffer
+	must(json.Indent(&buf, raw, "", "  "))
+	buf.WriteByte('\n')
+	must(os.WriteFile(path, buf.Bytes(), 0o644))
+	return buf.Bytes()
 }

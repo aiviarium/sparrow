@@ -13,10 +13,10 @@ the hub come later and build on these packages.
 | `value` | Schema-driven payload encoder/decoder: positional structs with trailing-null omission, sparse structs, enums, unions, `dynamic`, `symbol`, byte-stream tokens. |
 | `websign` | Module signing (9.5): key IDs, signature inputs, certificates, revocation lists, web-module entries, the acceptance verdict, semver precedence and rollback records. |
 | `names` | Name grammars: facet names, node IDs, module ids, imported names, principals (6.1, 9.4, 10.2-10.8). |
-| `conformance` | Tests only: checks the library against every vector in `../test-vectors`. |
+| `adminiface` | The `sparrow.hub.admin` v1 interface (`../spec/hub-admin.md`): `Interface()`, `Facet(id)`, `InterfaceHash()`, type, method and sigil IDs, and `StoredFacetKey`. |
+| `conformance` | Tests only: checks the library against every vector in `../test-vectors`, and the messages of every behaviour scenario in `../test-vectors/scenarios`. |
 
-The vectors still use the old name "part" for a facet; the conformance tests map their error
-vocabulary (`reserved_part_id`, ...) to this library's (`reserved_facet_id`, ...).
+The vectors and this library use the same error vocabulary (`reserved_facet_id`, `invalid_notification`, ...).
 
 ## Testing
 
@@ -41,9 +41,16 @@ reference for float widths and Core Deterministic Encoding.
 - Receivers accept integers and lengths that are not in shortest form (3.1 binds senders);
   `cbor.Options.RequirePreferred` turns on strict checking. Senders always write preferred form,
   and map keys in deterministic order.
-- The 64-level nesting limit applies to the whole message; the outermost array is level 1 and
-  tags count as a level.
+- The 64-level nesting limit applies to the whole message: arrays, maps and tags count, the outermost
+  array is level 1, and scalars add no level (so 64 nested arrays holding a uint are accepted).
+- Received `params` are checked with `wire.Params.Validate` (minimums of 5.4); unknown keys are kept
+  in `Params.Extra` and otherwise ignored.
 - Facet 1 must match `sparrow.web` by facet hash and be named `sparrow.web`.
+- A notification must have output unit and no `[4]` in its input; TypeIds 12-31 are reserved
+  (`reserved_type_id`); an interface's reachability ignores references inside tombstones.
+- `Compatible` rejects making a required field optional and changing the type of a field or variant
+  as (or after) it becomes a tombstone.
 - `[4]` inside a `dynamic` value cannot be ruled out by schema validation (any named type may be
   sent as `dynamic`); `value` rejects it when encoding or decoding.
-- A message that counts zero bytes of credit (an empty `Bytes` chunk) is never a credit violation.
+- A message that counts zero bytes of credit (an empty `Bytes` chunk, `End`) is never held back
+  (`CreditWindow.CanSendCounted`) and never a credit violation.

@@ -354,8 +354,12 @@ func TestDecodeErrors(t *testing.T) {
 			t.Errorf("%s: error type %T", tc.name, err)
 		}
 	}
-	// nesting limit applies to the whole message
-	deep := append(unhex("83 11 02"), append(bytes.Repeat([]byte{0x81}, 63), 0x00)...)
+	// nesting limit applies to the whole message, whose own array is level 1
+	ok := append(unhex("83 11 02"), append(bytes.Repeat([]byte{0x81}, 63), 0x00)...)
+	if _, err := Decode(ok); err != nil {
+		t.Errorf("message nested 64 levels rejected: %v", err)
+	}
+	deep := append(unhex("83 11 02"), append(bytes.Repeat([]byte{0x81}, 64), 0x00)...)
 	if _, err := Decode(deep); err == nil {
 		t.Error("message nested 65 levels accepted")
 	}
@@ -587,4 +591,46 @@ func FuzzDecode(f *testing.F) {
 			}
 		}
 	})
+}
+
+func TestParamsValidate(t *testing.T) {
+	var p Params
+	if err := p.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	p.Set(ParamMaxStreams, 0)
+	p.Set(ParamIdleTimeoutMs, 0)
+	p.Extra = map[string]cbor.Raw{"x-future": cbor.AppendUint(nil, 1)}
+	if err := ValidateParams(p); err != nil {
+		t.Fatalf("keys without a minimum: %v", err)
+	}
+	for _, k := range []string{ParamMaxMessageSize, ParamMaxInlineBytes, ParamSharedCredit, ParamLeaseCredit, ParamMaxConcurrentCalls} {
+		min, ok := ParamMinimum(k)
+		if !ok {
+			t.Fatalf("%s has no minimum", k)
+		}
+		q := Params{}
+		q.Set(k, min)
+		if err := q.Validate(); err != nil {
+			t.Fatalf("%s = %d: %v", k, min, err)
+		}
+		q.Set(k, min-1)
+		var pe *ParamError
+		if err := q.Validate(); !errors.As(err, &pe) || pe.Key != k || pe.Min != min || pe.Error() == "" {
+			t.Fatalf("%s = %d: %v", k, min-1, err)
+		}
+	}
+	if _, ok := ParamMinimum(ParamMaxStreams); ok {
+		t.Fatal("maxStreams has no minimum")
+	}
+}
+
+func TestCanSendCounted(t *testing.T) {
+	w := NewCreditWindow(10)
+	if err := w.Consume(15); err != nil {
+		t.Fatal(err)
+	}
+	if w.CanSend() || w.CanSendCounted(1) || !w.CanSendCounted(0) || w.Consume(0) != nil {
+		t.Fatalf("zero-byte messages are never held back (remaining %d)", w.Remaining())
+	}
 }

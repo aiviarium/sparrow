@@ -13,20 +13,32 @@ Dual-licensed under MIT (`LICENSE-MIT`) or Apache-2.0 (`LICENSE-APACHE`), at you
 ## Repository layout
 
 ```
-spec/core.md             Core protocol specification with the Web and Hub profiles (snapshot of draft revision 183)
-SPEC-ISSUES.md           Resolution log of spec questions raised while writing the test vectors
-test-vectors/            Test vectors, one JSON file per area, and their format (README.md)
-tools/vectorgen-go/      Go program that generates the vectors (canonical reference)
-tools/verify-js/         Independent Node.js verifier (cbor2 + node:crypto)
-.github/workflows/       CI: regenerate, check for drift, verify
+spec/core.md               Core protocol specification with the Web and Hub profiles (snapshot of draft revision 302)
+spec/hub-admin.md          Sparrow Hub Administration: the sparrow.hub.admin v1 interface (companion, revision 16)
+spec/reference-server.md   Design note for the Go reference server (not part of the spec)
+SPEC-ISSUES.md             Resolution log of spec questions raised while writing the test vectors
+test-vectors/              Test vectors, one JSON file per area, and their format (README.md)
+test-vectors/scenarios/    Behaviour scenarios: scripted message sequences with expected outcomes
+tools/vectorgen-go/        Go program that generates the vectors (canonical reference)
+tools/verify-js/           Independent Node.js verifier (cbor2 + node:crypto)
+go/                        Go reference implementation (see go/README.md)
+.github/workflows/         CI: regenerate, check for drift, verify
 ```
+
+The core specification defines the protocol. [`spec/hub-admin.md`](spec/hub-admin.md) is the companion
+document that section 10.9 of the core refers to: the standard interface through which a controller
+configures any hub. [`spec/reference-server.md`](spec/reference-server.md) describes how the Go
+reference server is built and configured; another hub may make every choice there differently and
+still interoperate.
 
 ## Test vectors
 
-Section 6.6 of the spec requires reference implementations to publish test vectors for parts,
-interfaces, schemas, deltas and their hashes, so Go and JavaScript can confirm they agree. The vectors cover encoding, framing (including the pipe binding),
-the handshake, call and control messages, credit accounting, parts, interfaces, schemas, their
-hashes and deltas, module signing, status codes and Hub Profile forwarding. See [`test-vectors/README.md`](test-vectors/README.md) for the file format and the
+Section 6.6 of the spec requires reference implementations to publish test vectors for facets,
+interfaces, schemas, deltas and their hashes, so Go and JavaScript can confirm they agree. The vectors
+cover encoding (including the nesting limit), framing (including the pipe binding), the handshake and
+`params`, call and control messages, credit accounting, facets, interfaces, schemas, their hashes and
+deltas, module signing, status codes, Hub Profile forwarding and the `sparrow.hub.admin` interface.
+Behaviour scenarios in `test-vectors/scenarios/` script whole message sequences for session tests. See [`test-vectors/README.md`](test-vectors/README.md) for the file format and the
 assumptions behind them.
 
 All keys in the vectors are **test-only** keys derived from trivial seeds. Never trust them in a
@@ -51,7 +63,7 @@ npm ci
 node verify.mjs ../../test-vectors
 ```
 
-The verifier re-encodes and decodes every CBOR item with cbor2 (a different CBOR implementation
+The verifier also checks every scenario message. It re-encodes and decodes every CBOR item with cbor2 (a different CBOR implementation
 from the generator's fxamacker/cbor). It recomputes schema canonical forms, deltas and hashes from
 the inputs, re-derives keys, key_ids and Ed25519 signatures with `node:crypto`, and re-runs the
 module acceptance, interface conformance, compatibility and hub forwarding rules. It exits non-zero

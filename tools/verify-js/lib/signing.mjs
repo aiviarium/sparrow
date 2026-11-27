@@ -6,11 +6,11 @@ import { concat, encTJ, hex, unhex, u8eq } from './cbor.mjs';
 
 const MODULE_ID = /^[a-z0-9-]+(\.[a-z0-9-]+)*$/;
 
-/** 9.4: module id follows the part-name grammar and equals the part name
+/** 9.4: module id follows the facet-name grammar and equals the facet name
  * (minus any '<peer-id>/') or starts with it and a dot. */
-export function moduleInPart(partName, moduleId) {
-  const i = partName.indexOf('/');
-  const name = i >= 0 ? partName.slice(i + 1) : partName;
+export function moduleInFacet(facetName, moduleId) {
+  const i = facetName.indexOf('/');
+  const name = i >= 0 ? facetName.slice(i + 1) : facetName;
   return MODULE_ID.test(moduleId) && (moduleId === name || moduleId.startsWith(`${name}.`));
 }
 

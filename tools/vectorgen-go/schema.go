@@ -69,6 +69,12 @@ const (
 	fOutputEnd    = 0x10
 )
 
+// TypeIds 12-31 are reserved for built-ins of later core versions (6.4).
+const (
+	firstReservedBuiltin = 12
+	lastReservedBuiltin  = 31
+)
+
 // Retired spaces (section 6.2)
 const (
 	spType    = 0
@@ -112,7 +118,7 @@ func retired(pairs ...[2]int) []any {
 	return out
 }
 
-// part = [id, name, version, types, services, sigils, implements, retired, annotations]
+// facet = [id, name, version, types, services, sigils, implements, retired, annotations]
 const (
 	pID = iota
 	pName
@@ -125,7 +131,7 @@ const (
 	pAnn
 )
 
-func partDoc(id int, name, version string, types, services, sigils []any, implements []byte, ret []any, an ann) []any {
+func facetDoc(id int, name, version string, types, services, sigils []any, implements []byte, ret []any, an ann) []any {
 	var impl any
 	if implements != nil {
 		impl = implements
@@ -141,9 +147,9 @@ func ifaceDoc(name, version string, types, services, sigils []any) []any {
 	return []any{name, version, list(types...), list(services...), list(sigils...)}
 }
 
-// schema = [format, name, version, parts, annotations]
-func schemaDoc(name, version string, parts []any, an ann) []any {
-	return []any{2, name, version, list(parts...), a(an)}
+// schema = [format, name, version, facets, annotations]
+func schemaDoc(name, version string, facets []any, an ann) []any {
+	return []any{2, name, version, list(facets...), a(an)}
 }
 
 func sortByInt(xs []any, key func(any) int64) {
@@ -176,7 +182,7 @@ func canonDefs(types, services, sigils []any) {
 	sortByInt(sigils, first)
 }
 
-func canonicalPart(p []any) []any {
+func canonicalFacet(p []any) []any {
 	c := deepCopy(p).([]any)
 	canonDefs(c[pTypes].([]any), c[pServices].([]any), c[pSigils].([]any))
 	r := c[pRetired].([]any)
@@ -198,11 +204,11 @@ func canonicalIface(i []any) []any {
 
 func canonicalSchema(s []any) []any {
 	c := deepCopy(s).([]any)
-	parts := c[3].([]any)
-	for i, p := range parts {
-		parts[i] = canonicalPart(p.([]any))
+	facets := c[3].([]any)
+	for i, p := range facets {
+		facets[i] = canonicalFacet(p.([]any))
 	}
-	sortByInt(parts, first)
+	sortByInt(facets, first)
 	return c
 }
 
@@ -211,24 +217,24 @@ func h33(b []byte) []byte {
 	return append([]byte{0x01}, s[:]...)
 }
 
-// partHashInput is the canonical part with name "" and id 0.
-func partHashInput(p []any) []any {
-	c := canonicalPart(p)
+// facetHashInput is the canonical facet with name "" and id 0.
+func facetHashInput(p []any) []any {
+	c := canonicalFacet(p)
 	c[pID] = 0
 	c[pName] = ""
 	return c
 }
 
-func partHash(p []any) []byte  { return h33(enc(partHashInput(p))) }
+func facetHash(p []any) []byte { return h33(enc(facetHashInput(p))) }
 func ifaceHash(i []any) []byte { return h33(enc(canonicalIface(i))) }
 
-// schemaHashInput is [format, name, version, [* [part_id, part_name, part_hash]], annotations].
+// schemaHashInput is [format, name, version, [* [facet_id, facet_name, facet_hash]], annotations].
 func schemaHashInput(s []any) []any {
 	c := canonicalSchema(s)
 	entries := []any{}
 	for _, p := range c[3].([]any) {
 		pd := p.([]any)
-		entries = append(entries, []any{pd[pID], pd[pName], partHash(pd)})
+		entries = append(entries, []any{pd[pID], pd[pName], facetHash(pd)})
 	}
 	return []any{c[0], c[1], c[2], entries, c[4]}
 }
@@ -278,10 +284,10 @@ func blankSigil(sg []any) []any {
 	return c
 }
 
-// conforms checks a part against an interface. It returns the first
+// conforms checks a facet against an interface. It returns the first
 // mismatch as [space, id] (space as in `retired`), or nil.
-func conforms(part, iface []any) []any {
-	p := canonicalPart(part)
+func conforms(facet, iface []any) []any {
+	p := canonicalFacet(facet)
 	i := canonicalIface(iface)
 	type group struct {
 		space       int
@@ -378,7 +384,7 @@ type defs struct {
 	svcs    map[int64][]any
 }
 
-// validateDefs checks one part or interface: IDs, references within it,
+// validateDefs checks one facet or interface: IDs, references within it,
 // End flags and stream placement (sections 6.1-6.6).
 func validateDefs(where string, types, services, sigils, ret []any) (*defs, *deltaError) {
 	d := &defs{map[int64][]any{}, map[int64]int64{}, map[int64][]any{}, map[int64][]any{}}
@@ -467,10 +473,13 @@ func validateDefs(where string, types, services, sigils, ret []any) (*defs, *del
 			return derr("bad_type_ref", "%s", at)
 		default:
 			id := num(r)
+			if id >= firstReservedBuiltin && id <= lastReservedBuiltin {
+				return derr("reserved_type_id", "%s references type %d; TypeIds 12-31 are reserved for later built-ins (6.4)", at, id)
+			}
 			if id <= tSymbol || d.types[id] != nil {
 				return nil
 			}
-			return derr("dangling_reference", "%s references type %d, not defined in this part", at, id)
+			return derr("dangling_reference", "%s references type %d, not defined in this facet", at, id)
 		}
 	}
 	for _, t := range types {
@@ -491,7 +500,7 @@ func validateDefs(where string, types, services, sigils, ret []any) (*defs, *del
 			for _, v := range td[3].([]any) {
 				sid := num(v)
 				if k, ok := d.sigils[sid]; !ok || k != 0 {
-					return nil, derr("dangling_reference", "%s lists sigil %d, not a kind-0 sigil of this part", at, sid)
+					return nil, derr("dangling_reference", "%s lists sigil %d, not a kind-0 sigil of this facet", at, sid)
 				}
 			}
 		case 3:
@@ -516,10 +525,18 @@ func validateDefs(where string, types, services, sigils, ret []any) (*defs, *del
 					continue
 				}
 				if k, ok := d.sigils[e]; !ok || k != 1 {
-					return nil, derr("dangling_reference", "%s lists error %d, not a kind-1 sigil of this part", at, e)
+					return nil, derr("dangling_reference", "%s lists error %d, not a kind-1 sigil of this facet", at, e)
 				}
 			}
 			flags := num(m[5])
+			if flags&fNotification != 0 {
+				if _, isRef := m[3].([]any); isRef || num(m[3]) != tUnit {
+					return nil, derr("invalid_notification", "%s: a notification (flag 0x2) must have output unit", at)
+				}
+				if containsByteStream(m[2], d.types, map[int64]bool{}) {
+					return nil, derr("invalid_notification", "%s: a notification (flag 0x2) must not have [4] in its input", at)
+				}
+			}
 			if needsEnd(m[2], d.types) && flags&fInputEnd == 0 {
 				return nil, derr("missing_end_flag", "%s: input needs flag 0x8", at)
 			}
@@ -580,13 +597,13 @@ func checkASCIINames(where string, types, services, sigils []any) *deltaError {
 	return nil
 }
 
-func validatePart(p []any) (*defs, *deltaError) {
-	where := fmt.Sprintf("part %d", num(p[pID]))
+func validateFacet(p []any) (*defs, *deltaError) {
+	where := fmt.Sprintf("facet %d", num(p[pID]))
 	if containsFloat(p) {
 		return nil, derr("float_in_canonical_data", "%s contains a float", where)
 	}
 	if n := p[pName].(string); !nameRe.MatchString(n) {
-		return nil, derr("invalid_name", "%s: part name %q does not match the part-name grammar", where, n)
+		return nil, derr("invalid_name", "%s: facet name %q does not match the facet-name grammar", where, n)
 	}
 	return validateDefs(where, p[pTypes].([]any), p[pServices].([]any), p[pSigils].([]any), p[pRetired].([]any))
 }
@@ -620,6 +637,9 @@ func validateIface(i []any) *deltaError {
 			switch num(td[0]) {
 			case 0, 2:
 				for _, f := range td[3].([]any) {
+					if num(f.([]any)[3])&ffRemoved != 0 {
+						continue // references inside tombstones do not count (6.5)
+					}
 					walk(f.([]any)[2])
 				}
 			case 1:
@@ -663,19 +683,19 @@ func validateSchema(doc []any) *deltaError {
 		id := num(p[pID])
 		name := p[pName].(string)
 		if ids[id] {
-			return derr("duplicate_part_id", "part %d", id)
+			return derr("duplicate_facet_id", "facet %d", id)
 		}
 		if names[name] {
-			return derr("duplicate_part_name", "%q", name)
+			return derr("duplicate_facet_name", "%q", name)
 		}
 		ids[id], names[name] = true, true
 		if id < 16 && id != 1 {
-			return derr("reserved_part_id", "part %d (%q): IDs 0 and 2-15 MUST NOT appear", id, name)
+			return derr("reserved_facet_id", "facet %d (%q): IDs 0 and 2-15 MUST NOT appear", id, name)
 		}
-		if id == 1 && !bytes.Equal(partHash(p), partHash(webPart())) {
-			return derr("part1_mismatch", "part 1 does not match the spec's definition of sparrow.web by part hash")
+		if id == 1 && (name != "sparrow.web" || !bytes.Equal(facetHash(p), facetHash(webFacet()))) {
+			return derr("facet1_mismatch", "facet 1 does not match the spec's definition of sparrow.web by name and facet hash")
 		}
-		if _, e := validatePart(p); e != nil {
+		if _, e := validateFacet(p); e != nil {
 			return e
 		}
 	}
@@ -683,12 +703,12 @@ func validateSchema(doc []any) *deltaError {
 }
 
 // validateSentSchema additionally checks that a schema document as sent
-// lists its parts sorted by ID (6.1).
+// lists its facets sorted by ID (6.1).
 func validateSentSchema(doc []any) *deltaError {
-	parts := doc[3].([]any)
-	for i := 1; i < len(parts); i++ {
-		if num(parts[i-1].([]any)[pID]) >= num(parts[i].([]any)[pID]) {
-			return derr("parts_not_sorted", "part %d listed after part %d", num(parts[i].([]any)[pID]), num(parts[i-1].([]any)[pID]))
+	facets := doc[3].([]any)
+	for i := 1; i < len(facets); i++ {
+		if num(facets[i-1].([]any)[pID]) >= num(facets[i].([]any)[pID]) {
+			return derr("facets_not_sorted", "facet %d listed after facet %d", num(facets[i].([]any)[pID]), num(facets[i-1].([]any)[pID]))
 		}
 	}
 	return validateSchema(doc)
@@ -735,7 +755,7 @@ func containsByteStream(ref any, types map[int64][]any, seen map[int64]bool) boo
 }
 
 // ---------------------------------------------------------------------------
-// Compatibility of a replacing part (sections 6.6 rule 2, 6.7)
+// Compatibility of a replacing facet (sections 6.6 rule 2, 6.7)
 // ---------------------------------------------------------------------------
 
 func major(v string) string { return strings.SplitN(v, ".", 2)[0] }
@@ -745,10 +765,10 @@ func refEq(a, b any) bool { return bytes.Equal(enc(a), enc(b)) }
 func compatible(old, nw []any) *deltaError {
 	pid := num(old[pID])
 	if old[pName] != nw[pName] {
-		return derr("part_renamed", "part %d: %q -> %q", pid, old[pName], nw[pName])
+		return derr("facet_renamed", "facet %d: %q -> %q", pid, old[pName], nw[pName])
 	}
 	if major(old[pVersion].(string)) != major(nw[pVersion].(string)) {
-		return derr("major_version_changed", "part %d: %s -> %s; a new major version is a new part", pid, old[pVersion], nw[pVersion])
+		return derr("major_version_changed", "facet %d: %s -> %s; a new major version is a new facet", pid, old[pVersion], nw[pVersion])
 	}
 	newRet := map[[2]int64]bool{}
 	for _, r := range nw[pRetired].([]any) {
@@ -758,20 +778,20 @@ func compatible(old, nw []any) *deltaError {
 	for _, r := range old[pRetired].([]any) {
 		rp := r.([]any)
 		if !newRet[[2]int64{num(rp[0]), num(rp[1])}] {
-			return derr("retired_not_carried_over", "part %d: retired [%d, %d] missing", pid, num(rp[0]), num(rp[1]))
+			return derr("retired_not_carried_over", "facet %d: retired [%d, %d] missing", pid, num(rp[0]), num(rp[1]))
 		}
 	}
-	od, e := validatePart(old)
+	od, e := validateFacet(old)
 	if e != nil {
 		return e
 	}
-	nd, e := validatePart(nw)
+	nd, e := validateFacet(nw)
 	if e != nil {
 		return e
 	}
 	dropped := func(space int, id int64) *deltaError {
 		if !newRet[[2]int64{int64(space), id}] {
-			return derr("dropped_id_not_retired", "part %d: [%d, %d] was removed but is not in retired", pid, space, id)
+			return derr("dropped_id_not_retired", "facet %d: [%d, %d] was removed but is not in retired", pid, space, id)
 		}
 		return nil
 	}
@@ -806,7 +826,7 @@ func compatible(old, nw []any) *deltaError {
 		}
 		const fixed = fNotification | fInputEnd | fOutputEnd
 		if !refEq(om[2], nm[2]) || !refEq(om[3], nm[3]) || num(om[5])&fixed != num(nm[5])&fixed {
-			return derr("incompatible_change", "part %d: method %d changed input, output or flags 0x2/0x8/0x10", pid, id)
+			return derr("incompatible_change", "facet %d: method %d changed input, output or flags 0x2/0x8/0x10", pid, id)
 		}
 	}
 	for _, id := range sortedKeys(od.sigils) {
@@ -818,7 +838,7 @@ func compatible(old, nw []any) *deltaError {
 			continue
 		}
 		if k != od.sigils[id] {
-			return derr("incompatible_change", "part %d: sigil %d changed kind", pid, id)
+			return derr("incompatible_change", "facet %d: sigil %d changed kind", pid, id)
 		}
 	}
 	return nil
@@ -836,7 +856,7 @@ func sortedKeys[V any](m map[int64]V) []int64 {
 func typeCompatible(pid int64, ot, nt []any) *deltaError {
 	id := num(ot[1])
 	bad := func(f string, args ...any) *deltaError {
-		return derr("incompatible_change", "part %d: type %d: %s", pid, id, fmt.Sprintf(f, args...))
+		return derr("incompatible_change", "facet %d: type %d: %s", pid, id, fmt.Sprintf(f, args...))
 	}
 	if num(ot[0]) != num(nt[0]) {
 		return bad("kind changed")
@@ -865,9 +885,15 @@ func typeCompatible(pid int64, ot, nt []any) *deltaError {
 			case oRem && !nRem:
 				return bad("tag %d reused after removal", tag)
 			case oRem && nRem:
+				if !refEq(of[2], nf[2]) {
+					return bad("tombstone %d changed type (a tombstone keeps its last definition)", tag)
+				}
 			case nRem:
 				if isStruct && num(of[3])&ffOptional == 0 {
 					return bad("required field %d removed", tag)
+				}
+				if !refEq(of[2], nf[2]) {
+					return bad("tag %d changed type as it became a tombstone", tag)
 				}
 			default:
 				if !refEq(of[2], nf[2]) {
@@ -875,6 +901,9 @@ func typeCompatible(pid int64, ot, nt []any) *deltaError {
 				}
 				if isStruct && num(of[3])&ffOptional != 0 && num(nf[3])&ffOptional == 0 {
 					return bad("field %d made required", tag)
+				}
+				if isStruct && num(of[3])&ffOptional == 0 && num(nf[3])&ffOptional != 0 {
+					return bad("required field %d made optional", tag)
 				}
 			}
 		}
@@ -909,7 +938,7 @@ func typeCompatible(pid int64, ot, nt []any) *deltaError {
 
 type schemaState struct {
 	doc     []any           // canonical schema
-	removed map[int64][]any // part ID -> last version seen, for re-adds
+	removed map[int64][]any // facet ID -> last version seen, for re-adds
 }
 
 func newState(doc []any) *schemaState {
@@ -933,18 +962,18 @@ func (st *schemaState) apply(delta []any) (*schemaState, *deltaError) {
 		op := opv.([]any)
 		switch num(op[0]) {
 		case 0:
-			p := canonicalPart(op[1].([]any))
+			p := canonicalFacet(op[1].([]any))
 			id := num(p[pID])
-			parts := doc[3].([]any)
-			if i := indexByID(parts, pID, id); i >= 0 {
-				if e := compatible(parts[i].([]any), p); e != nil {
+			facets := doc[3].([]any)
+			if i := indexByID(facets, pID, id); i >= 0 {
+				if e := compatible(facets[i].([]any), p); e != nil {
 					return nil, e
 				}
-				parts[i] = p
+				facets[i] = p
 			} else {
 				if last, ok := n.removed[id]; ok {
 					if last[pName] != p[pName] || major(last[pVersion].(string)) != major(p[pVersion].(string)) {
-						return nil, derr("removed_part_mismatch", "part %d was %q %s; it may only come back with the same name and major version (got %q %s)",
+						return nil, derr("removed_facet_mismatch", "facet %d was %q %s; it may only come back with the same name and major version (got %q %s)",
 							id, last[pName], last[pVersion], p[pName], p[pVersion])
 					}
 					if e := compatible(last, p); e != nil {
@@ -952,17 +981,17 @@ func (st *schemaState) apply(delta []any) (*schemaState, *deltaError) {
 					}
 					delete(n.removed, id)
 				}
-				doc[3] = append(parts, p)
+				doc[3] = append(facets, p)
 			}
 		case 1:
 			id := num(op[1])
-			parts := doc[3].([]any)
-			i := indexByID(parts, pID, id)
+			facets := doc[3].([]any)
+			i := indexByID(facets, pID, id)
 			if i < 0 {
-				return nil, derr("unknown_part", "part %d", id)
+				return nil, derr("unknown_facet", "facet %d", id)
 			}
-			n.removed[id] = parts[i].([]any)
-			doc[3] = append(parts[:i:i], parts[i+1:]...)
+			n.removed[id] = facets[i].([]any)
+			doc[3] = append(facets[:i:i], facets[i+1:]...)
 		case 2:
 			doc[4] = deepCopy(op[1])
 		case 3:

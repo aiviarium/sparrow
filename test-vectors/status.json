@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev183 (draft)",
+  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "status",
   "vectors": [
@@ -262,7 +262,7 @@
     },
     {
       "name": "status/application-error-not-transport",
-      "description": "An application error sigil (here conflict, 65, of part 16) travels only in an Error message; stream resets and transport closes carry core codes only, and Cancel, GoAway and AuthStatus carry core codes only.",
+      "description": "An application error sigil (here conflict, 65, of facet 16) travels only in an Error message; stream resets and transport closes carry core codes only, and Cancel, GoAway and AuthStatus carry core codes only.",
       "spec": "8",
       "type": "status_scope",
       "status": 65,

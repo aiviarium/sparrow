@@ -22,9 +22,10 @@ func Major(version string) string {
 //   - a type keeps its kind; a struct keeps its sparse flag; an alias keeps
 //     its target;
 //   - struct fields and union variants keep their tags forever: a tag never
-//     disappears, a tombstone stays a tombstone, a live member keeps its
-//     type, an optional field never becomes required, only optional fields
-//     and variants may become tombstones, and a new field must be optional;
+//     disappears, a tombstone stays a tombstone, a member keeps its type
+//     (also when it becomes a tombstone, and as a tombstone), a field never
+//     changes between optional and required, only optional fields and
+//     variants may become tombstones, and a new field must be optional;
 //   - an enum keeps every value;
 //   - a method keeps its input, its output and flags 0x2, 0x8 and 0x10
 //     (it may move to another service of the facet);
@@ -148,9 +149,15 @@ func typeCompatible(fid uint64, ot, nt *TypeDef) error {
 			case oRem && !nRem:
 				return bad("tag %d reused after removal", of.Tag)
 			case oRem && nRem:
+				if !of.Type.Equal(nf.Type) {
+					return bad("tombstone %d changed type (a tombstone keeps its last definition)", of.Tag)
+				}
 			case nRem:
 				if isStruct && !of.Optional() {
 					return bad("required field %d removed", of.Tag)
+				}
+				if !of.Type.Equal(nf.Type) {
+					return bad("tag %d changed type as it became a tombstone", of.Tag)
 				}
 			default:
 				if !of.Type.Equal(nf.Type) {
@@ -158,6 +165,9 @@ func typeCompatible(fid uint64, ot, nt *TypeDef) error {
 				}
 				if isStruct && of.Optional() && !nf.Optional() {
 					return bad("field %d made required", of.Tag)
+				}
+				if isStruct && !of.Optional() && nf.Optional() {
+					return bad("required field %d made optional", of.Tag)
 				}
 			}
 		}

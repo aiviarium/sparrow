@@ -188,7 +188,7 @@ func mkModule(name, desc, id, version string, deps []any, signer *testKey, domai
 var cssAsset = []byte(".acme-chart { display: block; }\n")
 
 var modules = []*module{
-	mkModule("module/acme-charts", "Module 'acme.charts.ui' of part acme.charts, signed by the certified publisher key 'acme'; has assets and load.", "acme.charts.ui", "1.4.2", list("acme.core.boot"), kAcme, domainModule,
+	mkModule("module/acme-charts", "Module 'acme.charts.ui' of facet acme.charts, signed by the certified publisher key 'acme'; has assets and load.", "acme.charts.ui", "1.4.2", list("acme.core.boot"), kAcme, domainModule,
 		map[string]any{"assets": []any{map[string]any{"path": "charts.css", "hash": fileHash(cssAsset)}}, "load": "lazy"}, nil, "ok"),
 	mkModule("module/acme-core", "Module signed directly by the root key.", "acme.core.boot", "3.1.0", nil, kRoot, domainModule,
 		map[string]any{"load": "eager"}, nil, "ok"),
@@ -277,17 +277,17 @@ func verifyModule(entry map[string]any, roots []*testKey, webKeys [][]any, revok
 	return "ok"
 }
 
-// moduleInPart implements the 9.4 rule: a module id in a part's web.modules
-// follows the part-name grammar and equals the part's name or starts with
+// moduleInFacet implements the 9.4 rule: a module id in a facet's web.modules
+// follows the facet-name grammar and equals the facet's name or starts with
 // it and a dot, ignoring a "<peer-id>/" prefix the hub added.
-func moduleInPart(partName, moduleID string) bool {
-	if i := strings.Index(partName, "/"); i >= 0 {
-		partName = partName[i+1:]
+func moduleInFacet(facetName, moduleID string) bool {
+	if i := strings.Index(facetName, "/"); i >= 0 {
+		facetName = facetName[i+1:]
 	}
 	if !nodeIDRe.MatchString(moduleID) {
 		return false
 	}
-	return moduleID == partName || strings.HasPrefix(moduleID, partName+".")
+	return moduleID == facetName || strings.HasPrefix(moduleID, facetName+".")
 }
 
 func signingVectors() O {
@@ -373,34 +373,34 @@ func signingVectors() O {
 	addVerify("verify/publisher-revoked-by-list-naming-root", "module/revoked-key (signed by 'beta') with revocation/lists-root in effect: the list also names the root key, whose entry is ignored, but the rest applies, so 'beta' is revoked.", "module/revoked-key", "revocation/lists-root")
 	addVerify("verify/forged-revocation-ignored", "module/acme-charts with revocation/forged in effect: that list is not signed by a root key, so it does not count and 'acme' is not revoked.", "module/acme-charts", "revocation/forged")
 
-	// Module ids against part names (section 9.4).
+	// Module ids against facet names (section 9.4).
 	scope := []struct {
-		part, id, desc string
+		facet, id, desc string
 	}{
-		{"acme.charts", "acme.charts.ui", "Starts with the part name and a dot."},
+		{"acme.charts", "acme.charts.ui", "Starts with the facet name and a dot."},
 		{"acme.charts", "acme.charts.ui.extra", "Deeper ids are fine."},
-		{"acme.charts", "acme.charts", "Equal to the part name: allowed (9.4)."},
-		{"acme.charts", "acme.chartsx.ui", "Shares a string prefix but not the part name followed by a dot."},
-		{"acme.charts", "acme.notes.ui", "Another part's name: a part cannot ship modules under another part's name."},
-		{"acme.charts", "acme.charts.Ui", "Upper case: module ids follow the ASCII part-name grammar."},
-		{"acme.charts", "acme.charts.caf\u00e9", "Non-ASCII: module ids follow the ASCII part-name grammar."},
-		{"hub-b/acme.charts", "acme.charts.ui", "Imported part: the '<peer-id>/' prefix a hub added is ignored."},
-		{"hub-b/acme.charts", "acme.charts", "Imported part, id equal to the unprefixed name."},
+		{"acme.charts", "acme.charts", "Equal to the facet name: allowed (9.4)."},
+		{"acme.charts", "acme.chartsx.ui", "Shares a string prefix but not the facet name followed by a dot."},
+		{"acme.charts", "acme.notes.ui", "Another facet's name: a facet cannot ship modules under another facet's name."},
+		{"acme.charts", "acme.charts.Ui", "Upper case: module ids follow the ASCII facet-name grammar."},
+		{"acme.charts", "acme.charts.caf\u00e9", "Non-ASCII: module ids follow the ASCII facet-name grammar."},
+		{"hub-b/acme.charts", "acme.charts.ui", "Imported facet: the '<peer-id>/' prefix a hub added is ignored."},
+		{"hub-b/acme.charts", "acme.charts", "Imported facet, id equal to the unprefixed name."},
 		{"hub-b/acme.charts", "hub-b/acme.charts.ui", "Module ids never carry the prefix ('/' is outside the grammar)."},
-		{"sparrow.web", "sparrow.web.core", "Part 1 may ship modules named after it."},
+		{"sparrow.web", "sparrow.web.core", "Facet 1 may ship modules named after it."},
 	}
 	for _, s := range scope {
 		vs = append(vs, o(
-			"name", "module-scope/"+strings.ReplaceAll(s.part, "/", "_")+"/"+s.id, "description", s.desc,
+			"name", "module-scope/"+strings.ReplaceAll(s.facet, "/", "_")+"/"+s.id, "description", s.desc,
 			"spec", "9.4, 10.8", "type", "module_scope",
-			"part_name", s.part, "module_id", s.id, "expected_valid", moduleInPart(s.part, s.id),
+			"facet_name", s.facet, "module_id", s.id, "expected_valid", moduleInFacet(s.facet, s.id),
 		))
 	}
-	partAnn := map[string]any{"web.modules": []any{}, "web.apply": "hot", "web.keys": []any{}, "web.title": "Hijacked", "doc": "A part's annotations."}
+	facetAnn := map[string]any{"web.modules": []any{}, "web.apply": "hot", "web.keys": []any{}, "web.title": "Hijacked", "doc": "A facet's annotations."}
 	vs = append(vs, o(
-		"name", "module-scope/part-web-keys", "description", "A part's own annotations may carry only web.modules; a client ignores any other web.* key in a part, and reads web.keys, web.revoked and client configuration from top-level schema annotations only (section 9.4). Non-web keys are untouched.",
-		"spec", "9.4", "type", "part_web_keys",
-		"part_annotations", tj(partAnn), "honoured_web_keys", []any{"web.modules"}, "ignored_web_keys", []any{"web.apply", "web.keys", "web.title"},
+		"name", "module-scope/facet-web-keys", "description", "A facet's own annotations may carry only web.modules; a client ignores any other web.* key in a facet, and reads web.keys, web.revoked and client configuration from top-level schema annotations only (section 9.4). Non-web keys are untouched.",
+		"spec", "9.4", "type", "facet_web_keys",
+		"facet_annotations", tj(facetAnn), "honoured_web_keys", []any{"web.modules"}, "ignored_web_keys", []any{"web.apply", "web.keys", "web.title"},
 	))
 	return o("area", "signing",
 		"test_only_keys", "Every key in this file is derived from a trivial TEST-ONLY seed. Never use these keys outside tests.",

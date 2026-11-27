@@ -91,6 +91,12 @@ func (w *CreditWindow) Remaining() int64 { return w.remaining }
 // CanSend reports whether the remaining credit is above zero.
 func (w *CreditWindow) CanSend() bool { return w.remaining > 0 }
 
+// CanSendCounted reports whether a message that counts n bytes may be sent
+// now: when the remaining credit is above zero, or always when n is zero
+// (an empty final Bytes chunk, End, Error and other messages that count
+// nothing are never held back, section 7.4).
+func (w *CreditWindow) CanSendCounted(n uint64) bool { return n == 0 || w.remaining > 0 }
+
 // Consume accounts for a message of n counted bytes. It fails with
 // ErrNoCredit, leaving the window unchanged, if no credit is left. A
 // message that counts zero bytes always passes.

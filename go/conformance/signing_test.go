@@ -167,14 +167,14 @@ func TestSigning(t *testing.T) {
 	}, "verify")
 
 	each(t, "signing.json", func(t *testing.T, v vectors.Vector) {
-		if got := names.ModuleInFacet(v.String("part_name"), v.String("module_id")); got != v.Bool("expected_valid") {
+		if got := names.ModuleInFacet(v.String("facet_name"), v.String("module_id")); got != v.Bool("expected_valid") {
 			t.Fatalf("ModuleInFacet = %v", got)
 		}
 	}, "module_scope")
 
 	each(t, "signing.json", func(t *testing.T, v vectors.Vector) {
 		var ann map[string]json.RawMessage
-		v.Into("part_annotations", &ann)
+		v.Into("facet_annotations", &ann)
 		var keys []string
 		for k := range ann {
 			keys = append(keys, k)
@@ -189,7 +189,7 @@ func TestSigning(t *testing.T) {
 		if !equalStrings(h, wantH) || !equalStrings(ig, wantI) {
 			t.Fatalf("honoured %v ignored %v", h, ig)
 		}
-	}, "part_web_keys")
+	}, "facet_web_keys")
 }
 
 func equalStrings(a, b []string) bool {

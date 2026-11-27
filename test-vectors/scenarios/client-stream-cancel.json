@@ -1,0 +1,137 @@
+{
+  "format": 1,
+  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
+  "generator": "tools/vectorgen-go",
+  "name": "client-stream-cancel",
+  "description": "The client cancels a client-stream call. Cancel finishes the caller's half; the callee answers with its final message, normally Error(cancelled); the call ends and the leased stream is idle again in a clean state, so the next call reuses it (7.1, 7.5).",
+  "spec": "7.1, 7.3, 7.5, 4.2",
+  "given": {
+    "schema": "schema/scenario-host",
+    "session": "established as in scenario handshake-normal (steps 1-3), with no call open"
+  },
+  "steps": [
+    {
+      "step": 1,
+      "from": "client",
+      "stream": "lease:1",
+      "opens_stream": true,
+      "header": "01",
+      "kind_name": "Request",
+      "message": [
+        16,
+        2,
+        16,
+        2,
+        {},
+        null
+      ],
+      "diag": "[16, 2, 16, 2, {}, null]",
+      "cbor": "8610021002a0f6"
+    },
+    {
+      "step": 2,
+      "from": "client",
+      "stream": "lease:1",
+      "kind_name": "Item",
+      "message": [
+        18,
+        2,
+        1
+      ],
+      "diag": "[18, 2, 1]",
+      "cbor": "83120201"
+    },
+    {
+      "step": 3,
+      "from": "client",
+      "stream": "lease:1",
+      "kind_name": "Item",
+      "message": [
+        18,
+        2,
+        2
+      ],
+      "diag": "[18, 2, 2]",
+      "cbor": "83120202"
+    },
+    {
+      "step": 4,
+      "from": "client",
+      "stream": "lease:1",
+      "kind_name": "Cancel",
+      "message": [
+        23,
+        2,
+        1
+      ],
+      "diag": "[23, 2, 1]",
+      "cbor": "83170201"
+    },
+    {
+      "step": 5,
+      "expect": "half_finished",
+      "call_id": 2,
+      "half": "caller"
+    },
+    {
+      "step": 6,
+      "from": "server",
+      "stream": "lease:1",
+      "kind_name": "Error",
+      "message": [
+        20,
+        2,
+        1,
+        "cancelled",
+        null
+      ],
+      "diag": "[20, 2, 1, \"cancelled\", null]",
+      "cbor": "851402016963616e63656c6c6564f6",
+      "compare": "status"
+    },
+    {
+      "step": 7,
+      "expect": "call_ended",
+      "call_id": 2
+    },
+    {
+      "step": 8,
+      "expect": "stream_idle",
+      "stream": "lease:1"
+    },
+    {
+      "step": 9,
+      "from": "client",
+      "stream": "lease:1",
+      "kind_name": "Request",
+      "message": [
+        16,
+        4,
+        16,
+        0,
+        {},
+        "after cancel"
+      ],
+      "diag": "[16, 4, 16, 0, {}, \"after cancel\"]",
+      "cbor": "8610041000a06c61667465722063616e63656c"
+    },
+    {
+      "step": 10,
+      "from": "server",
+      "stream": "lease:1",
+      "kind_name": "Response",
+      "message": [
+        17,
+        4,
+        "after cancel"
+      ],
+      "diag": "[17, 4, \"after cancel\"]",
+      "cbor": "8311046c61667465722063616e63656c"
+    },
+    {
+      "step": 11,
+      "expect": "call_ended",
+      "call_id": 4
+    }
+  ]
+}

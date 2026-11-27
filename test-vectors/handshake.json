@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev183 (draft)",
+  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "handshake",
   "vectors": [
@@ -194,7 +194,7 @@
     },
     {
       "name": "welcome/delta",
-      "description": "Welcome with schema offer [1, hash, from, delta]: the delta of vector schema/delta-1-replace-part from the schema the client named.",
+      "description": "Welcome with schema offer [1, hash, from, delta]: the delta of vector schema/delta-1-replace-facet from the schema the client named.",
       "spec": "5.4, 6.6",
       "type": "message",
       "kind": 1,
@@ -709,7 +709,7 @@
       "length": 1202,
       "framed": "44b2870101a050000102030405060708090a0b0c0d0e0fa2667365727665727361636d652d686f73742f323032362e31322e31697765622e7469746c656a41636d65204e6f7465738401582101a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa582101f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed382820089106a61636d652e6e6f74657365312e312e30878501184265436f6c6f72841849184818461847a086001840644e6f7465898503647461677382000600a08500626964184400a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f7285056b6c65676163794c6162656c0605a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58501657469746c650600a0850665636f6c6f728202184201a0850467757064617465640800a0850868617263686976656482020101a000a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018456a4174746163686d656e748385026464617461810400a08500646e616d650600a08501646d696d6582020601a000a085021843664368616e67658385016764656c65746564184400a0850267636c65617265640004a08500687570736572746564184000a0a0860018416a4e6f746546696c746572858502656c696d697482020301a0850065717565727982020601a085046474616773820282000601a0850165636f6c6f728202184201a085036573696e636582020801a001a085031844664e6f7465496409a08600184b68546167436f756e7482850165636f756e740300a08500637461670600a000a08284016541646d696e8387186f6473796e6382031843820318438118411818a087186e66696d706f7274820318400381184008a087187067726573746f72658104038008a169617574682e726f6c656561646d696ea169617574682e726f6c656561646d696e8400654e6f746573868718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e8718656370757418401844821841184000a0871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a697087186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718666577617463681841820318438014a087186969746167436f756e7473008200184b8001a0a163646f636f506572736f6e616c206e6f7465732e878418506c6e6f74652e7570646174656402a08418476b436f6c6f722e677265656e00a084184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad8418486a436f6c6f722e626c756500a08418496c436f6c6f722e79656c6c6f7700a0f68482031852820218718200184682031851a16a61636d652e6f776e65726a6e6f7465732d7465616d820369323032362e31322e32a0",
       "refs": {
-        "hash": "schema/delta-1-replace-part",
+        "hash": "schema/delta-1-replace-facet",
         "from": "schema/server-base"
       }
     },
@@ -1538,7 +1538,7 @@
     },
     {
       "name": "hello/node-pipe",
-      "description": "Hello from node 'acme.charts', a process the hub started on the pipe binding: no auth (identity comes from the link, section 10.2); the node's parts travel in client_schema.",
+      "description": "Hello from node 'acme.charts', a process the hub started on the pipe binding: no auth (identity comes from the link, section 10.2); the node's facets travel in client_schema.",
       "spec": "4.7, 10.2",
       "type": "message",
       "kind": 0,
@@ -1799,7 +1799,7 @@
     },
     {
       "name": "welcome/node-pipe",
-      "description": "The hub's Welcome to node 'acme.charts': the full schema the node may call, which leaves out the node's own part (section 10.3).",
+      "description": "The hub's Welcome to node 'acme.charts': the full schema the node may call, which leaves out the node's own facet (section 10.3).",
       "spec": "4.7, 10.3",
       "type": "message",
       "kind": 1,
@@ -2404,6 +2404,223 @@
       "cbor": "850915781c7365727665722072657374617274696e6720666f72206465706c6f79193a98f6",
       "length": 37,
       "framed": "25850915781c7365727665722072657374617274696e6720666f72206465706c6f79193a98f6"
+    },
+    {
+      "name": "params/validation",
+      "description": "Params as received in Hello or Welcome: a missing key means the default, unknown keys are ignored, and maxMessageSize, maxInlineBytes, sharedCredit and leaseCredit MUST be at least 16384 and maxConcurrentCalls at least 1. A peer that receives a smaller value closes the session with GoAway(invalid_argument) (5.4).",
+      "spec": "5.4",
+      "type": "params_table",
+      "minimums": {
+        "maxMessageSize": 16384,
+        "maxInlineBytes": 16384,
+        "maxConcurrentCalls": 1,
+        "sharedCredit": 16384,
+        "leaseCredit": 16384
+      },
+      "entries": [
+        {
+          "sent_in": "Welcome",
+          "params": {},
+          "params_cbor": "a0",
+          "note": "every key missing: the defaults, maxStreams 16 in Welcome",
+          "expected": "ok",
+          "effective": {
+            "maxMessageSize": 1048576,
+            "maxInlineBytes": 65536,
+            "maxConcurrentCalls": 100,
+            "maxStreams": 16,
+            "sharedCredit": 65536,
+            "leaseCredit": 1048576,
+            "idleTimeoutMs": 30000
+          }
+        },
+        {
+          "sent_in": "Hello",
+          "params": {},
+          "params_cbor": "a0",
+          "note": "every key missing: maxStreams defaults to 4 in Hello",
+          "expected": "ok",
+          "effective": {
+            "maxMessageSize": 1048576,
+            "maxInlineBytes": 65536,
+            "maxConcurrentCalls": 100,
+            "maxStreams": 4,
+            "sharedCredit": 65536,
+            "leaseCredit": 1048576,
+            "idleTimeoutMs": 30000
+          }
+        },
+        {
+          "sent_in": "Hello",
+          "params": {
+            "maxStreams": 2,
+            "x-future-limit": 7
+          },
+          "params_cbor": "a26a6d617853747265616d73026e782d6675747572652d6c696d697407",
+          "note": "an unknown key is ignored",
+          "expected": "ok",
+          "effective": {
+            "maxMessageSize": 1048576,
+            "maxInlineBytes": 65536,
+            "maxConcurrentCalls": 100,
+            "maxStreams": 2,
+            "sharedCredit": 65536,
+            "leaseCredit": 1048576,
+            "idleTimeoutMs": 30000
+          }
+        },
+        {
+          "sent_in": "Welcome",
+          "params": {
+            "x-future": "text"
+          },
+          "params_cbor": "a168782d6675747572656474657874",
+          "note": "an unknown key is ignored whatever its value",
+          "expected": "ok",
+          "effective": {
+            "maxMessageSize": 1048576,
+            "maxInlineBytes": 65536,
+            "maxConcurrentCalls": 100,
+            "maxStreams": 16,
+            "sharedCredit": 65536,
+            "leaseCredit": 1048576,
+            "idleTimeoutMs": 30000
+          }
+        },
+        {
+          "sent_in": "Welcome",
+          "params": {
+            "maxStreams": 0,
+            "leaseCredit": 16384,
+            "sharedCredit": 16384,
+            "idleTimeoutMs": 1000,
+            "maxInlineBytes": 16384,
+            "maxMessageSize": 16384,
+            "maxConcurrentCalls": 1
+          },
+          "params_cbor": "a76a6d617853747265616d73006b6c656173654372656469741940006c7368617265644372656469741940006d69646c6554696d656f75744d731903e86e6d6178496e6c696e6542797465731940006e6d61784d65737361676553697a65194000726d6178436f6e63757272656e7443616c6c7301",
+          "note": "every limit at its minimum; maxStreams and idleTimeoutMs have none",
+          "expected": "ok",
+          "effective": {
+            "maxMessageSize": 16384,
+            "maxInlineBytes": 16384,
+            "maxConcurrentCalls": 1,
+            "maxStreams": 0,
+            "sharedCredit": 16384,
+            "leaseCredit": 16384,
+            "idleTimeoutMs": 1000
+          }
+        },
+        {
+          "sent_in": "Welcome",
+          "params": {
+            "maxMessageSize": 16383
+          },
+          "params_cbor": "a16e6d61784d65737361676553697a65193fff",
+          "note": "maxMessageSize below 16384",
+          "expected": "goaway",
+          "status": 3,
+          "status_name": "invalid_argument",
+          "key": "maxMessageSize"
+        },
+        {
+          "sent_in": "Hello",
+          "params": {
+            "maxInlineBytes": 1024
+          },
+          "params_cbor": "a16e6d6178496e6c696e654279746573190400",
+          "note": "maxInlineBytes below 16384",
+          "expected": "goaway",
+          "status": 3,
+          "status_name": "invalid_argument",
+          "key": "maxInlineBytes"
+        },
+        {
+          "sent_in": "Welcome",
+          "params": {
+            "sharedCredit": 0
+          },
+          "params_cbor": "a16c73686172656443726564697400",
+          "note": "sharedCredit below 16384",
+          "expected": "goaway",
+          "status": 3,
+          "status_name": "invalid_argument",
+          "key": "sharedCredit"
+        },
+        {
+          "sent_in": "Hello",
+          "params": {
+            "leaseCredit": 16383
+          },
+          "params_cbor": "a16b6c65617365437265646974193fff",
+          "note": "leaseCredit below 16384",
+          "expected": "goaway",
+          "status": 3,
+          "status_name": "invalid_argument",
+          "key": "leaseCredit"
+        },
+        {
+          "sent_in": "Welcome",
+          "params": {
+            "maxConcurrentCalls": 0
+          },
+          "params_cbor": "a1726d6178436f6e63757272656e7443616c6c7300",
+          "note": "maxConcurrentCalls below 1",
+          "expected": "goaway",
+          "status": 3,
+          "status_name": "invalid_argument",
+          "key": "maxConcurrentCalls"
+        }
+      ]
+    },
+    {
+      "name": "hello/unknown-params-key",
+      "description": "Hello whose params carry an unknown key 'x-future-limit' next to maxStreams 2. The server ignores the unknown key (5.4).",
+      "spec": "5.4",
+      "type": "message",
+      "kind": 0,
+      "kind_name": "Hello",
+      "message": [
+        0,
+        [
+          1
+        ],
+        {},
+        [
+          "bearer",
+          "v4.public.TEST-ONLY-TICKET"
+        ],
+        null,
+        null,
+        {
+          "maxStreams": 2,
+          "x-future-limit": 7
+        },
+        false
+      ],
+      "diag": "[0, [1], {}, [\"bearer\", \"v4.public.TEST-ONLY-TICKET\"], null, null, {\"maxStreams\": 2, \"x-future-limit\": 7}, false]",
+      "cbor": "88008101a08266626561726572781a76342e7075626c69632e544553542d4f4e4c592d5449434b4554f6f6a26a6d617853747265616d73026e782d6675747572652d6c696d697407f4",
+      "length": 73,
+      "framed": "404988008101a08266626561726572781a76342e7075626c69632e544553542d4f4e4c592d5449434b4554f6f6a26a6d617853747265616d73026e782d6675747572652d6c696d697407f4"
+    },
+    {
+      "name": "goaway/params-too-small",
+      "description": "GoAway(invalid_argument) from a client whose server sent sharedCredit 1024 in Welcome.params: below the minimum of 16384 (5.4).",
+      "spec": "5.4",
+      "type": "message",
+      "kind": 9,
+      "kind_name": "GoAway",
+      "message": [
+        9,
+        3,
+        "sharedCredit 1024 is below 16384",
+        null,
+        null
+      ],
+      "diag": "[9, 3, \"sharedCredit 1024 is below 16384\", null, null]",
+      "cbor": "850903782073686172656443726564697420313032342069732062656c6f77203136333834f6f6",
+      "length": 39,
+      "framed": "27850903782073686172656443726564697420313032342069732062656c6f77203136333834f6f6"
     }
   ]
 }

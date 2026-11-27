@@ -171,3 +171,64 @@ func readParams(d *cbor.Decoder) (Params, error) {
 	}
 	return p, nil
 }
+
+// Minimums a received params map must respect (section 5.4).
+const (
+	MinMaxMessageSize     = 16384
+	MinMaxInlineBytes     = 16384
+	MinSharedCredit       = 16384
+	MinLeaseCredit        = 16384
+	MinMaxConcurrentCalls = 1
+)
+
+// ParamError reports a received params value below its minimum. A peer
+// that receives one closes the session with GoAway(invalid_argument).
+type ParamError struct {
+	Key   string
+	Value uint64
+	Min   uint64
+}
+
+func (e *ParamError) Error() string {
+	return fmt.Sprintf("wire: params %s = %d is below the minimum %d", e.Key, e.Value, e.Min)
+}
+
+// ParamMinimum returns the minimum for a params key, and false for keys
+// without one (maxStreams, idleTimeoutMs and unknown keys).
+func ParamMinimum(key string) (uint64, bool) {
+	switch key {
+	case ParamMaxMessageSize:
+		return MinMaxMessageSize, true
+	case ParamMaxInlineBytes:
+		return MinMaxInlineBytes, true
+	case ParamSharedCredit:
+		return MinSharedCredit, true
+	case ParamLeaseCredit:
+		return MinLeaseCredit, true
+	case ParamMaxConcurrentCalls:
+		return MinMaxConcurrentCalls, true
+	}
+	return 0, false
+}
+
+// Validate checks received params against the minimums of section 5.4:
+// maxMessageSize, maxInlineBytes, sharedCredit and leaseCredit at least
+// 16384 and maxConcurrentCalls at least 1. Unknown keys (Extra) are
+// ignored. It returns a *ParamError for the first offending key in the
+// order of section 5.4; the receiver then sends GoAway(invalid_argument)
+// (status.InvalidArgument) and closes the session.
+func (p Params) Validate() error {
+	for _, k := range paramKeys {
+		v, ok := p.values[k]
+		if !ok {
+			continue
+		}
+		if min, has := ParamMinimum(k); has && v < min {
+			return &ParamError{Key: k, Value: v, Min: min}
+		}
+	}
+	return nil
+}
+
+// ValidateParams is Params.Validate as a function.
+func ValidateParams(p Params) error { return p.Validate() }

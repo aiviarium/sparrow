@@ -176,6 +176,9 @@ func validateDefs(where string, types []TypeDef, services []Service, sigils []Si
 	checkRef = func(r TypeRef, at string, top bool) error {
 		switch r.Kind {
 		case RefNamed:
+			if r.ID >= FirstReservedBuiltinType && r.ID <= LastReservedBuiltinType {
+				return errorf(CodeReservedTypeID, "%s references type %d; TypeIds 12-31 are reserved for later built-ins", at, r.ID)
+			}
 			if r.ID <= MaxBuiltinType || ix.types[r.ID] != nil {
 				return nil
 			}
@@ -251,6 +254,14 @@ func validateDefs(where string, types []TypeDef, services []Service, sigils []Si
 					return nil, errorf(CodeDanglingReference, "%s lists error %d, not a kind-1 sigil of this facet", at, e)
 				}
 			}
+			if m.IsNotification() {
+				if m.Output.Kind != RefNamed || m.Output.ID != TypeUnit {
+					return nil, errorf(CodeInvalidNotification, "%s: a notification (flag 0x2) must have output unit", at)
+				}
+				if ReachesByteStream(m.Input, ix.types) {
+					return nil, errorf(CodeInvalidNotification, "%s: a notification (flag 0x2) must not have [4] in its input", at)
+				}
+			}
 			if NeedsEnd(m.Input, ix.types) && !m.InputEnds() {
 				return nil, errorf(CodeMissingEndFlag, "%s: input is a stream or reaches [4], so flag 0x8 is required", at)
 			}
@@ -324,7 +335,8 @@ func (f *Facet) validate() (*index, error) {
 }
 
 // Validate checks an interface: its definitions, and that it contains
-// exactly the types and sigils its services reach (section 6.5).
+// exactly the types and sigils its services reach, not counting references
+// inside tombstones (section 6.5).
 func (i *Interface) Validate() error {
 	if defsHaveFloat(i.Types, i.Services, i.Sigils) {
 		return errorf(CodeFloat, "interface contains a float")
@@ -356,6 +368,9 @@ func (i *Interface) Validate() error {
 		switch t.Kind {
 		case KindStruct, KindUnion:
 			for j := range t.Fields {
+				if t.Fields[j].Removed() {
+					continue // a tombstone reaches nothing
+				}
 				walk(t.Fields[j].Type)
 			}
 		case KindEnum:
@@ -396,7 +411,7 @@ type ValidateOptions struct {
 // Validate checks a received schema document (section 6.6, rule 3, and
 // section 6.1): the format, no floats anywhere, facets listed sorted by ID,
 // unique facet IDs and names, no reserved facet ID other than 1, facet 1
-// matching sparrow.web by facet hash, and every facet valid.
+// matching sparrow.web by name and facet hash, and every facet valid.
 func (s *Schema) Validate() error { return s.ValidateWith(ValidateOptions{}) }
 
 // ValidateWith is Validate with options.
@@ -441,7 +456,7 @@ func (s *Schema) ValidateWith(o ValidateOptions) error {
 			if ok, err := IsWebFacet(f); err != nil {
 				return err
 			} else if !ok {
-				return errorf(CodeFacet1Mismatch, "facet 1 does not match the definition of sparrow.web by facet hash")
+				return errorf(CodeFacet1Mismatch, "facet 1 does not match the definition of sparrow.web by name and facet hash")
 			}
 		}
 		if err := f.Validate(); err != nil {

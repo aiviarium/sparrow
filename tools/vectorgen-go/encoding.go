@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"strconv"
@@ -136,7 +137,7 @@ func encodingVectors() O {
 		{0, "id", noteUUID}, {1, "title", "Groceries"}, {2, "body", "milk, eggs"}, {3, "tags", []any{"home"}},
 		{4, "updated", ts(1795737600)}, {6, "color", sgGreen},
 	}
-	add(encVec("struct/note", "Note (type 64 of part 16): tag 5 is a tombstoned field (flag 0x4), encoded as null so later fields do not shift; tag 7 'pinned' is absent, so the trailing null is omitted.",
+	add(encVec("struct/note", "Note (type 64 of facet 16): tag 5 is a tombstoned field (flag 0x4), encoded as null so later fields do not shift; tag 7 'pinned' is absent, so the trailing null is omitted.",
 		"3.4", "struct", tyNote, fieldsLogical("acme.notes.Note", noteFields), structValue(noteFields)))
 	noteNoBody := []fieldVal{{0, "id", noteUUID}, {1, "title", "Empty"}, {3, "tags", []any{}}, {4, "updated", ts(1795737600)}}
 	add(encVec("struct/note-trailing-nulls", "Note with body and color absent: the null slot for body (tag 2) stays; tags 5 and 6 are trailing nulls and are omitted.",
@@ -170,7 +171,7 @@ func encodingVectors() O {
 		o("type", "acme.notes.Change", "variant_tag", 1, "variant", "deleted", "value", tj(note2UUID)), []any{1, note2UUID}))
 	add(encVec("union/change-cleared", "Union Change, variant 2 'cleared' carrying unit (null).", "3.4", "union", tyChange,
 		o("type", "acme.notes.Change", "variant_tag", 2, "variant", "cleared", "value", nil), []any{2, nil}))
-	add(encVec("dynamic/note", "dynamic: [type_id, value] for a Note (a named type of the same part).", "3.4, 6.3", "dynamic", tDynamic,
+	add(encVec("dynamic/note", "dynamic: [type_id, value] for a Note (a named type of the same facet).", "3.4, 6.3", "dynamic", tDynamic,
 		o("type_id", tyNote, "value", tj(structValue(noteFields))), []any{tyNote, structValue(noteFields)}))
 	add(encVec("dynamic/string", "dynamic carrying a built-in string (type 6).", "3.4, 6.3", "dynamic", tDynamic,
 		o("type_id", tString, "value", "hello"), []any{tString, "hello"}))
@@ -211,10 +212,12 @@ func encodingVectors() O {
 		[][2]any{{256, "c"}, {24, "b"}, {23, "a"}, {0, "z"}})
 	mapCase("map/metadata-hub", "Metadata with all core keys a hub sets when forwarding (section 10.6): deadline (32), context (36, bytes), principal (37, string), plus an application text key.",
 		"metadata", [][2]any{{37, "user:alice"}, {"x-tenant", "acme"}, {36, hubContext}, {32, 4950}})
-	mapCase("map/mixed-keys", "Mixed key types as in metadata ({* symbol => any}) or annotations: uints (major type 0) before negative ints (1) before text (3); bytewise order, so 24 (18 18) sorts before -1 (20).",
-		"metadata / any map", [][2]any{{"x-tenant", "acme"}, {-1, "neg"}, {35, 262144}, {24, "u24"}, {1, "one"}, {"", "empty"}, {-25, "neg25"}})
+	mapCase("map/mixed-keys", "A map with keys of mixed CBOR major types, as in a generic CBOR value (the CDDL `any` of an annotation value or of Error.details). These keys are not metadata symbols: -1 and -25 are not uints or text, and 1, 24 and 35 are not used as metadata keys here. Core Deterministic Encoding orders uints (major type 0) before negative ints (1) before text (3), bytewise, so 24 (18 18) sorts before -1 (20).",
+		"any map", [][2]any{{"x-tenant", "acme"}, {-1, "neg"}, {35, 262144}, {24, "u24"}, {1, "one"}, {"", "empty"}, {-25, "neg25"}})
 	mapCase("map/params", "A params map (section 5.4) in canonical order.", "params",
 		[][2]any{{"maxStreams", 32}, {"maxMessageSize", 4194304}, {"leaseCredit", 2097152}, {"idleTimeoutMs", 20000}, {"sharedCredit", 65536}, {"maxInlineBytes", 65536}, {"maxConcurrentCalls", 100}})
+	depthVectors(add)
+	nonShortestVectors(add)
 	return o("area", "encoding", "vectors", vs)
 }
 
@@ -223,4 +226,72 @@ func tUintOrInt(decl string) any {
 		return tUint
 	}
 	return tInt
+}
+
+// nestArrays wraps x in n arrays.
+func nestArrays(n int, x any) any {
+	for i := 0; i < n; i++ {
+		x = []any{x}
+	}
+	return x
+}
+
+// nestMixed builds n levels alternating map {"k": ...} and array, with a
+// tag 1 holding an integer as the innermost level.
+func nestMixed(n int) any {
+	var x any = cbor.Tag{Number: 1, Content: 0}
+	for i := 1; i < n; i++ {
+		if i%2 == 1 {
+			x = []any{x}
+		} else {
+			x = map[string]any{"k": x}
+		}
+	}
+	return x
+}
+
+func depthVectors(add func(O)) {
+	cases := []struct {
+		name, desc string
+		value      any
+	}{
+		{"depth/64-arrays", "Item whose value is 63 nested arrays around the uint 1. With the message's own array as level 1, the message is nested exactly 64 levels deep and MUST be accepted; the scalar inside adds no level (3.1).", nestArrays(63, 1)},
+		{"depth/65-arrays", "The same Item with one more array: nested 65 levels deep, so a decoder MUST reject it (3.1).", nestArrays(64, 1)},
+		{"depth/64-mixed", "Item whose value alternates arrays and maps {\"k\": ...}, with tag 1 (an integer timestamp) as the innermost level: arrays, maps and tags all count, and the message is nested exactly 64 levels deep. Accepted (3.1).", nestMixed(63)},
+		{"depth/65-mixed", "The same with one more level: the tag is level 65, so a decoder MUST reject the message (3.1).", nestMixed(64)},
+	}
+	for _, c := range cases {
+		msg := []any{18, 6, c.value}
+		b := enc(msg)
+		d := nestDepth(msg)
+		add(o("name", c.name, "description", c.desc, "spec", "3.1, 11", "type", "depth",
+			"message", tj(msg), "cbor", hx(b), "depth", d, "max_depth", 64, "expected_valid", d <= 64))
+	}
+}
+
+func nonShortestVectors(add func(O)) {
+	cases := []struct {
+		name, desc, cborHex string
+		msg                 []any
+	}{
+		{"non-shortest/credit", "Credit [24, 6, 100] with a one-byte array length (98 03) and every integer in a longer form than needed (kind 19 00 18, call ID 1a 00000006, amount 19 0064). Senders use the shortest form; a receiver MUST accept this one as the same message (3.1).",
+			"98 03 19 00 18 1a 00 00 00 06 19 00 64", []any{24, 6, 100}},
+		{"non-shortest/float-width", "Item [18, 6, 1.5] with the float sent as a 64-bit float (fb) although half precision is exact. Decoders MUST accept any float width (3.1).",
+			"83 12 06 fb 3f f8 00 00 00 00 00 00", []any{18, 6, 1.5}},
+		{"non-shortest/text-length", "Error [20, 2, 13, \"hello\", null] with the text length written as 78 05 instead of 65 (3.1).",
+			"85 14 02 0d 78 05 68 65 6c 6c 6f f6", []any{20, 2, 13, "hello", nil}},
+		{"non-shortest/unsorted-metadata", "Request whose metadata lists the text key before sigil key 32. Ordinary messages need not sort map keys (3.2): this is another valid encoding of the same message.",
+			"86 10 02 10 18 64 a2 68 78 2d 74 65 6e 61 6e 74 64 61 63 6d 65 18 20 19 13 88 d8 25 50 6f 1c 2e 4a 8b 3d 4f 5e 9a 7b 0c 1d 2e 3f 4a 5b",
+			[]any{16, 2, 16, 100, map[any]any{32: 5000, "x-tenant": "acme"}, noteUUID}},
+	}
+	for _, c := range cases {
+		b := unhex(c.cborHex)
+		var back any
+		must(cbor.Unmarshal(b, &back))
+		if !bytes.Equal(enc(back), enc(c.msg)) || bytes.Equal(b, enc(c.msg)) {
+			panic(c.name + ": non-shortest bytes do not decode to the message, or are shortest")
+		}
+		add(o("name", c.name, "description", c.desc, "spec", "3.1, 3.2", "type", "non_shortest",
+			"message", tj(c.msg), "cbor", hx(b), "shortest_cbor", hx(enc(c.msg)), "expected_valid", true))
+	}
 }

@@ -1,0 +1,119 @@
+{
+  "format": 1,
+  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
+  "generator": "tools/vectorgen-go",
+  "name": "upload-referenced-token",
+  "description": "An upload whose input struct carries byte token 1 in its [4] field (7.8). The caller sends the Request, the data for token 1 in two chunks (the last with fin), then End, because the method has flag 0x8. The callee answers with the number of bytes received.",
+  "spec": "7.3, 7.8, 7.4",
+  "given": {
+    "schema": "schema/scenario-host",
+    "session": "established as in scenario handshake-normal (steps 1-3), with no call open",
+    "initial_credit": {
+      "2/client": 1048576,
+      "2/server": 1048576
+    }
+  },
+  "steps": [
+    {
+      "step": 1,
+      "from": "client",
+      "stream": "lease:1",
+      "opens_stream": true,
+      "header": "01",
+      "kind_name": "Request",
+      "message": [
+        16,
+        2,
+        16,
+        3,
+        {},
+        [
+          "photo.jpg",
+          1
+        ]
+      ],
+      "diag": "[16, 2, 16, 3, {}, [\"photo.jpg\", 1]]",
+      "cbor": "8610021003a0826970686f746f2e6a706701"
+    },
+    {
+      "step": 2,
+      "from": "client",
+      "stream": "lease:1",
+      "kind_name": "Bytes",
+      "message": [
+        25,
+        2,
+        1,
+        {
+          "$bytes": "ffd8ff"
+        },
+        false
+      ],
+      "diag": "[25, 2, 1, h'ffd8ff', false]",
+      "cbor": "851819020143ffd8fff4",
+      "counted_bytes": 3,
+      "credit_after": 1048573
+    },
+    {
+      "step": 3,
+      "from": "client",
+      "stream": "lease:1",
+      "kind_name": "Bytes",
+      "message": [
+        25,
+        2,
+        1,
+        {
+          "$bytes": "e000"
+        },
+        true
+      ],
+      "diag": "[25, 2, 1, h'e000', true]",
+      "cbor": "851819020142e000f5",
+      "counted_bytes": 2,
+      "credit_after": 1048571
+    },
+    {
+      "step": 4,
+      "from": "client",
+      "stream": "lease:1",
+      "kind_name": "End",
+      "message": [
+        19,
+        2,
+        {}
+      ],
+      "diag": "[19, 2, {}]",
+      "cbor": "831302a0"
+    },
+    {
+      "step": 5,
+      "expect": "half_finished",
+      "call_id": 2,
+      "half": "caller"
+    },
+    {
+      "step": 6,
+      "from": "server",
+      "stream": "lease:1",
+      "kind_name": "Response",
+      "message": [
+        17,
+        2,
+        5
+      ],
+      "diag": "[17, 2, 5]",
+      "cbor": "83110205"
+    },
+    {
+      "step": 7,
+      "expect": "call_ended",
+      "call_id": 2
+    },
+    {
+      "step": 8,
+      "expect": "stream_idle",
+      "stream": "lease:1"
+    }
+  ]
+}

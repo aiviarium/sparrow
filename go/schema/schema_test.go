@@ -94,7 +94,18 @@ func TestValidateFacet(t *testing.T) {
 		{"retired sigil reused", func(f *Facet) { f.Retired = append(f.Retired, Retired{SpaceSigil, 80}) }, CodeRetiredIDReused},
 		{"bad retired space", func(f *Facet) { f.Retired = append(f.Retired, Retired{4, 1}) }, CodeBadRetiredEntry},
 		{"dangling field type", func(f *Facet) { f.Types[0].Fields[1].Type = Named(200) }, CodeDanglingReference},
-		{"reserved builtin range", func(f *Facet) { f.Types[0].Fields[1].Type = Named(12) }, CodeDanglingReference},
+		{"reserved builtin range", func(f *Facet) { f.Types[0].Fields[1].Type = Named(12) }, CodeReservedTypeID},
+		{"reserved builtin range, upper end", func(f *Facet) { f.Services[0].Methods[0].Output = List(Named(31)) }, CodeReservedTypeID},
+		{"reserved range 32-63", func(f *Facet) { f.Types[0].Fields[1].Type = Named(32) }, CodeDanglingReference},
+		{"notification with output", func(f *Facet) { f.Services[0].Methods[5].Output = Named(TypeBool) }, CodeInvalidNotification},
+		{"notification with stream output", func(f *Facet) {
+			f.Services[0].Methods[5].Output = Stream(Named(TypeUnit))
+			f.Services[0].Methods[5].Flags |= MethodOutputEnd
+		}, CodeInvalidNotification},
+		{"notification with [4] input", func(f *Facet) {
+			f.Services[0].Methods[5].Input = Named(69)
+			f.Services[0].Methods[5].Flags |= MethodInputEnd
+		}, CodeInvalidNotification},
 		{"dangling nested ref", func(f *Facet) { f.Types[6].Target = List(Optional(Named(77))) }, CodeDanglingReference},
 		{"dangling map key", func(f *Facet) { f.Services[1].Methods[0].Output = MapOf(Named(78), Named(3)) }, CodeDanglingReference},
 		{"dangling method input", func(f *Facet) { f.Services[0].Methods[0].Input = Named(300) }, CodeDanglingReference},

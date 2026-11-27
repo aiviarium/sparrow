@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -11,6 +13,7 @@ import (
 	"github.com/aiviarium/sparrow-rpc/go/cbor"
 	"github.com/aiviarium/sparrow-rpc/go/internal/vectors"
 	"github.com/aiviarium/sparrow-rpc/go/schema"
+	"github.com/aiviarium/sparrow-rpc/go/status"
 	"github.com/aiviarium/sparrow-rpc/go/wire"
 )
 
@@ -184,7 +187,7 @@ func TestFraming(t *testing.T) {
 			}
 			msgs = append(msgs, m)
 		}
-		// every message part with a ref equals that vector's cbor
+		// every message facet with a ref equals that vector's cbor
 		i := 0
 		for _, p := range parts {
 			if p.Ref == "" {
@@ -364,6 +367,53 @@ func checkRefs(t *testing.T, v vectors.Vector, m wire.Message) {
 	}
 }
 
+func TestParams(t *testing.T) {
+	each(t, "handshake.json", func(t *testing.T, v vectors.Vector) {
+		var entries []struct {
+			SentIn    string            `json:"sent_in"`
+			Params    json.RawMessage   `json:"params"`
+			CBOR      string            `json:"params_cbor"`
+			Expected  string            `json:"expected"`
+			Status    uint64            `json:"status"`
+			Key       string            `json:"key"`
+			Effective map[string]uint64 `json:"effective"`
+		}
+		v.Into("entries", &entries)
+		for _, e := range entries {
+			cb := vectors.MustHex(e.CBOR)
+			if tb, err := vectors.TJSONToCBOR(e.Params); err != nil || !bytes.Equal(tb, cb) {
+				t.Fatalf("params_cbor differs from params")
+			}
+			// Decode the params inside a Hello, as a receiver would.
+			p := paramsOf(t, cb)
+			err := p.Validate()
+			if e.Expected == "goaway" {
+				var pe *wire.ParamError
+				if !errors.As(err, &pe) || pe.Key != e.Key || e.Status != uint64(status.InvalidArgument) {
+					t.Fatalf("%s: Validate = %v, want key %s", e.CBOR, err, e.Key)
+				}
+				continue
+			}
+			if err != nil {
+				t.Fatalf("%s: %v", e.CBOR, err)
+			}
+			sender := wire.Server
+			if e.SentIn == "Hello" {
+				sender = wire.Client
+			}
+			l := p.Limits(sender)
+			got := map[string]uint64{
+				wire.ParamMaxMessageSize: l.MaxMessageSize, wire.ParamMaxInlineBytes: l.MaxInlineBytes,
+				wire.ParamMaxConcurrentCalls: l.MaxConcurrentCalls, wire.ParamMaxStreams: l.MaxStreams,
+				wire.ParamSharedCredit: l.SharedCredit, wire.ParamLeaseCredit: l.LeaseCredit, wire.ParamIdleTimeoutMs: l.IdleTimeoutMs,
+			}
+			if fmt.Sprint(got) != fmt.Sprint(e.Effective) {
+				t.Fatalf("%s: limits %v, want %v", e.CBOR, got, e.Effective)
+			}
+		}
+	}, "params_table")
+}
+
 func TestHandshake(t *testing.T) {
 	each(t, "handshake.json", func(t *testing.T, v vectors.Vector) {
 		m := checkMessageVector(t, v)
@@ -393,8 +443,16 @@ func TestHandshake(t *testing.T) {
 			if l.MaxStreams == 0 {
 				t.Fatalf("limits")
 			}
+			if err := w.Params.Validate(); err != nil {
+				t.Fatal(err)
+			}
 		}
-	})
+		if h, ok := m.(*wire.Hello); ok {
+			if err := h.Params.Validate(); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}, "message")
 }
 
 func TestCalls(t *testing.T) {
@@ -470,6 +528,7 @@ func TestCredit(t *testing.T) {
 			MaySend   bool            `json:"may_send"`
 			Remaining int64           `json:"remaining"`
 			Amount    uint64          `json:"amount"`
+			Answer    json.RawMessage `json:"answer"`
 		}
 		v.Into("steps", &steps)
 		w := wire.NewCreditWindow(uint64(v.Int("initial_credit")))
@@ -482,8 +541,11 @@ func TestCredit(t *testing.T) {
 				if n != s.Counted {
 					t.Fatalf("step %d: counted %d, want %d", i, n, s.Counted)
 				}
-				if !w.CanSend() {
+				if !w.CanSendCounted(n) {
 					t.Fatalf("step %d: may not send", i)
+				}
+				if n == 0 && !w.CanSend() && w.Consume(0) != nil {
+					t.Fatalf("step %d: a message counting zero bytes is a violation", i)
 				}
 				if err := w.Consume(n); err != nil {
 					t.Fatal(err)
@@ -499,6 +561,25 @@ func TestCredit(t *testing.T) {
 					if err := w.Consume(1); err == nil {
 						t.Fatalf("step %d: receiver accepted data with no credit", i)
 					}
+				}
+			case "violation":
+				cb := vectors.MustHex(s.CBOR)
+				m := checkMessageBytes(t, "step", s.Message, cb)
+				n := wire.CountedBytes(m, len(cb))
+				if n != s.Counted || n == 0 || w.CanSendCounted(n) || w.Remaining() != s.Remaining {
+					t.Fatalf("step %d: not a violation (counted %d, remaining %d)", i, n, w.Remaining())
+				}
+				if err := w.Consume(n); !errors.Is(err, wire.ErrNoCredit) {
+					t.Fatalf("step %d: Consume = %v, want ErrNoCredit", i, err)
+				}
+				var ans struct {
+					Message json.RawMessage `json:"message"`
+					CBOR    string          `json:"cbor"`
+				}
+				_ = json.Unmarshal(s.Answer, &ans)
+				c, ok := checkMessageBytes(t, "answer", ans.Message, vectors.MustHex(ans.CBOR)).(*wire.Cancel)
+				if !ok || c.CallID != m.(wire.CallMessage).Call() || c.Status != uint64(status.ProtocolError) {
+					t.Fatalf("step %d: answer %+v, want Cancel(protocol_error)", i, c)
 				}
 			case "receive_credit":
 				m, err := tjsonMessage(s.Message)

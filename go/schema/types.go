@@ -30,6 +30,11 @@ const (
 
 	// MaxBuiltinType is the highest built-in TypeId this revision defines.
 	MaxBuiltinType = TypeSymbol
+	// FirstReservedBuiltinType and LastReservedBuiltinType bound the TypeIds
+	// reserved for built-ins of later core versions (section 6.4): a schema
+	// that uses them is invalid under this version.
+	FirstReservedBuiltinType uint64 = 12
+	LastReservedBuiltinType  uint64 = 31
 	// FirstFreeTypeID is the first TypeId a facet may define.
 	FirstFreeTypeID uint64 = 64
 	// FirstFreeSigil is the first sigil a facet may define.

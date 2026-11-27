@@ -123,7 +123,7 @@ func framingVectors() O {
 		panic(fmt.Sprintf("section 7.7 example mismatch: %x / %x", gotReq, gotRsp))
 	}
 	vs = append(vs, msgVec("example-7.7/request",
-		"Section 7.7 example: unary Request, call ID 2, part 16, method 1042 (Panels.open), empty metadata, input struct [\"settings\", true]: 19 bytes. Confirms the spec bytes exactly.",
+		"Section 7.7 example: unary Request, call ID 2, facet 16, method 1042 (Panels.open), empty metadata, input struct [\"settings\", true]: 19 bytes. Confirms the spec bytes exactly.",
 		"7.7", req, "spec_framed", hx(wantReq), "matches_spec", true))
 	vs = append(vs, msgVec("example-7.7/response",
 		"Section 7.7 example: Response [17, 2, null] on the same leased stream. Confirms the spec bytes exactly.",
@@ -246,9 +246,9 @@ func handshakeVectors() O {
 		"5.4", []any{1, 1, map[string]any{"datagrams": true}, testSessionID, props, []any{0, r.baseHash}, wparams},
 		"refs", o("hash", "schema/server-base")))
 	vs = append(vs, msgVec("welcome/delta",
-		"Welcome with schema offer [1, hash, from, delta]: the delta of vector schema/delta-1-replace-part from the schema the client named.",
+		"Welcome with schema offer [1, hash, from, delta]: the delta of vector schema/delta-1-replace-facet from the schema the client named.",
 		"5.4, 6.6", []any{1, 1, map[string]any{}, testSessionID, props, []any{1, r.hA, r.baseHash, deltaA()}, map[string]any{}},
-		"refs", o("hash", "schema/delta-1-replace-part", "from", "schema/server-base")))
+		"refs", o("hash", "schema/delta-1-replace-facet", "from", "schema/server-base")))
 	vs = append(vs, msgVec("welcome/full",
 		"Welcome with the full canonical schema inline: [2, hash, schema].",
 		"5.4, 6.2", []any{1, 1, map[string]any{}, testSessionID, props, []any{2, r.baseHash, r.base.doc}, wparams},
@@ -261,11 +261,11 @@ func handshakeVectors() O {
 		"Ready naming the server schema hash the client loaded.",
 		"5.4", []any{2, r.baseHash}, "refs", o("schema_hash", "schema/server-base")))
 	vs = append(vs, msgVec("hello/node-pipe",
-		"Hello from node 'acme.charts', a process the hub started on the pipe binding: no auth (identity comes from the link, section 10.2); the node's parts travel in client_schema.",
+		"Hello from node 'acme.charts', a process the hub started on the pipe binding: no auth (identity comes from the link, section 10.2); the node's facets travel in client_schema.",
 		"4.7, 10.2", nodeHello(), "refs", o("client_schema", "schema/node-acme-charts")))
 	hv := hubViewForNode()
 	vs = append(vs, msgVec("welcome/node-pipe",
-		"The hub's Welcome to node 'acme.charts': the full schema the node may call, which leaves out the node's own part (section 10.3).",
+		"The hub's Welcome to node 'acme.charts': the full schema the node may call, which leaves out the node's own facet (section 10.3).",
 		"4.7, 10.3", []any{1, 1, map[string]any{}, testSessionID, map[string]any{}, []any{2, schemaHash(hv), hv}, map[string]any{}}))
 	vs = append(vs, msgVec("goaway/unsupported-version",
 		"GoAway(unsupported_version) listing the server's versions.",
@@ -279,6 +279,7 @@ func handshakeVectors() O {
 	vs = append(vs, msgVec("goaway/draining",
 		"GoAway(going_away) before a deploy, asking the client to reconnect after 15 s.",
 		"5.5, 5.6", []any{9, 21, "server restarting for deploy", 15000, nil}))
+	vs = append(vs, paramsVectors()...)
 	return o("area", "handshake", "vectors", vs)
 }
 
@@ -291,17 +292,17 @@ func callVectors() O {
 		vs = append(vs, msgVec(name, desc, spec, msg, extra...))
 	}
 	md := map[any]any{32: 5000, 33: traceBin, 35: 262144, "x-tenant": "acme"}
-	add("request/get-with-metadata", "Unary Request (call 2) to part 16 (acme.notes), method get (100), with core metadata keys deadline (32) = 5000 ms, trace (33) = 26-byte packed traceparent, credit (35) = 256 KiB, plus an application text key. Input is a NoteId (uuid, tag 37).",
-		"7.2", []any{16, 2, partNotes, 100, md, noteUUID})
+	add("request/get-with-metadata", "Unary Request (call 2) to facet 16 (acme.notes), method get (100), with core metadata keys deadline (32) = 5000 ms, trace (33) = 26-byte packed traceparent, credit (35) = 256 KiB, plus an application text key. Input is a NoteId (uuid, tag 37).",
+		"7.2", []any{16, 2, facetNotes, 100, md, noteUUID})
 	add("response/get", "Response (call 2) carrying a Note struct: tag 5 is a tombstoned field (flag 0x4), sent as null; tag 7 'pinned' is absent so the trailing null is omitted.",
 		"7.2, 3.4", []any{17, 2, noteValue()})
-	add("request/put", "Unary Request (call 4) to put (101) with a Note.", "7.2", []any{16, 4, partNotes, 101, map[string]any{}, noteValue()})
+	add("request/put", "Unary Request (call 4) to put (101) with a Note.", "7.2", []any{16, 4, facetNotes, 101, map[string]any{}, noteValue()})
 	add("response/put", "Response (call 4) with the NoteId.", "7.2", []any{17, 4, noteUUID})
-	add("error/application", "Error (call 4) with the method's own error sigil conflict (65) of part 16 and details as a dynamic value [type_id, value] (here type 6 string).",
+	add("error/application", "Error (call 4) with the method's own error sigil conflict (65) of facet 16 and details as a dynamic value [type_id, value] (here type 6 string).",
 		"7.2, 8", []any{20, 4, sgConflct, "note was modified concurrently", []any{6, "expected revision 7"}})
 	add("error/core-no-details", "Error with a core status (deadline_exceeded, 4) and no details.", "7.2, 8", []any{20, 14, 4, "deadline exceeded", nil})
 	add("request/watch", "Server-stream subscription Request (call 6) to watch (102, flag shared) with a sparse NoteFilter {1: green, 2: 50}.",
-		"7.2, 7.3, 3.4", []any{16, 6, partNotes, 102, map[string]any{}, map[any]any{1: sgGreen, 2: 50}})
+		"7.2, 7.3, 3.4", []any{16, 6, facetNotes, 102, map[string]any{}, map[any]any{1: sgGreen, 2: 50}})
 	add("headers", "Headers (call 6) before the first Item.", "7.2", []any{22, 6, map[string]any{"x-cursor": "c-1842"}})
 	add("item/upserted", "Item (call 6): union Change variant 0 'upserted' with a Note.", "7.2, 3.4", []any{18, 6, []any{0, noteValue()}})
 	add("item/deleted", "Item (call 6): union Change variant 1 'deleted' with a NoteId.", "7.2, 3.4", []any{18, 6, []any{1, note2UUID}})
@@ -310,31 +311,31 @@ func callVectors() O {
 	add("cancel", "Cancel (call 6) with status cancelled (1).", "7.2, 7.5", []any{23, 6, 1})
 	add("error/cancelled", "The callee's final answer to the Cancel: Error(cancelled).", "7.5", []any{20, 6, 1, "cancelled", nil})
 	add("request/export", "Download Request (call 8) to export (104, output [4]) with a sparse NoteFilter {0: \"groceries\"}.",
-		"7.3, 7.8", []any{16, 8, partNotes, 104, map[string]any{}, map[any]any{0: "groceries"}})
+		"7.3, 7.8", []any{16, 8, facetNotes, 104, map[string]any{}, map[any]any{0: "groceries"}})
 	add("progress/with-total", "Progress (call 8): 512 KiB of 2 MiB done, with a note.", "7.2", []any{21, 8, 524288, 2097152, "exporting"})
 	add("progress/minimal", "Progress (call 8) with total and note null.", "7.2", []any{21, 8, 10, nil, nil})
 	add("bytes/inline-chunk", "Bytes (call 8), token 0 (inline, output type is exactly [4]), not final.", "7.2, 7.8", []any{25, 8, 0, []byte("PK\x03\x04"), false})
 	add("bytes/inline-final-empty", "Bytes (call 8), token 0, empty final chunk (allowed).", "7.8", []any{25, 8, 0, []byte{}, true})
 	add("end/empty-trailers", "End (call 8) with empty trailers, finishing the callee's half (flag 0x10).", "7.2, 7.1", []any{19, 8, map[string]any{}})
 	add("request/attach-by-reference", "Request (call 10) to attach (103, flag 0x8). The Attachment struct's [4] field (tag 2) carries byte token 1.",
-		"7.8, 3.4", []any{16, 10, partNotes, 103, map[string]any{}, []any{"photo.jpg", "image/jpeg", 1}})
+		"7.8, 3.4", []any{16, 10, facetNotes, 103, map[string]any{}, []any{"photo.jpg", "image/jpeg", 1}})
 	add("bytes/token-1-final", "Bytes (call 10) for token 1, final chunk.", "7.8", []any{25, 10, 1, unhex("ffd8ffe000104a464946"), true})
 	add("end/with-trailers", "End (call 10) finishing the caller's half, with an application trailer.", "7.2", []any{19, 10, map[string]any{"x-bytes": 10}})
 	add("response/attach", "Response (call 10): unit output (null).", "7.2", []any{17, 10, nil})
-	add("request/import-client-stream", "Client-stream Request (call 12) to import (110): input null, Items follow.", "7.3", []any{16, 12, partNotes, 110, map[string]any{}, nil})
+	add("request/import-client-stream", "Client-stream Request (call 12) to import (110): input null, Items follow.", "7.3", []any{16, 12, facetNotes, 110, map[string]any{}, nil})
 	add("item/import", "Item (call 12) carrying a Note.", "7.2", []any{18, 12, noteValue()})
 	add("response/import", "Response (call 12): uint count.", "7.2", []any{17, 12, 1})
-	add("request/server-to-client", "Request from server to client (odd call ID 1) to part 16 of the client schema, method navigate (65): IDs belong to the callee's (client's) schema.",
+	add("request/server-to-client", "Request from server to client (odd call ID 1) to facet 16 of the client schema, method navigate (65): IDs belong to the callee's (client's) schema.",
 		"6.1, 7.1", []any{16, 1, 16, 65, map[string]any{}, "/notes/6f1c2e4a"})
 	add("request/notification", "Notification: Request with call ID 0 to touch (113, flag 0x2), input unit. Sent on the shared lane, no reply.",
-		"7.1, 7.3", []any{16, 0, partNotes, 113, map[string]any{}, nil})
+		"7.1, 7.3", []any{16, 0, facetNotes, 113, map[string]any{}, nil})
 
-	add("request/module-rejected", "Client to server: notification moduleRejected (part 1 sparrow.web, service 0, method 0) with [id, version, reason] for a module whose hostApi range excludes the client's host API.",
-		"9.4", []any{16, 0, partWeb, 0, map[string]any{}, []any{"acme.charts.ui", "1.4.2", "hostApi ^4.0 does not include 3.2.0"}})
-	add("request/render", "Request (call 14) to part 17 (acme.charts), method draw (0) of the Renderer interface, with a Chart struct.",
-		"7.2, 6.5", []any{16, 14, partCharts, 0, map[string]any{}, chartValue()})
-	add("control/schema-update", "SchemaUpdate epoch 1 with the new hash and the delta of vector schema/delta-1-replace-part.",
-		"5.5, 6.6", []any{3, 1, r.hA, deltaA()}, "refs", o("hash", "schema/delta-1-replace-part"))
+	add("request/module-rejected", "Client to server: notification moduleRejected (facet 1 sparrow.web, service 0, method 0) with [id, version, reason] for a module whose hostApi range excludes the client's host API.",
+		"9.4", []any{16, 0, facetWeb, 0, map[string]any{}, []any{"acme.charts.ui", "1.4.2", "hostApi ^4.0 does not include 3.2.0"}})
+	add("request/render", "Request (call 14) to facet 17 (acme.charts), method draw (0) of the Renderer interface, with a Chart struct.",
+		"7.2, 6.5", []any{16, 14, facetCharts, 0, map[string]any{}, chartValue()})
+	add("control/schema-update", "SchemaUpdate epoch 1 with the new hash and the delta of vector schema/delta-1-replace-facet.",
+		"5.5, 6.6", []any{3, 1, r.hA, deltaA()}, "refs", o("hash", "schema/delta-1-replace-facet"))
 	add("control/schema-ack", "SchemaAck acknowledging epoch 1.", "5.5, 6.6", []any{4, 1})
 	add("control/auth-refresh", "AuthRefresh with a fresh (fake) bearer ticket.", "5.5", []any{5, []any{"bearer", "v4.public.TEST-ONLY-REFRESHED"}})
 	add("control/auth-status-ok", "AuthStatus ok with the session expiry as a timestamp (tag 1, integer seconds).", "5.5", []any{6, 0, ts(1795766400)})
@@ -347,9 +348,9 @@ func callVectors() O {
 		name, desc string
 		req, err   []any
 	}{
-		{"unimplemented/unknown-method", "A Request naming method 99, which part 16 of the callee's schema does not have, is answered with Error(unimplemented) (7.1).",
-			[]any{16, 16, partNotes, 99, map[string]any{}, nil}, []any{20, 16, 12, "unknown method 99 in part 16", nil}},
-		{"unimplemented/unknown-part", "A Request naming part 40, which the callee's schema does not have, is answered with Error(unimplemented) (7.1).",
+		{"unimplemented/unknown-method", "A Request naming method 99, which facet 16 of the callee's schema does not have, is answered with Error(unimplemented) (7.1).",
+			[]any{16, 16, facetNotes, 99, map[string]any{}, nil}, []any{20, 16, 12, "unknown method 99 in part 16", nil}},
+		{"unimplemented/unknown-facet", "A Request naming facet 40, which the callee's schema does not have, is answered with Error(unimplemented) (7.1).",
 			[]any{16, 18, 40, 0, map[string]any{}, nil}, []any{20, 18, 12, "unknown part 40", nil}},
 	} {
 		vs = append(vs, o("name", u.name, "description", u.desc, "spec", "7.1, 8", "type", "unimplemented",
@@ -404,42 +405,127 @@ func creditVectors() O {
 			"counted_bytes", creditCount(c.msg),
 		))
 	}
-	// A sequence on one call direction with a tiny initial credit set by the
+	// Sequences on one call direction with a tiny initial credit set by the
 	// caller's `credit` metadata key.
 	type step struct {
 		action string
 		msg    []any
 		grant  int
 	}
-	item := []any{18, 6, strings.Repeat("y", 54)}
-	steps := []step{
-		{"send", item, 0}, {"send", item, 0}, {"blocked", nil, 0}, {"grant", nil, 50}, {"send", item, 0}, {"blocked", nil, 0},
-	}
-	remaining := 100
-	var out []any
-	for _, s := range steps {
-		switch s.action {
-		case "send":
-			if remaining <= 0 {
-				panic("credit sequence: send with no credit")
+	sequence := func(name, desc string, callID int, steps []step) {
+		remaining := 100
+		var out []any
+		for _, s := range steps {
+			switch s.action {
+			case "send":
+				n := creditCount(s.msg)
+				if remaining <= 0 && n > 0 {
+					panic("credit sequence: send with no credit")
+				}
+				remaining -= n
+				out = append(out, o("action", "send", "message", tj(s.msg), "cbor", hx(enc(s.msg)), "counted_bytes", n, "remaining_after", remaining))
+			case "grant":
+				remaining += s.grant
+				out = append(out, o("action", "receive_credit", "message", tj([]any{24, callID, s.grant}), "amount", s.grant, "remaining_after", remaining))
+			case "blocked":
+				out = append(out, o("action", "check", "may_send", remaining > 0, "remaining", remaining))
+			case "violation":
+				n := creditCount(s.msg)
+				if remaining > 0 || n == 0 {
+					panic("credit sequence: not a violation")
+				}
+				// The callee's half is the sender here, so the caller answers.
+				ans := []any{23, callID, 17}
+				out = append(out, o("action", "violation", "message", tj(s.msg), "cbor", hx(enc(s.msg)), "counted_bytes", n, "remaining", remaining,
+					"answer", o("message", tj(ans), "cbor", hx(enc(ans)), "note", "the caller sends Cancel(protocol_error); a callee detecting a violation answers Error(protocol_error) instead")))
 			}
-			n := creditCount(s.msg)
-			remaining -= n
-			out = append(out, o("action", "send", "message", tj(s.msg), "cbor", hx(enc(s.msg)), "counted_bytes", n, "remaining_after", remaining))
-		case "grant":
-			remaining += s.grant
-			out = append(out, o("action", "receive_credit", "message", tj([]any{24, 6, s.grant}), "amount", s.grant, "remaining_after", remaining))
-		case "blocked":
-			out = append(out, o("action", "check", "may_send", remaining > 0, "remaining", remaining))
 		}
+		vs = append(vs, o("name", name, "description", desc, "spec", "7.4", "type", "credit_sequence", "initial_credit", 100, "steps", out))
 	}
-	vs = append(vs, o(
-		"name", "credit/sequence-small-window",
-		"description", "Callee's half of call 6 with initial credit 100 (set by the caller with metadata key credit (35) = 100). A sender may send while its remaining credit is above zero, even if the message is larger, and the credit then goes negative. Grants add up.",
-		"spec", "7.4",
-		"type", "credit_sequence",
-		"initial_credit", 100,
-		"steps", out,
-	))
+	item := []any{18, 6, strings.Repeat("y", 54)}
+	sequence("credit/sequence-small-window", "Callee's half of call 6 with initial credit 100 (set by the caller with metadata key credit (35) = 100). A sender may send while its remaining credit is above zero, even if the message is larger, and the credit then goes negative. Grants add up.",
+		6, []step{{"send", item, 0}, {"send", item, 0}, {"blocked", nil, 0}, {"grant", nil, 50}, {"send", item, 0}, {"blocked", nil, 0}})
+	sequence("credit/sequence-zero-byte-messages", "Callee's half of download call 8 with initial credit 100. A 150-byte chunk takes the credit to -50, so no more data may be sent, but messages that count zero bytes are never held back and are never a violation: the empty final Bytes chunk and the End that follows go out at once (7.4).",
+		8, []step{{"send", []any{25, 8, 0, bytes.Repeat([]byte{0x61}, 150), false}, 0}, {"blocked", nil, 0},
+			{"send", []any{25, 8, 0, []byte{}, true}, 0}, {"send", []any{19, 8, map[string]any{}}, 0}})
+	sequence("credit/sequence-violation", "Callee's half of call 6 with initial credit 100. After two Items the credit is -16; a third Item sent anyway is a credit violation. The caller, as receiver, ends the call with Cancel(protocol_error) (7.4).",
+		6, []step{{"send", item, 0}, {"send", item, 0}, {"blocked", nil, 0}, {"violation", item, 0}})
 	return o("area", "credit", "vectors", vs)
+}
+
+// Params (section 5.4): defaults, unknown keys, minimums.
+var paramDefaults = []struct {
+	key string
+	def int
+	min int
+}{
+	{"maxMessageSize", 1048576, 16384},
+	{"maxInlineBytes", 65536, 16384},
+	{"maxConcurrentCalls", 100, 1},
+	{"maxStreams", -1, 0}, // 16 in Welcome, 4 in Hello
+	{"sharedCredit", 65536, 16384},
+	{"leaseCredit", 1048576, 16384},
+	{"idleTimeoutMs", 30000, 0},
+}
+
+// checkParams returns the effective limits, or the first key below its
+// minimum. Unknown keys are ignored.
+func checkParams(p map[string]any, sentIn string) (O, string) {
+	eff := O{}
+	for _, d := range paramDefaults {
+		v := d.def
+		if d.key == "maxStreams" {
+			v = 16
+			if sentIn == "Hello" {
+				v = 4
+			}
+		}
+		if x, ok := p[d.key]; ok {
+			v = int(num(x))
+			if v < d.min {
+				return nil, d.key
+			}
+		}
+		eff = append(eff, kv{d.key, v})
+	}
+	return eff, ""
+}
+
+func paramsVectors() []any {
+	cases := []struct {
+		sentIn string
+		params map[string]any
+		note   string
+	}{
+		{"Welcome", map[string]any{}, "every key missing: the defaults, maxStreams 16 in Welcome"},
+		{"Hello", map[string]any{}, "every key missing: maxStreams defaults to 4 in Hello"},
+		{"Hello", map[string]any{"maxStreams": 2, "x-future-limit": 7}, "an unknown key is ignored"},
+		{"Welcome", map[string]any{"x-future": "text"}, "an unknown key is ignored whatever its value"},
+		{"Welcome", map[string]any{"maxMessageSize": 16384, "maxInlineBytes": 16384, "maxConcurrentCalls": 1, "maxStreams": 0, "sharedCredit": 16384, "leaseCredit": 16384, "idleTimeoutMs": 1000},
+			"every limit at its minimum; maxStreams and idleTimeoutMs have none"},
+		{"Welcome", map[string]any{"maxMessageSize": 16383}, "maxMessageSize below 16384"},
+		{"Hello", map[string]any{"maxInlineBytes": 1024}, "maxInlineBytes below 16384"},
+		{"Welcome", map[string]any{"sharedCredit": 0}, "sharedCredit below 16384"},
+		{"Hello", map[string]any{"leaseCredit": 16383}, "leaseCredit below 16384"},
+		{"Welcome", map[string]any{"maxConcurrentCalls": 0}, "maxConcurrentCalls below 1"},
+	}
+	var entries []any
+	for _, c := range cases {
+		eff, bad := checkParams(c.params, c.sentIn)
+		e := o("sent_in", c.sentIn, "params", tj(c.params), "params_cbor", hx(enc(c.params)), "note", c.note)
+		if bad == "" {
+			e = append(e, o("expected", "ok", "effective", eff)...)
+		} else {
+			e = append(e, o("expected", "goaway", "status", 3, "status_name", "invalid_argument", "key", bad)...)
+		}
+		entries = append(entries, e)
+	}
+	return []any{
+		o("name", "params/validation", "description", "Params as received in Hello or Welcome: a missing key means the default, unknown keys are ignored, and maxMessageSize, maxInlineBytes, sharedCredit and leaseCredit MUST be at least 16384 and maxConcurrentCalls at least 1. A peer that receives a smaller value closes the session with GoAway(invalid_argument) (5.4).",
+			"spec", "5.4", "type", "params_table", "minimums", o("maxMessageSize", 16384, "maxInlineBytes", 16384, "maxConcurrentCalls", 1, "sharedCredit", 16384, "leaseCredit", 16384), "entries", entries),
+		msgVec("hello/unknown-params-key", "Hello whose params carry an unknown key 'x-future-limit' next to maxStreams 2. The server ignores the unknown key (5.4).",
+			"5.4", []any{0, []any{1}, map[string]any{}, []any{"bearer", testTicket}, nil, nil, map[string]any{"maxStreams": 2, "x-future-limit": 7}, false}),
+		msgVec("goaway/params-too-small", "GoAway(invalid_argument) from a client whose server sent sharedCredit 1024 in Welcome.params: below the minimum of 16384 (5.4).",
+			"5.4", []any{9, 3, "sharedCredit 1024 is below 16384", nil, nil}),
+	}
 }

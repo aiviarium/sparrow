@@ -155,8 +155,10 @@ func TestValidate(t *testing.T) {
 	}
 }
 
+// nested returns n nested arrays around the uint 0: nesting depth n, since
+// scalars add no level.
 func nested(n int) []byte {
-	b := bytes.Repeat([]byte{0x81}, n-1)
+	b := bytes.Repeat([]byte{0x81}, n)
 	return append(b, 0x00)
 }
 
@@ -170,10 +172,22 @@ func TestValidateDepth(t *testing.T) {
 	if err := Validate(nested(10), Options{MaxDepth: 9}); err == nil {
 		t.Error("MaxDepth 9 not enforced")
 	}
+	if err := Validate(nested(9), Options{MaxDepth: 9}); err != nil {
+		t.Errorf("MaxDepth 9, depth 9: %v", err)
+	}
 	// tags count as a level
 	deep := append(bytes.Repeat([]byte{0x81}, 63), 0xc1, 0x00)
+	if err := Validate(deep, Options{}); err != nil {
+		t.Errorf("63 arrays and a tag (depth 64): %v", err)
+	}
+	deep = append(bytes.Repeat([]byte{0x81}, 64), 0xc1, 0x00)
 	if err := Validate(deep, Options{}); err == nil {
 		t.Error("tag level not counted")
+	}
+	// maps count as a level
+	deep = append(bytes.Repeat([]byte{0x81}, 64), 0xa0)
+	if err := Validate(deep, Options{}); err == nil {
+		t.Error("map level not counted")
 	}
 	// Skip and the tree decoder survive very deep input without Validate.
 	d := NewDecoder(nested(100000))

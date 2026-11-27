@@ -1,19 +1,19 @@
 {
-  "spec_revision": "core rev183 (draft)",
+  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "hub",
   "vectors": [
     {
       "name": "forward/unary",
-      "description": "A client of session principal user:alice calls draw (method 0) of part 17, which belongs to node acme.charts. The hub authorizes it, then opens a call on the node's pipe link with a new call ID (1: the hub is the Sparrow server there, so odd), the node's own part ID (16), the same method ID and input bytes, deadline lowered by the 50 ms already spent, credit set to 64 KiB (no higher than the default for the caller's leased stream, 1 MiB, since the caller sent no credit), and context/principal set by the hub, replacing the values the caller sent. Every element except the call ID, the part ID and the Request's metadata is copied byte for byte. The node's Response is relayed with only the call ID changed.",
+      "description": "A client of session principal user:alice calls draw (method 0) of facet 17, which belongs to node acme.charts. The hub authorizes it, then opens a call on the node's pipe link with a new call ID (1: the hub is the Sparrow server there, so odd), the node's own facet ID (16), the same method ID and input bytes, deadline lowered by the 50 ms already spent, credit set to 64 KiB (no higher than the default for the caller's leased stream, 1 MiB, since the caller sent no credit), and context/principal set by the hub, replacing the values the caller sent. Every element except the call ID, the facet ID and the Request's metadata is copied byte for byte. The node's Response is relayed with only the call ID changed.",
       "spec": "10.4, 10.5, 10.6",
       "type": "forward",
       "session_principal": "user:alice",
       "node_id": "acme.charts",
-      "part_map": {
-        "hub_part_id": 17,
-        "node_part_id": 16,
-        "part_hash": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
+      "facet_map": {
+        "hub_facet_id": 17,
+        "node_facet_id": 16,
+        "facet_hash": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
       },
       "elapsed_ms": 50,
       "caller_stream": "leased",
@@ -145,9 +145,9 @@
       "spec": "10.5, 10.6",
       "type": "forward_notification",
       "session_principal": "user:alice",
-      "part_map": {
-        "hub_part_id": 17,
-        "node_part_id": 16
+      "facet_map": {
+        "hub_facet_id": 17,
+        "node_facet_id": 16
       },
       "client_request": {
         "message": [
@@ -197,7 +197,7 @@
     },
     {
       "name": "forward/error-relay",
-      "description": "The node answers with its part's error sigil 66 instead; the hub relays the Error changing only the call ID. Sigil 66 means the same in the hub's part 17 because the part is the same part.",
+      "description": "The node answers with its facet's error sigil 66 instead; the hub relays the Error changing only the call ID. Sigil 66 means the same in the hub's facet 17 because the facet is the same facet.",
       "spec": "10.5",
       "type": "relay",
       "from_node": {
@@ -229,7 +229,7 @@
     },
     {
       "name": "forward/node-call-with-context",
-      "description": "While handling the forwarded call, the node calls get (100) of part 16 in the hub's schema for it, passing the hub's context. Its call ID is even (the node is the Sparrow client on the pipe). The hub checks both the context's principal and node:acme.charts.",
+      "description": "While handling the forwarded call, the node calls get (100) of facet 16 in the hub's schema for it, passing the hub's context. Its call ID is even (the node is the Sparrow client on the pipe). The hub checks both the context's principal and node:acme.charts.",
       "spec": "10.4, 10.6",
       "type": "message_with_principals",
       "request": {
@@ -268,11 +268,11 @@
     },
     {
       "name": "hub/view-for-node",
-      "description": "The schema the hub sends node acme.charts: the server schema without the node's own part 17 (section 10.3).",
+      "description": "The schema the hub sends node acme.charts: the server schema without the node's own facet 17 (section 10.3).",
       "spec": "10.3",
       "type": "schema_view",
       "from": "schema/server-base",
-      "omitted_part_ids": [
+      "omitted_facet_ids": [
         17
       ],
       "hash": "01946706ae8b354c38673532c8c13c0ca78777512b9b8469c15409f275453941b6"
@@ -330,45 +330,45 @@
       ]
     },
     {
-      "name": "hub/part-names",
-      "description": "Every part a node publishes is named after the node: equal to the node ID, or the node ID and a dot followed by more (section 10.2). Otherwise GoAway(invalid_argument).",
+      "name": "hub/facet-names",
+      "description": "Every facet a node publishes is named after the node: equal to the node ID, or the node ID and a dot followed by more (section 10.2). Otherwise GoAway(invalid_argument).",
       "spec": "10.2",
-      "type": "part_owner_table",
+      "type": "facet_owner_table",
       "entries": [
         {
           "node_id": "acme.charts",
-          "part_name": "acme.charts",
+          "facet_name": "acme.charts",
           "allowed": true
         },
         {
           "node_id": "acme.charts",
-          "part_name": "acme.charts.admin",
+          "facet_name": "acme.charts.admin",
           "allowed": true
         },
         {
           "node_id": "acme.charts",
-          "part_name": "acme.chartsx",
+          "facet_name": "acme.chartsx",
           "allowed": false
         },
         {
           "node_id": "acme.charts",
-          "part_name": "acme",
+          "facet_name": "acme",
           "allowed": false
         },
         {
           "node_id": "acme.charts",
-          "part_name": "acme.notes",
+          "facet_name": "acme.notes",
           "allowed": false
         }
       ]
     },
     {
       "name": "hub/imported-name",
-      "description": "An importing hub lists a part imported from peer hub-b as '<peer-id>/<name>'. Names are not hashed, so the part hash is unchanged (see schema/part-hash-invariance).",
+      "description": "An importing hub lists a facet imported from peer hub-b as '<peer-id>/<name>'. Names are not hashed, so the facet hash is unchanged (see schema/facet-hash-invariance).",
       "spec": "10.8",
       "type": "imported_name",
       "peer_id": "hub-b",
-      "part_name": "acme.notes",
+      "facet_name": "acme.notes",
       "imported_name": "hub-b/acme.notes"
     },
     {

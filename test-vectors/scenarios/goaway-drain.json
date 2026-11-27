@@ -1,0 +1,149 @@
+{
+  "format": 1,
+  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
+  "generator": "tools/vectorgen-go",
+  "name": "goaway-drain",
+  "description": "A graceful drain. The server sends GoAway(going_away) with retry_after_ms; neither peer opens new calls. A Request that crosses the GoAway is answered with Error(going_away). Running calls continue until they finish (or a grace period, RECOMMENDED 30 s, ends), then the transport is closed (5.6).",
+  "spec": "5.6",
+  "given": {
+    "schema": "schema/scenario-host",
+    "session": "established as in scenario handshake-normal (steps 1-3), with no call open"
+  },
+  "steps": [
+    {
+      "step": 1,
+      "from": "client",
+      "stream": "shared",
+      "kind_name": "Request",
+      "message": [
+        16,
+        2,
+        16,
+        5,
+        {},
+        null
+      ],
+      "diag": "[16, 2, 16, 5, {}, null]",
+      "cbor": "8610021005a0f6"
+    },
+    {
+      "step": 2,
+      "from": "server",
+      "stream": "shared",
+      "kind_name": "Item",
+      "message": [
+        18,
+        2,
+        [
+          6,
+          "tick"
+        ]
+      ],
+      "diag": "[18, 2, [6, \"tick\"]]",
+      "cbor": "8312028206647469636b"
+    },
+    {
+      "step": 3,
+      "from": "server",
+      "stream": "shared",
+      "kind_name": "GoAway",
+      "message": [
+        9,
+        21,
+        "draining for deploy",
+        15000,
+        null
+      ],
+      "diag": "[9, 21, \"draining for deploy\", 15000, null]",
+      "cbor": "85091573647261696e696e6720666f72206465706c6f79193a98f6",
+      "compare": "status"
+    },
+    {
+      "step": 4,
+      "from": "client",
+      "stream": "lease:1",
+      "opens_stream": true,
+      "header": "01",
+      "kind_name": "Request",
+      "message": [
+        16,
+        4,
+        16,
+        0,
+        {},
+        "late"
+      ],
+      "diag": "[16, 4, 16, 0, {}, \"late\"]",
+      "cbor": "8610041000a0646c617465",
+      "crossed": true,
+      "note": "sent before the GoAway reached the client"
+    },
+    {
+      "step": 5,
+      "from": "server",
+      "stream": "lease:1",
+      "kind_name": "Error",
+      "message": [
+        20,
+        4,
+        21,
+        "going away",
+        null
+      ],
+      "diag": "[20, 4, 21, \"going away\", null]",
+      "cbor": "851404156a676f696e672061776179f6",
+      "compare": "status"
+    },
+    {
+      "step": 6,
+      "expect": "not_dispatched",
+      "call_id": 4
+    },
+    {
+      "step": 7,
+      "expect": "call_ended",
+      "call_id": 4
+    },
+    {
+      "step": 8,
+      "from": "server",
+      "stream": "shared",
+      "kind_name": "Item",
+      "message": [
+        18,
+        2,
+        [
+          6,
+          "tock"
+        ]
+      ],
+      "diag": "[18, 2, [6, \"tock\"]]",
+      "cbor": "831202820664746f636b",
+      "note": "the running call continues"
+    },
+    {
+      "step": 9,
+      "from": "server",
+      "stream": "shared",
+      "kind_name": "End",
+      "message": [
+        19,
+        2,
+        {}
+      ],
+      "diag": "[19, 2, {}]",
+      "cbor": "831302a0"
+    },
+    {
+      "step": 10,
+      "expect": "call_ended",
+      "call_id": 2
+    },
+    {
+      "step": 11,
+      "expect": "transport_closed",
+      "by": "server",
+      "note": "once no call is open, or when the grace period ends"
+    }
+  ]
+}

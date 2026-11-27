@@ -1,0 +1,166 @@
+{
+  "format": 1,
+  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
+  "generator": "tools/vectorgen-go",
+  "name": "server-stream-credit",
+  "description": "A server stream with initial credit 10 for the callee's half, set by the caller with metadata key credit (35). Each Item [18, 2, n] counts 4 bytes. The server sends while its credit is above zero, so the third Item takes it to -2 and the server holds the rest back until the client grants 8 more. End counts zero bytes and is never held back (7.4).",
+  "spec": "7.2, 7.3, 7.4",
+  "given": {
+    "schema": "schema/scenario-host",
+    "session": "established as in scenario handshake-normal (steps 1-3), with no call open",
+    "initial_credit": {
+      "2/server": 10,
+      "2/client": 1048576
+    }
+  },
+  "steps": [
+    {
+      "step": 1,
+      "from": "client",
+      "stream": "lease:1",
+      "opens_stream": true,
+      "header": "01",
+      "kind_name": "Request",
+      "message": [
+        16,
+        2,
+        16,
+        1,
+        {
+          "$map": [
+            [
+              35,
+              10
+            ]
+          ]
+        },
+        5
+      ],
+      "diag": "[16, 2, 16, 1, {35: 10}, 5]",
+      "cbor": "8610021001a118230a05"
+    },
+    {
+      "step": 2,
+      "from": "server",
+      "stream": "lease:1",
+      "kind_name": "Item",
+      "message": [
+        18,
+        2,
+        1
+      ],
+      "diag": "[18, 2, 1]",
+      "cbor": "83120201",
+      "counted_bytes": 4,
+      "credit_after": 6
+    },
+    {
+      "step": 3,
+      "from": "server",
+      "stream": "lease:1",
+      "kind_name": "Item",
+      "message": [
+        18,
+        2,
+        2
+      ],
+      "diag": "[18, 2, 2]",
+      "cbor": "83120202",
+      "counted_bytes": 4,
+      "credit_after": 2
+    },
+    {
+      "step": 4,
+      "from": "server",
+      "stream": "lease:1",
+      "kind_name": "Item",
+      "message": [
+        18,
+        2,
+        3
+      ],
+      "diag": "[18, 2, 3]",
+      "cbor": "83120203",
+      "counted_bytes": 4,
+      "credit_after": -2
+    },
+    {
+      "step": 5,
+      "expect": "held_back",
+      "by": "server",
+      "call_id": 2,
+      "reason": "credit",
+      "note": "remaining credit -2: no Item until a Credit arrives"
+    },
+    {
+      "step": 6,
+      "from": "client",
+      "stream": "lease:1",
+      "kind_name": "Credit",
+      "message": [
+        24,
+        2,
+        8
+      ],
+      "diag": "[24, 2, 8]",
+      "cbor": "8318180208",
+      "credit_after": 6
+    },
+    {
+      "step": 7,
+      "from": "server",
+      "stream": "lease:1",
+      "kind_name": "Item",
+      "message": [
+        18,
+        2,
+        4
+      ],
+      "diag": "[18, 2, 4]",
+      "cbor": "83120204",
+      "counted_bytes": 4,
+      "credit_after": 2
+    },
+    {
+      "step": 8,
+      "from": "server",
+      "stream": "lease:1",
+      "kind_name": "Item",
+      "message": [
+        18,
+        2,
+        5
+      ],
+      "diag": "[18, 2, 5]",
+      "cbor": "83120205",
+      "counted_bytes": 4,
+      "credit_after": -2
+    },
+    {
+      "step": 9,
+      "from": "server",
+      "stream": "lease:1",
+      "kind_name": "End",
+      "message": [
+        19,
+        2,
+        {}
+      ],
+      "diag": "[19, 2, {}]",
+      "cbor": "831302a0",
+      "counted_bytes": 0,
+      "credit_after": -2,
+      "note": "End counts zero bytes, so it goes out with negative credit"
+    },
+    {
+      "step": 10,
+      "expect": "call_ended",
+      "call_id": 2
+    },
+    {
+      "step": 11,
+      "expect": "stream_idle",
+      "stream": "lease:1"
+    }
+  ]
+}

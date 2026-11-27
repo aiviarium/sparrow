@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev183 (draft)",
+  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "credit",
   "vectors": [
@@ -311,6 +311,117 @@
           "action": "check",
           "may_send": false,
           "remaining": -27
+        }
+      ]
+    },
+    {
+      "name": "credit/sequence-zero-byte-messages",
+      "description": "Callee's half of download call 8 with initial credit 100. A 150-byte chunk takes the credit to -50, so no more data may be sent, but messages that count zero bytes are never held back and are never a violation: the empty final Bytes chunk and the End that follows go out at once (7.4).",
+      "spec": "7.4",
+      "type": "credit_sequence",
+      "initial_credit": 100,
+      "steps": [
+        {
+          "action": "send",
+          "message": [
+            25,
+            8,
+            0,
+            {
+              "$bytes": "616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"
+            },
+            false
+          ],
+          "cbor": "85181908005896616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161f4",
+          "counted_bytes": 150,
+          "remaining_after": -50
+        },
+        {
+          "action": "check",
+          "may_send": false,
+          "remaining": -50
+        },
+        {
+          "action": "send",
+          "message": [
+            25,
+            8,
+            0,
+            {
+              "$bytes": ""
+            },
+            true
+          ],
+          "cbor": "851819080040f5",
+          "counted_bytes": 0,
+          "remaining_after": -50
+        },
+        {
+          "action": "send",
+          "message": [
+            19,
+            8,
+            {}
+          ],
+          "cbor": "831308a0",
+          "counted_bytes": 0,
+          "remaining_after": -50
+        }
+      ]
+    },
+    {
+      "name": "credit/sequence-violation",
+      "description": "Callee's half of call 6 with initial credit 100. After two Items the credit is -16; a third Item sent anyway is a credit violation. The caller, as receiver, ends the call with Cancel(protocol_error) (7.4).",
+      "spec": "7.4",
+      "type": "credit_sequence",
+      "initial_credit": 100,
+      "steps": [
+        {
+          "action": "send",
+          "message": [
+            18,
+            6,
+            "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+          ],
+          "cbor": "8312067836797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979",
+          "counted_bytes": 59,
+          "remaining_after": 41
+        },
+        {
+          "action": "send",
+          "message": [
+            18,
+            6,
+            "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+          ],
+          "cbor": "8312067836797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979",
+          "counted_bytes": 59,
+          "remaining_after": -18
+        },
+        {
+          "action": "check",
+          "may_send": false,
+          "remaining": -18
+        },
+        {
+          "action": "violation",
+          "message": [
+            18,
+            6,
+            "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+          ],
+          "cbor": "8312067836797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979",
+          "counted_bytes": 59,
+          "remaining": -18,
+          "answer": {
+            "message": [
+              23,
+              6,
+              17
+            ],
+            "cbor": "83170611",
+            "note": "the caller sends Cancel(protocol_error); a callee detecting a violation answers Error(protocol_error) instead"
+          }
         }
       ]
     }

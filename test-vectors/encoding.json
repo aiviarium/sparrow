@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev183 (draft)",
+  "spec_revision": "core rev302 (draft); hub-admin rev16 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "encoding",
   "vectors": [
@@ -536,7 +536,7 @@
     },
     {
       "name": "struct/note",
-      "description": "Note (type 64 of part 16): tag 5 is a tombstoned field (flag 0x4), encoded as null so later fields do not shift; tag 7 'pinned' is absent, so the trailing null is omitted.",
+      "description": "Note (type 64 of facet 16): tag 5 is a tombstoned field (flag 0x4), encoded as null so later fields do not shift; tag 7 'pinned' is absent, so the trailing null is omitted.",
       "spec": "3.4",
       "type": "value",
       "rule": "struct",
@@ -1025,7 +1025,7 @@
     },
     {
       "name": "dynamic/note",
-      "description": "dynamic: [type_id, value] for a Note (a named type of the same part).",
+      "description": "dynamic: [type_id, value] for a Note (a named type of the same facet).",
       "spec": "3.4, 6.3",
       "type": "value",
       "rule": "dynamic",
@@ -1481,11 +1481,11 @@
     },
     {
       "name": "map/mixed-keys",
-      "description": "Mixed key types as in metadata ({* symbol => any}) or annotations: uints (major type 0) before negative ints (1) before text (3); bytewise order, so 24 (18 18) sorts before -1 (20).",
+      "description": "A map with keys of mixed CBOR major types, as in a generic CBOR value (the CDDL `any` of an annotation value or of Error.details). These keys are not metadata symbols: -1 and -25 are not uints or text, and 1, 24 and 35 are not used as metadata keys here. Core Deterministic Encoding orders uints (major type 0) before negative ints (1) before text (3), bytewise, so 24 (18 18) sorts before -1 (20).",
       "spec": "3.2, 3.4",
       "type": "value",
       "rule": "map",
-      "schema_type": "metadata / any map",
+      "schema_type": "any map",
       "logical": {
         "entries": [
           [
@@ -1603,6 +1603,655 @@
       },
       "diag": "{\"maxStreams\": 32, \"leaseCredit\": 2097152, \"sharedCredit\": 65536, \"idleTimeoutMs\": 20000, \"maxInlineBytes\": 65536, \"maxMessageSize\": 4194304, \"maxConcurrentCalls\": 100}",
       "cbor": "a76a6d617853747265616d7318206b6c656173654372656469741a002000006c7368617265644372656469741a000100006d69646c6554696d656f75744d73194e206e6d6178496e6c696e6542797465731a000100006e6d61784d65737361676553697a651a00400000726d6178436f6e63757272656e7443616c6c731864"
+    },
+    {
+      "name": "depth/64-arrays",
+      "description": "Item whose value is 63 nested arrays around the uint 1. With the message's own array as level 1, the message is nested exactly 64 levels deep and MUST be accepted; the scalar inside adds no level (3.1).",
+      "spec": "3.1, 11",
+      "type": "depth",
+      "message": [
+        18,
+        6,
+        [
+          [
+            [
+              [
+                [
+                  [
+                    [
+                      [
+                        [
+                          [
+                            [
+                              [
+                                [
+                                  [
+                                    [
+                                      [
+                                        [
+                                          [
+                                            [
+                                              [
+                                                [
+                                                  [
+                                                    [
+                                                      [
+                                                        [
+                                                          [
+                                                            [
+                                                              [
+                                                                [
+                                                                  [
+                                                                    [
+                                                                      [
+                                                                        [
+                                                                          [
+                                                                            [
+                                                                              [
+                                                                                [
+                                                                                  [
+                                                                                    [
+                                                                                      [
+                                                                                        [
+                                                                                          [
+                                                                                            [
+                                                                                              [
+                                                                                                [
+                                                                                                  [
+                                                                                                    [
+                                                                                                      [
+                                                                                                        [
+                                                                                                          [
+                                                                                                            [
+                                                                                                              [
+                                                                                                                [
+                                                                                                                  [
+                                                                                                                    [
+                                                                                                                      [
+                                                                                                                        [
+                                                                                                                          [
+                                                                                                                            [
+                                                                                                                              [
+                                                                                                                                [
+                                                                                                                                  [
+                                                                                                                                    [
+                                                                                                                                      1
+                                                                                                                                    ]
+                                                                                                                                  ]
+                                                                                                                                ]
+                                                                                                                              ]
+                                                                                                                            ]
+                                                                                                                          ]
+                                                                                                                        ]
+                                                                                                                      ]
+                                                                                                                    ]
+                                                                                                                  ]
+                                                                                                                ]
+                                                                                                              ]
+                                                                                                            ]
+                                                                                                          ]
+                                                                                                        ]
+                                                                                                      ]
+                                                                                                    ]
+                                                                                                  ]
+                                                                                                ]
+                                                                                              ]
+                                                                                            ]
+                                                                                          ]
+                                                                                        ]
+                                                                                      ]
+                                                                                    ]
+                                                                                  ]
+                                                                                ]
+                                                                              ]
+                                                                            ]
+                                                                          ]
+                                                                        ]
+                                                                      ]
+                                                                    ]
+                                                                  ]
+                                                                ]
+                                                              ]
+                                                            ]
+                                                          ]
+                                                        ]
+                                                      ]
+                                                    ]
+                                                  ]
+                                                ]
+                                              ]
+                                            ]
+                                          ]
+                                        ]
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ]
+      ],
+      "cbor": "83120681818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818101",
+      "depth": 64,
+      "max_depth": 64,
+      "expected_valid": true
+    },
+    {
+      "name": "depth/65-arrays",
+      "description": "The same Item with one more array: nested 65 levels deep, so a decoder MUST reject it (3.1).",
+      "spec": "3.1, 11",
+      "type": "depth",
+      "message": [
+        18,
+        6,
+        [
+          [
+            [
+              [
+                [
+                  [
+                    [
+                      [
+                        [
+                          [
+                            [
+                              [
+                                [
+                                  [
+                                    [
+                                      [
+                                        [
+                                          [
+                                            [
+                                              [
+                                                [
+                                                  [
+                                                    [
+                                                      [
+                                                        [
+                                                          [
+                                                            [
+                                                              [
+                                                                [
+                                                                  [
+                                                                    [
+                                                                      [
+                                                                        [
+                                                                          [
+                                                                            [
+                                                                              [
+                                                                                [
+                                                                                  [
+                                                                                    [
+                                                                                      [
+                                                                                        [
+                                                                                          [
+                                                                                            [
+                                                                                              [
+                                                                                                [
+                                                                                                  [
+                                                                                                    [
+                                                                                                      [
+                                                                                                        [
+                                                                                                          [
+                                                                                                            [
+                                                                                                              [
+                                                                                                                [
+                                                                                                                  [
+                                                                                                                    [
+                                                                                                                      [
+                                                                                                                        [
+                                                                                                                          [
+                                                                                                                            [
+                                                                                                                              [
+                                                                                                                                [
+                                                                                                                                  [
+                                                                                                                                    [
+                                                                                                                                      [
+                                                                                                                                        1
+                                                                                                                                      ]
+                                                                                                                                    ]
+                                                                                                                                  ]
+                                                                                                                                ]
+                                                                                                                              ]
+                                                                                                                            ]
+                                                                                                                          ]
+                                                                                                                        ]
+                                                                                                                      ]
+                                                                                                                    ]
+                                                                                                                  ]
+                                                                                                                ]
+                                                                                                              ]
+                                                                                                            ]
+                                                                                                          ]
+                                                                                                        ]
+                                                                                                      ]
+                                                                                                    ]
+                                                                                                  ]
+                                                                                                ]
+                                                                                              ]
+                                                                                            ]
+                                                                                          ]
+                                                                                        ]
+                                                                                      ]
+                                                                                    ]
+                                                                                  ]
+                                                                                ]
+                                                                              ]
+                                                                            ]
+                                                                          ]
+                                                                        ]
+                                                                      ]
+                                                                    ]
+                                                                  ]
+                                                                ]
+                                                              ]
+                                                            ]
+                                                          ]
+                                                        ]
+                                                      ]
+                                                    ]
+                                                  ]
+                                                ]
+                                              ]
+                                            ]
+                                          ]
+                                        ]
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ]
+      ],
+      "cbor": "8312068181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818101",
+      "depth": 65,
+      "max_depth": 64,
+      "expected_valid": false
+    },
+    {
+      "name": "depth/64-mixed",
+      "description": "Item whose value alternates arrays and maps {\"k\": ...}, with tag 1 (an integer timestamp) as the innermost level: arrays, maps and tags all count, and the message is nested exactly 64 levels deep. Accepted (3.1).",
+      "spec": "3.1, 11",
+      "type": "depth",
+      "message": [
+        18,
+        6,
+        {
+          "k": [
+            {
+              "k": [
+                {
+                  "k": [
+                    {
+                      "k": [
+                        {
+                          "k": [
+                            {
+                              "k": [
+                                {
+                                  "k": [
+                                    {
+                                      "k": [
+                                        {
+                                          "k": [
+                                            {
+                                              "k": [
+                                                {
+                                                  "k": [
+                                                    {
+                                                      "k": [
+                                                        {
+                                                          "k": [
+                                                            {
+                                                              "k": [
+                                                                {
+                                                                  "k": [
+                                                                    {
+                                                                      "k": [
+                                                                        {
+                                                                          "k": [
+                                                                            {
+                                                                              "k": [
+                                                                                {
+                                                                                  "k": [
+                                                                                    {
+                                                                                      "k": [
+                                                                                        {
+                                                                                          "k": [
+                                                                                            {
+                                                                                              "k": [
+                                                                                                {
+                                                                                                  "k": [
+                                                                                                    {
+                                                                                                      "k": [
+                                                                                                        {
+                                                                                                          "k": [
+                                                                                                            {
+                                                                                                              "k": [
+                                                                                                                {
+                                                                                                                  "k": [
+                                                                                                                    {
+                                                                                                                      "k": [
+                                                                                                                        {
+                                                                                                                          "k": [
+                                                                                                                            {
+                                                                                                                              "k": [
+                                                                                                                                {
+                                                                                                                                  "k": [
+                                                                                                                                    {
+                                                                                                                                      "$tag": 1,
+                                                                                                                                      "value": 0
+                                                                                                                                    }
+                                                                                                                                  ]
+                                                                                                                                }
+                                                                                                                              ]
+                                                                                                                            }
+                                                                                                                          ]
+                                                                                                                        }
+                                                                                                                      ]
+                                                                                                                    }
+                                                                                                                  ]
+                                                                                                                }
+                                                                                                              ]
+                                                                                                            }
+                                                                                                          ]
+                                                                                                        }
+                                                                                                      ]
+                                                                                                    }
+                                                                                                  ]
+                                                                                                }
+                                                                                              ]
+                                                                                            }
+                                                                                          ]
+                                                                                        }
+                                                                                      ]
+                                                                                    }
+                                                                                  ]
+                                                                                }
+                                                                              ]
+                                                                            }
+                                                                          ]
+                                                                        }
+                                                                      ]
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "cbor": "831206a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81c100",
+      "depth": 64,
+      "max_depth": 64,
+      "expected_valid": true
+    },
+    {
+      "name": "depth/65-mixed",
+      "description": "The same with one more level: the tag is level 65, so a decoder MUST reject the message (3.1).",
+      "spec": "3.1, 11",
+      "type": "depth",
+      "message": [
+        18,
+        6,
+        [
+          {
+            "k": [
+              {
+                "k": [
+                  {
+                    "k": [
+                      {
+                        "k": [
+                          {
+                            "k": [
+                              {
+                                "k": [
+                                  {
+                                    "k": [
+                                      {
+                                        "k": [
+                                          {
+                                            "k": [
+                                              {
+                                                "k": [
+                                                  {
+                                                    "k": [
+                                                      {
+                                                        "k": [
+                                                          {
+                                                            "k": [
+                                                              {
+                                                                "k": [
+                                                                  {
+                                                                    "k": [
+                                                                      {
+                                                                        "k": [
+                                                                          {
+                                                                            "k": [
+                                                                              {
+                                                                                "k": [
+                                                                                  {
+                                                                                    "k": [
+                                                                                      {
+                                                                                        "k": [
+                                                                                          {
+                                                                                            "k": [
+                                                                                              {
+                                                                                                "k": [
+                                                                                                  {
+                                                                                                    "k": [
+                                                                                                      {
+                                                                                                        "k": [
+                                                                                                          {
+                                                                                                            "k": [
+                                                                                                              {
+                                                                                                                "k": [
+                                                                                                                  {
+                                                                                                                    "k": [
+                                                                                                                      {
+                                                                                                                        "k": [
+                                                                                                                          {
+                                                                                                                            "k": [
+                                                                                                                              {
+                                                                                                                                "k": [
+                                                                                                                                  {
+                                                                                                                                    "k": [
+                                                                                                                                      {
+                                                                                                                                        "$tag": 1,
+                                                                                                                                        "value": 0
+                                                                                                                                      }
+                                                                                                                                    ]
+                                                                                                                                  }
+                                                                                                                                ]
+                                                                                                                              }
+                                                                                                                            ]
+                                                                                                                          }
+                                                                                                                        ]
+                                                                                                                      }
+                                                                                                                    ]
+                                                                                                                  }
+                                                                                                                ]
+                                                                                                              }
+                                                                                                            ]
+                                                                                                          }
+                                                                                                        ]
+                                                                                                      }
+                                                                                                    ]
+                                                                                                  }
+                                                                                                ]
+                                                                                              }
+                                                                                            ]
+                                                                                          }
+                                                                                        ]
+                                                                                      }
+                                                                                    ]
+                                                                                  }
+                                                                                ]
+                                                                              }
+                                                                            ]
+                                                                          }
+                                                                        ]
+                                                                      }
+                                                                    ]
+                                                                  }
+                                                                ]
+                                                              }
+                                                            ]
+                                                          }
+                                                        ]
+                                                      }
+                                                    ]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      ],
+      "cbor": "83120681a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81a1616b81c100",
+      "depth": 65,
+      "max_depth": 64,
+      "expected_valid": false
+    },
+    {
+      "name": "non-shortest/credit",
+      "description": "Credit [24, 6, 100] with a one-byte array length (98 03) and every integer in a longer form than needed (kind 19 00 18, call ID 1a 00000006, amount 19 0064). Senders use the shortest form; a receiver MUST accept this one as the same message (3.1).",
+      "spec": "3.1, 3.2",
+      "type": "non_shortest",
+      "message": [
+        24,
+        6,
+        100
+      ],
+      "cbor": "98031900181a00000006190064",
+      "shortest_cbor": "831818061864",
+      "expected_valid": true
+    },
+    {
+      "name": "non-shortest/float-width",
+      "description": "Item [18, 6, 1.5] with the float sent as a 64-bit float (fb) although half precision is exact. Decoders MUST accept any float width (3.1).",
+      "spec": "3.1, 3.2",
+      "type": "non_shortest",
+      "message": [
+        18,
+        6,
+        {
+          "$float": "1.5"
+        }
+      ],
+      "cbor": "831206fb3ff8000000000000",
+      "shortest_cbor": "831206f93e00",
+      "expected_valid": true
+    },
+    {
+      "name": "non-shortest/text-length",
+      "description": "Error [20, 2, 13, \"hello\", null] with the text length written as 78 05 instead of 65 (3.1).",
+      "spec": "3.1, 3.2",
+      "type": "non_shortest",
+      "message": [
+        20,
+        2,
+        13,
+        "hello",
+        null
+      ],
+      "cbor": "8514020d780568656c6c6ff6",
+      "shortest_cbor": "8514020d6568656c6c6ff6",
+      "expected_valid": true
+    },
+    {
+      "name": "non-shortest/unsorted-metadata",
+      "description": "Request whose metadata lists the text key before sigil key 32. Ordinary messages need not sort map keys (3.2): this is another valid encoding of the same message.",
+      "spec": "3.1, 3.2",
+      "type": "non_shortest",
+      "message": [
+        16,
+        2,
+        16,
+        100,
+        {
+          "$map": [
+            [
+              32,
+              5000
+            ],
+            [
+              "x-tenant",
+              "acme"
+            ]
+          ]
+        },
+        {
+          "$tag": 37,
+          "value": {
+            "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+          }
+        }
+      ],
+      "cbor": "861002101864a268782d74656e616e746461636d651820191388d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b",
+      "shortest_cbor": "861002101864a2182019138868782d74656e616e746461636d65d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b",
+      "expected_valid": true
     }
   ]
 }

@@ -61,7 +61,6 @@ func TestCompatible(t *testing.T) {
 		}, ""},
 		{"remove an optional field", func(f *Facet) { f.Types[0].Fields[2].Flags |= FieldRemoved }, ""},
 		{"remove a variant", func(f *Facet) { f.Types[3].Fields[1].Flags |= FieldRemoved }, ""},
-		{"make a required field optional", func(f *Facet) { f.Types[0].Fields[1].Flags |= FieldOptional }, ""},
 		{"change a method's errors", func(f *Facet) { f.Services[0].Methods[1].Errors = nil }, ""},
 		{"minor version bump", func(f *Facet) { f.Version = "1.7.0" }, ""},
 		{"change implements", func(f *Facet) { f.Implements = []byte{1} }, ""},
@@ -86,6 +85,16 @@ func TestCompatible(t *testing.T) {
 		{"change a variant's type", func(f *Facet) { f.Types[3].Fields[1].Type = Named(TypeString) }, CodeIncompatibleChange},
 		{"change a sigil's kind", func(f *Facet) { f.Sigils[3].Kind = SigilError }, CodeIncompatibleChange},
 		{"make an optional field required", func(f *Facet) { f.Types[0].Fields[2].Flags = 0 }, CodeIncompatibleChange},
+		{"make a required field optional", func(f *Facet) { f.Types[0].Fields[1].Flags |= FieldOptional }, CodeIncompatibleChange},
+		{"change a field's type as it becomes a tombstone", func(f *Facet) {
+			f.Types[0].Fields[2].Flags |= FieldRemoved
+			f.Types[0].Fields[2].Type = Named(TypeBytes)
+		}, CodeIncompatibleChange},
+		{"change a tombstone's type", func(f *Facet) { f.Types[0].Fields[3].Type = Named(TypeString) }, CodeIncompatibleChange},
+		{"change a variant's type as it becomes a tombstone", func(f *Facet) {
+			f.Types[3].Fields[1].Flags |= FieldRemoved
+			f.Types[3].Fields[1].Type = Named(TypeString)
+		}, CodeIncompatibleChange},
 		{"change a method's input", func(f *Facet) { f.Services[0].Methods[0].Input = Named(TypeString) }, CodeIncompatibleChange},
 		{"change a method's output", func(f *Facet) { f.Services[0].Methods[0].Output = Optional(Named(64)) }, CodeIncompatibleChange},
 		{"change flag 0x2", func(f *Facet) { f.Services[0].Methods[5].Flags = 0 }, CodeIncompatibleChange},
