@@ -333,6 +333,13 @@ func TestRunInProcess(t *testing.T) {
 		t.Fatal("Run did not return")
 	}
 	if g := c.Session(); g != nil {
-		<-g.Done()
+		select {
+		case <-g.Done():
+		case <-time.After(10 * time.Second):
+			t.Fatal("client session not ended after Run returned")
+		}
+		if ga := g.GoAwayReceived(); ga == nil || status.Code(ga.Status) != status.GoingAway {
+			t.Fatalf("client got %v", ga)
+		}
 	}
 }
