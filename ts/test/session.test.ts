@@ -4,6 +4,7 @@ import * as lib from '../src/index.js';
 import { FacetBuilder, Session, SparrowError, Status, T, field, makeSchema, memPair, stream, type SessionOptions } from '../src/index.js';
 import { encodeMessage, decodeMessage } from '../src/wire.js';
 import { clientHandlers, facets, runClientSuite, serverHandlers } from './fixture/interop.mjs';
+import { FakeClock } from './helpers/clock.js';
 import { eventually, never } from './helpers/wait.js';
 
 function errOf(p: Promise<unknown>): Promise<SparrowError> {
@@ -68,7 +69,7 @@ describe('session over mem', () => {
     Session.accept(b, {}).catch(() => {});
     a.start({ message: (m) => got.push(decodeMessage(m)), error: () => {}, close: () => {} });
     a.send(encodeMessage({ kind: 0, versions: [9], caps: {}, auth: null, knownSchema: null, clientSchema: null, params: {}, optimistic: false }));
-    await new Promise((r) => setTimeout(r, 20));
+    await eventually(() => got.length > 0, 'GoAway');
     expect(got[0]).toMatchObject({ kind: 9, status: Status.unsupported_version, versions: [1] });
   });
 
@@ -117,14 +118,14 @@ describe('session over mem', () => {
 
   it('GoAway drains running calls and refuses new ones', async () => {
     const { srv, cli } = await pair();
-    const slow = cli.call('interop.test', 'progress', 3);
-    await new Promise((r) => setTimeout(r, 5));
+    const slow = cli.call('interop.test', 'slow', 30);
+    await eventually(() => srv.openCalls === 1, 'the call to start');
     srv.goAway(Status.going_away, 'deploy', 1000);
-    await new Promise((r) => setTimeout(r, 5));
+    await eventually(() => cli.isDraining, 'the GoAway to arrive');
     const late = await errOf(cli.call('interop.test', 'echo', 'late'));
     expect(late.status).toBe(Status.going_away);
     expect(late.notDispatched).toBe(true);
-    expect(await slow).toBe('done');
+    expect(await slow).toBe(null);
     const info = await cli.closed;
     expect(info.code).toBe(Status.going_away);
     expect(cli.goAwayReceived?.retryAfterMs).toBe(1000);
@@ -163,13 +164,98 @@ describe('session over mem', () => {
     expect(info.code).toBe(Status.message_too_large);
   });
 
-  it('idle sessions stay alive with Ping/Pong and close when the peer goes silent', async () => {
-    const { srv, cli, a } = await pair({ params: { idleTimeoutMs: 120 } });
-    await new Promise((r) => setTimeout(r, 400));
+  it('idle sessions stay alive with Ping/Pong and close when the peer goes silent (fake clock)', async () => {
+    const clock = new FakeClock();
+    const { srv, cli, a } = await pair({ params: { idleTimeoutMs: 20_000 }, clock }, { clock });
+    const kinds = (l: Uint8Array[], from: number) => l.slice(from).map((m) => decodeMessage(m).kind);
+    const [ca, sb] = [a.sent.length, (srv as any).conn.sent.length];
+    await clock.advance(60_000);
     expect(cli.isOpen && srv.isOpen).toBe(true);
+    // The client pings after half the idle timeout without traffic, the server answers.
+    expect(kinds(a.sent, ca).filter((k) => k === 7).length).toBeGreaterThanOrEqual(5);
+    expect(kinds((srv as any).conn.sent, sb).filter((k) => k === 8).length).toBeGreaterThanOrEqual(5);
     a.drop = true; // the client's messages (Pongs included) vanish
+    await clock.advance(19_000);
+    expect(srv.isOpen).toBe(true);
+    await clock.advance(6_000);
     const info = await srv.closed;
     expect(info.code).toBe(Status.unavailable);
+  });
+
+  it('a Cancel left unanswered: the caller gives up after 5 s and closes the session after 30 s (fake clock)', async () => {
+    const clock = new FakeClock();
+    const [a, b] = memPair();
+    const f = facets(lib);
+    // A server whose handler ignores the Cancel, and that never answers it: a raw handler would answer,
+    // so drop the server's messages for the call once it has started.
+    const srvP = Session.accept(b, { schema: f.serverSchema, handlers: { 'interop.test': { slow: () => new Promise(() => {}) } }, clock });
+    const cli = await Session.connect(a, { clock });
+    const srv = await srvP;
+    const call = cli.open('interop.test', 'slow', 1);
+    const res = call.result();
+    res.catch(() => {});
+    await eventually(() => srv.openCalls === 1, 'the call to start');
+    b.drop = true; // the server's Error(cancelled) never arrives
+    call.cancel();
+    expect((await errOf(res)).status).toBe(Status.cancelled);
+    await clock.advance(4_000);
+    expect(cli.openCalls).toBe(1); // still counted (7.5: shared lane)
+    await clock.advance(26_500);
+    const info = await cli.closed;
+    expect(info.code).toBe(Status.protocol_error);
+  });
+
+  it('a SchemaUpdate the peer does not ack closes the session with schema_mismatch (fake clock)', async () => {
+    const clock = new FakeClock();
+    const { srv, cli, f } = await pair({ clock }, { clock, onPeerSchemaUpdate: () => new Promise(() => {}) });
+    const b = new FacetBuilder('interop.extra', '1.0.0', { id: 17 });
+    b.service('Extra').method('twice', T.string, T.string);
+    const upd = srv.updateSchema(makeSchema('interop.server', '1.1.0', [f.server, b.build()]));
+    upd.catch(() => {});
+    await clock.advance(9_000);
+    expect(srv.isOpen).toBe(true);
+    await clock.advance(2_000);
+    expect((await srv.closed).code).toBe(Status.schema_mismatch);
+    expect((await cli.closed).code).toBe(Status.schema_mismatch);
+    await expect(upd).rejects.toThrow();
+  });
+
+  it('deadlines: the callee answers deadline_exceeded, the caller cancels when its own timer fires (fake clock)', async () => {
+    const clock = new FakeClock();
+    const { srv, cli } = await pair({ clock }, { clock });
+    const p = cli.call('interop.test', 'slow', 1_000_000, { timeoutMs: 5_000 });
+    p.catch(() => {});
+    await eventually(() => srv.openCalls === 1, 'the call to start');
+    await clock.advance(5_000);
+    expect((await errOf(p)).status).toBe(Status.deadline_exceeded);
+    await eventually(() => srv.openCalls === 0 && cli.openCalls === 0, 'the call to end on both sides');
+    await cli.close();
+  });
+
+  it('byte streams larger than the credit window flow both ways', async () => {
+    const { srv, cli } = await pair();
+    const down = (await cli.call('interop.test', 'download', 1 << 20)) as Uint8Array;
+    expect(down.length).toBe(1 << 20);
+    expect(down[257]).toBe(1);
+    expect(await cli.call('interop.test', 'upload', new Uint8Array(1 << 20).fill(7))).toBe(1 << 20);
+    // Chunk by chunk, with credit granted as each chunk is taken.
+    const cc = cli.open('interop.test', 'download', 300_000);
+    let n = 0;
+    for await (const chunk of cc.byteChunks(0)) n += chunk.length;
+    expect(n).toBe(300_000);
+    await cc.result().catch(() => {});
+    await eventually(() => srv.openCalls === 0 && cli.openCalls === 0, 'the calls to end');
+    await cli.close();
+  });
+
+  it('credit 0: the callee waits for a Credit, which the caller grants when it starts reading', async () => {
+    const { cli } = await pair();
+    const cc = cli.stream('interop.test', 'count', 5, { credit: 0 });
+    const got: unknown[] = [];
+    for await (const v of cc) got.push(v);
+    expect(got).toEqual([1, 2, 3, 4, 5]);
+    expect((await cli.call('interop.test', 'download', 100_000, { credit: 0 }) as Uint8Array).length).toBe(100_000);
+    await cli.close();
   });
 
   it('schema updates: the peer applies the delta and acks; new methods are callable', async () => {
@@ -282,17 +368,20 @@ describe('session over mem', () => {
     }
     // The session is fine afterwards.
     expect(await cli.call('interop.test', 'echo', 'after')).toBe('after');
-    await new Promise((r) => setTimeout(r, 20));
-    expect(srv.openCalls).toBe(0);
+    await eventually(() => srv.openCalls === 0, 'the cancelled call to end');
     await cli.close();
   });
 
-  it('closing the transport fails open calls with unavailable', async () => {
-    const { cli, a } = await pair();
+  it('closing the transport fails open calls with unavailable after the linger (fake clock)', async () => {
+    const clock = new FakeClock();
+    const { cli, srv, a } = await pair({ clock }, { clock });
     const p = cli.call('interop.test', 'slow', 5000);
-    await new Promise((r) => setTimeout(r, 10));
+    p.catch(() => {});
+    await eventually(() => cli.openCalls === 1 && srv.openCalls === 1, 'the call to start');
     a.kill();
+    await clock.advance(1_000);
     const e = await errOf(p);
     expect(e.status).toBe(Status.unavailable);
+    expect(cli.openCalls + srv.openCalls).toBe(0);
   });
 });

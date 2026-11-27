@@ -181,6 +181,8 @@ export interface CallContext {
   sendBytes(token: number, data: Uint8Array, fin?: boolean): Promise<void>;
   /** Collects input byte data for a token (0 for a whole-value [4] input) until its final chunk. */
   bytes(token: number): Promise<Uint8Array>;
+  /** The input byte data of a token chunk by chunk, granting credit as each is taken. */
+  byteChunks(token: number): AsyncIterable<Uint8Array>;
 }
 
 /**
@@ -301,6 +303,8 @@ export interface SessionOptions {
   gracePeriodMs?: number;
   /** How long open calls may still finish after the peer ended the connection; default 1 s. */
   lingerMs?: number;
+  /** The clock of every protocol timer; default realClock. */
+  clock?: Clock;
 }
 
 /** Options of one call. */
@@ -335,7 +339,26 @@ class Waiter {
   }
 }
 
-type Timer = ReturnType<typeof setTimeout>;
+type Timer = unknown;
+
+/**
+ * The time source and timers of a session: every protocol timer (Hello,
+ * idle and Ping, schema ack, cancel give-up, deadlines, grace and linger)
+ * runs on it, so tests can use a fake clock. Defaults to the real one.
+ */
+export interface Clock {
+  /** Milliseconds since the epoch. */
+  now(): number;
+  setTimeout(f: () => void, ms: number): unknown;
+  clearTimeout(t: unknown): void;
+}
+
+/** The real clock: Date.now and the global timers. */
+export const realClock: Clock = {
+  now: () => Date.now(),
+  setTimeout: (f, ms) => setTimeout(f, ms),
+  clearTimeout: (t) => clearTimeout(t as ReturnType<typeof setTimeout>),
+};
 
 const noop = () => {};
 
@@ -371,6 +394,7 @@ export class CallState {
   recvWin: CreditWindow;
   recvInit: number;
   unacked = 0;
+  demanded = false;
   items: { raw: Uint8Array; n: number }[] = [];
   tokens = new Map<number, TokenBuf>();
   sentTokens = new Set<number>();
@@ -442,7 +466,9 @@ export class Session {
   private codecs = new WeakMap<Facet, Codec>();
   private localLimits: Limits;
   private peerLimits: Limits;
-  private lastRecv = Date.now();
+  /** @internal */
+  readonly clock: Clock;
+  private lastRecv: number;
   private pingSent = false;
   private pingNonce = 0;
   private idleTimer?: Timer;
@@ -485,6 +511,8 @@ export class Session {
     this.localLimits = limitsOf(opts.params ?? {}, role);
     this.peerLimits = defaultLimits(role === 'client' ? 'server' : 'client');
     this.closed = new Promise((r) => (this.closedResolve = r));
+    this.clock = opts.clock ?? realClock;
+    this.lastRecv = this.clock.now();
   }
 
   // -------------------------------------------------------------------------
@@ -876,7 +904,7 @@ export class Session {
   }
 
   private timer(ms: number, f: () => void): Timer {
-    const t = setTimeout(() => {
+    const t = this.clock.setTimeout(() => {
       this.sessionTimers.delete(t);
       f();
     }, ms);
@@ -896,7 +924,7 @@ export class Session {
   // -------------------------------------------------------------------------
 
   private onMessage(b: Uint8Array): void {
-    this.lastRecv = Date.now();
+    this.lastRecv = this.clock.now();
     this.pingSent = false;
     if (this.isClosed) return;
     if (this.hs === 'handshaking') {
@@ -938,7 +966,7 @@ export class Session {
       this.helloMsg = m;
       this.hs = 'handshaking';
       if (this.helloTimer) {
-        clearTimeout(this.helloTimer);
+        this.clock.clearTimeout(this.helloTimer);
         this.sessionTimers.delete(this.helloTimer);
       }
       void this.serverHandshake(m).catch((e) => this.fail(Status.internal, (e as Error).message));
@@ -1057,10 +1085,10 @@ export class Session {
     const idle = Math.min(this.localLimits.idleTimeoutMs, this.peerLimits.idleTimeoutMs);
     if (!(idle > 0) || this.isClosed) return;
     const tick = Math.max(1, Math.floor(idle / 4));
-    this.idleTimer = setTimeout(() => {
+    this.idleTimer = this.clock.setTimeout(() => {
       this.idleTimer = undefined;
       if (this.isClosed) return;
-      const since = Date.now() - this.lastRecv;
+      const since = this.clock.now() - this.lastRecv;
       const cur = Math.min(this.localLimits.idleTimeoutMs, this.peerLimits.idleTimeoutMs);
       if (since >= cur) {
         this.fail(Status.unavailable, 'idle timeout');
@@ -1193,7 +1221,7 @@ export class Session {
     });
     this.write(encodeMessage({ kind: 3, epoch, hash: next.hash, delta: encodeDelta(d) }));
     await this.waitEpoch(epoch);
-    clearTimeout(t);
+    this.clock.clearTimeout(t);
     this.sessionTimers.delete(t);
   }
 
@@ -1290,9 +1318,9 @@ export class Session {
     const notDispatched = this.role === 'client' && ((!this.welcomeDone && !this.optimistic) || this.optReject);
     const err = new SparrowError(code, reason, undefined, { remote, notDispatched: notDispatched || callErr?.notDispatched });
     this.closeInfo = { code, reason, remote, error: err };
-    for (const t of this.sessionTimers) clearTimeout(t);
+    for (const t of this.sessionTimers) this.clock.clearTimeout(t);
     this.sessionTimers.clear();
-    if (this.idleTimer) clearTimeout(this.idleTimer);
+    if (this.idleTimer) this.clock.clearTimeout(this.idleTimer);
     const ce = callErr ?? new SparrowError(Status.unavailable, `session closed: ${reason}`, undefined, { notDispatched });
     for (const c of [...this.calls.values()]) this.failCall(c, ce);
     this.calls.clear();
@@ -1363,6 +1391,20 @@ export class Session {
       }
       await c.waiter.wait();
     }
+  }
+
+  /**
+   * The application waits for data of a call whose caller set its credit
+   * to 0 (the credit key, 7.2): the callee waits for a Credit, so the first
+   * wait grants the default window, as if it had been the initial one.
+   */
+  private demand(c: CallState): void {
+    if (c.recvInit !== 0 || c.demanded || c.peerHalfDone() || c.ended) return;
+    c.demanded = true;
+    const g = this.localLimits.sharedCredit;
+    c.recvInit = g;
+    c.recvWin.grant(g);
+    this.trySend({ kind: 24, callId: c.id, amount: g });
   }
 
   private grant(c: CallState, n: number): void {
@@ -1618,7 +1660,7 @@ export class Session {
   private endCall(c: CallState): void {
     c.ended = true;
     if (this.calls.get(c.id) === c) this.calls.delete(c.id);
-    for (const t of c.timers) clearTimeout(t);
+    for (const t of c.timers) this.clock.clearTimeout(t);
     c.timers = [];
     this.uncount(c);
     if (!c.caller && c.abort && !c.abort.signal.aborted) c.abort.abort(new SparrowError(Status.cancelled, 'the call ended'));
@@ -1630,7 +1672,7 @@ export class Session {
     c.localErr ??= e;
     c.abort?.abort(e);
     c.ended = true;
-    for (const t of c.timers) clearTimeout(t);
+    for (const t of c.timers) this.clock.clearTimeout(t);
     c.timers = [];
     this.uncount(c);
     if (this.calls.get(c.id) === c) this.calls.delete(c.id);
@@ -1640,13 +1682,13 @@ export class Session {
   private armGiveUp(c: CallState): void {
     const giveUp = this.opts.cancelGiveUpMs ?? SessionDefaults.cancelGiveUpMs;
     const broken = this.opts.cancelBrokenMs ?? SessionDefaults.cancelBrokenMs;
-    const t = setTimeout(() => {
+    const t = this.clock.setTimeout(() => {
       if (c.ended || c.calleeDone) return;
       c.localErr ??= new SparrowError(c.cancelCode, 'no answer to Cancel');
       c.items = [];
       c.wake();
       // On the shared lane the call keeps counting until its final message; after cancelBrokenMs the peer is broken (7.5).
-      const t2 = setTimeout(() => {
+      const t2 = this.clock.setTimeout(() => {
         if (!c.ended && !c.calleeDone) this.fail(Status.protocol_error, 'a Cancel went unanswered for 30 s');
       }, Math.max(0, broken - giveUp));
       c.timers.push(t2);
@@ -1718,9 +1760,9 @@ export class Session {
     const dl = metaDeadline(r.metadata);
     let deadline: number | undefined;
     if (dl !== undefined) {
-      deadline = Date.now() + dl;
+      deadline = this.clock.now() + dl;
       c.timers.push(
-        setTimeout(() => {
+        this.clock.setTimeout(() => {
           const e = new SparrowError(Status.deadline_exceeded, 'deadline exceeded');
           c.abort?.abort(e);
           if (!c.calleeDone) this.trySendError(c, e);
@@ -1779,6 +1821,9 @@ export class Session {
       },
       bytes(token) {
         return s.collectBytes(c, token);
+      },
+      byteChunks(token) {
+        return s.byteChunks(c, token);
       },
     };
   }
@@ -1848,27 +1893,47 @@ export class Session {
     }
   }
 
-  private async collectBytes(c: CallState, token: number): Promise<Uint8Array> {
+  /**
+   * The data of a byte token as it arrives, chunk by chunk. Each chunk is
+   * granted back as credit when it is taken, so a token larger than the
+   * credit window flows (7.4); data for a token nobody reads stays buffered
+   * and holds the sender back.
+   */
+  /** @internal */
+  async *byteChunks(c: CallState, token: number): AsyncGenerator<Uint8Array> {
     for (;;) {
       const tb = c.tokens.get(token);
-      if (tb?.fin) {
-        let n = 0;
-        for (const x of tb.chunks) n += x.length;
-        const out = new Uint8Array(n);
-        let off = 0;
-        for (const x of tb.chunks) {
-          out.set(x, off);
-          off += x.length;
-        }
-        this.grant(c, tb.size);
-        tb.size = 0;
-        return out;
+      if (tb && tb.chunks.length) {
+        const x = tb.chunks.shift()!;
+        tb.size -= x.length;
+        this.grant(c, x.length);
+        if (x.length) yield x;
+        continue;
       }
+      if (tb?.fin) return;
       if (c.localErr) throw c.localErr;
       if (c.peerError) throw c.peerError;
       if (c.peerHalfDone() || c.ended) throw new SparrowError(Status.data_loss, `byte token ${token} was cut off or never sent`);
+      this.demand(c);
       await c.waiter.wait();
     }
+  }
+
+  private async collectBytes(c: CallState, token: number): Promise<Uint8Array> {
+    const parts: Uint8Array[] = [];
+    let n = 0;
+    for await (const x of this.byteChunks(c, token)) {
+      parts.push(x);
+      n += x.length;
+    }
+    if (parts.length === 1) return parts[0];
+    const out = new Uint8Array(n);
+    let off = 0;
+    for (const x of parts) {
+      out.set(x, off);
+      off += x.length;
+    }
+    return out;
   }
 
   private async sendBytesChunks(c: CallState, token: number, data: Uint8Array, fin: boolean, check: () => void): Promise<void> {
@@ -2059,6 +2124,7 @@ export class Session {
       if (c.peerError) throw c.peerError;
       if (c.calleeDone) return { value: undefined, done: true };
       if (c.ended) throw this.closedError();
+      this.demand(c);
       await c.waiter.wait();
     }
   }
@@ -2178,7 +2244,7 @@ export class ClientCall implements AsyncIterable<unknown> {
       opts.signal.addEventListener('abort', this.abortListener, { once: true });
     }
     if (opts.timeoutMs !== undefined) {
-      this.timeoutTimer = setTimeout(() => this.abortWith(new SparrowError(Status.deadline_exceeded, 'deadline exceeded'), Status.deadline_exceeded), opts.timeoutMs);
+      this.timeoutTimer = session.clock.setTimeout(() => this.abortWith(new SparrowError(Status.deadline_exceeded, 'deadline exceeded'), Status.deadline_exceeded), opts.timeoutMs);
     }
     this.started.then(
       (c) => {
@@ -2213,7 +2279,7 @@ export class ClientCall implements AsyncIterable<unknown> {
     if (this.settled) return;
     this.settled = true;
     if (this.abortListener) this.opts.signal?.removeEventListener('abort', this.abortListener);
-    if (this.timeoutTimer) clearTimeout(this.timeoutTimer);
+    if (this.timeoutTimer) this.session.clock.clearTimeout(this.timeoutTimer);
   }
 
   private abortWith(e: SparrowError, code: number): void {
@@ -2306,6 +2372,12 @@ export class ClientCall implements AsyncIterable<unknown> {
   /** Collects the data of an output byte token. */
   bytes(token: number): Promise<Uint8Array> {
     return this.wrap((c) => this.session.bytesOf(c, token));
+  }
+
+  /** The data of an output byte token chunk by chunk, granting credit as each is taken (for data larger than memory). */
+  async *byteChunks(token: number): AsyncGenerator<Uint8Array> {
+    const c = await Promise.race([this.started, this.failure]);
+    yield* this.session.byteChunks(c, token);
   }
 
   /** The output items; throws the callee's SparrowError if it answered with Error. */

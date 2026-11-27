@@ -19,6 +19,8 @@ export interface PipeOptions {
   lingerMs?: number;
   /** Destroy the readable side on close (default true). */
   destroyOnClose?: boolean;
+  /** Called once when the connection has ended, either way. */
+  onEnd?: () => void;
 }
 
 class PipeConn implements Conn {
@@ -85,20 +87,25 @@ class PipeConn implements Conn {
   private finish(remote: boolean, reason: string): void {
     if (this.notified) return;
     this.notified = true;
+    this.opts.onEnd?.();
     this.h?.close({ code: Status.unavailable, reason, remote });
   }
 
   async close(code: number, reason: string): Promise<void> {
     if (!this.sendClosed) {
       this.sendClosed = true;
+      // Finish this side's direction once what was written is flushed; a
+      // peer that reads nothing cannot hold it past the linger.
+      let t: ReturnType<typeof setTimeout> | undefined;
       await new Promise<void>((res) => {
         try {
           this.w.end(() => res());
         } catch {
           res();
         }
-        setTimeout(res, 100);
+        t = setTimeout(res, this.opts.lingerMs ?? 2000);
       });
+      clearTimeout(t);
       if (code !== Status.protocol_error && !this.readEnded) {
         let t: ReturnType<typeof setTimeout> | undefined;
         await Promise.race([this.onReadEnd, new Promise<void>((res) => (t = setTimeout(res, this.opts.lingerMs ?? 2000)))]);
@@ -108,6 +115,7 @@ class PipeConn implements Conn {
     }
     if (!this.notified) {
       this.notified = true;
+      this.opts.onEnd?.();
       this.h?.close({ code, reason, remote: false });
     }
   }
@@ -128,14 +136,44 @@ export function stdio(opts: PipeOptions = {}): Conn {
   return new PipeConn(process.stdin, process.stdout, opts);
 }
 
+export interface SpawnPipeOptions extends PipeOptions {
+  /** How long the child may take to exit after the connection ended (its standard input is closed) before it is killed; default 5 s. */
+  killAfterMs?: number;
+}
+
+/** How a spawned process ended. */
+export interface ChildExit {
+  code: number | null;
+  signal: NodeJS.Signals | null;
+}
+
 /**
  * Starts a process with a pipe connection on its standard input and output.
  * The returned connection is the starting side's end: the Sparrow server
- * (4.7). Standard error is inherited unless opts.stdio says otherwise.
+ * (4.7). Standard error is inherited unless opts.stdio says otherwise. Once
+ * the connection has ended (closed, or the child closed its output or died),
+ * a child that has not exited killAfterMs later is killed; exited resolves
+ * with its exit code or signal.
  */
-export function spawn(cmd: string, args: string[] = [], opts: SpawnOptions & PipeOptions = {}): { conn: Conn; child: ChildProcess } {
-  const { lingerMs, destroyOnClose, ...spawnOpts } = opts;
+export function spawn(cmd: string, args: string[] = [], opts: SpawnOptions & SpawnPipeOptions = {}): { conn: Conn; child: ChildProcess; exited: Promise<ChildExit> } {
+  const { lingerMs, destroyOnClose, onEnd, killAfterMs, ...spawnOpts } = opts;
   const child = nodeSpawn(cmd, args, { stdio: ['pipe', 'pipe', 'inherit'], ...spawnOpts });
   if (!child.stdout || !child.stdin) throw new Error('pipe: the child has no standard input or output pipe');
-  return { conn: new PipeConn(child.stdout, child.stdin, { lingerMs, destroyOnClose }), child };
+  let killTimer: ReturnType<typeof setTimeout> | undefined;
+  const exited = new Promise<ChildExit>((res) => {
+    child.once('exit', (code, signal) => {
+      clearTimeout(killTimer);
+      res({ code, signal });
+    });
+    child.once('error', () => {
+      clearTimeout(killTimer);
+      res({ code: child.exitCode, signal: child.signalCode });
+    });
+  });
+  const reap = () => {
+    onEnd?.();
+    if (child.exitCode !== null || child.signalCode !== null) return;
+    killTimer = setTimeout(() => child.kill('SIGKILL'), killAfterMs ?? 5000);
+  };
+  return { conn: new PipeConn(child.stdout, child.stdin, { lingerMs, destroyOnClose, onEnd: reap }), child, exited };
 }
