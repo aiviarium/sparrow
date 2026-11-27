@@ -272,3 +272,13 @@ func varint(v uint64) []byte {
 	}
 	panic("varint: value too large")
 }
+
+// varintValue decodes a QUIC variable-length integer (any valid form).
+func varintValue(b []byte) uint64 {
+	n := 1 << (b[0] >> 6)
+	v := uint64(b[0] & 0x3f)
+	for i := 1; i < n; i++ {
+		v = v<<8 | uint64(b[i])
+	}
+	return v
+}

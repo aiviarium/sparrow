@@ -1,13 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"sort"
+	"strings"
+
+	"github.com/fxamacker/cbor/v2"
 )
 
-// Schema documents are handled as generic CBOR trees ([]any / map[string]any)
-// that mirror the CDDL in section 6 one to one.
+// Schema documents (format 2, section 6) are handled as generic CBOR trees
+// ([]any / map[string]any) that mirror the CDDL one to one.
 
 type ann = map[string]any
 
@@ -44,8 +48,32 @@ const (
 	tBytes
 	tTimestamp
 	tUUID
-	tAny
+	tDynamic
 	tSymbol
+)
+
+// Field and variant flags (section 6.3)
+const (
+	ffOptional   = 0x1
+	ffDeprecated = 0x2
+	ffRemoved    = 0x4
+)
+
+// Method flags (section 6.4)
+const (
+	fIdempotent   = 0x1
+	fNotification = 0x2
+	fShared       = 0x4
+	fInputEnd     = 0x8
+	fOutputEnd    = 0x10
+)
+
+// Retired spaces (section 6.2)
+const (
+	spType    = 0
+	spService = 1
+	spMethod  = 2
+	spSigil   = 3
 )
 
 func structDef(id int, name string, fields []any, flags int, an ann) []any {
@@ -63,8 +91,8 @@ func aliasDef(id int, name string, target any, an ann) []any {
 func field(tag int, name string, typ any, flags int, an ann) []any {
 	return []any{tag, name, typ, flags, a(an)}
 }
-func variant(tag int, name string, typ any, an ann) []any {
-	return []any{tag, name, typ, a(an)}
+func variant(tag int, name string, typ any, flags int, an ann) []any {
+	return []any{tag, name, typ, flags, a(an)}
 }
 func method(id int, name string, in, out any, errors []any, flags int, an ann) []any {
 	return []any{id, name, in, out, list(errors...), flags, a(an)}
@@ -75,18 +103,47 @@ func service(id int, name string, methods []any, an ann) []any {
 func sigil(id int, name string, kind int, an ann) []any {
 	return []any{id, name, kind, a(an)}
 }
-func schemaDoc(name, version string, types, services, sigils []any, an ann) []any {
-	return []any{1, name, version, list(types...), list(services...), list(sigils...), a(an)}
+func retired(pairs ...[2]int) []any {
+	out := []any{}
+	for _, p := range pairs {
+		out = append(out, []any{p[0], p[1]})
+	}
+	return out
 }
 
-// Method flags (section 6.4)
+// part = [id, name, version, types, services, sigils, implements, retired, annotations]
 const (
-	fIdempotent   = 0x1
-	fNotification = 0x2
-	fShared       = 0x4
-	fInputEnd     = 0x8
-	fOutputEnd    = 0x10
+	pID = iota
+	pName
+	pVersion
+	pTypes
+	pServices
+	pSigils
+	pImplements
+	pRetired
+	pAnn
 )
+
+func partDoc(id int, name, version string, types, services, sigils []any, implements []byte, ret []any, an ann) []any {
+	var impl any
+	if implements != nil {
+		impl = implements
+	}
+	if ret == nil {
+		ret = []any{}
+	}
+	return []any{id, name, version, list(types...), list(services...), list(sigils...), impl, ret, a(an)}
+}
+
+// interface = [name, version, types, services, sigils]
+func ifaceDoc(name, version string, types, services, sigils []any) []any {
+	return []any{name, version, list(types...), list(services...), list(sigils...)}
+}
+
+// schema = [format, name, version, parts, annotations]
+func schemaDoc(name, version string, parts []any, an ann) []any {
+	return []any{2, name, version, list(parts...), a(an)}
+}
 
 func sortByInt(xs []any, key func(any) int64) {
 	sort.SliceStable(xs, func(i, j int) bool { return key(xs[i]) < key(xs[j]) })
@@ -95,25 +152,18 @@ func first(x any) int64  { return num(x.([]any)[0]) }
 func second(x any) int64 { return num(x.([]any)[1]) }
 func self(x any) int64   { return num(x) }
 
-// canonical returns the canonical form of a schema (section 6.6) as a new
-// tree. Retired definitions are never present in the trees this program
-// keeps (retiring removes them), so only sorting is needed here.
-func canonical(s []any) []any {
-	c := deepCopy(s).([]any)
-	types := c[3].([]any)
+// canonDefs sorts types, services and sigils in place (section 6.6).
+func canonDefs(types, services, sigils []any) {
 	sortByInt(types, second)
 	for _, t := range types {
 		td := t.([]any)
 		switch num(td[0]) {
-		case 0:
+		case 0, 2:
 			sortByInt(td[3].([]any), first)
 		case 1:
 			sortByInt(td[3].([]any), self)
-		case 2:
-			sortByInt(td[3].([]any), first)
 		}
 	}
-	services := c[4].([]any)
 	sortByInt(services, first)
 	for _, sv := range services {
 		ms := sv.([]any)[2].([]any)
@@ -122,42 +172,138 @@ func canonical(s []any) []any {
 			sortByInt(m.([]any)[4].([]any), self)
 		}
 	}
-	sortByInt(c[5].([]any), first)
+	sortByInt(sigils, first)
+}
+
+func canonicalPart(p []any) []any {
+	c := deepCopy(p).([]any)
+	canonDefs(c[pTypes].([]any), c[pServices].([]any), c[pSigils].([]any))
+	r := c[pRetired].([]any)
+	sort.SliceStable(r, func(i, j int) bool {
+		a, b := r[i].([]any), r[j].([]any)
+		if num(a[0]) != num(b[0]) {
+			return num(a[0]) < num(b[0])
+		}
+		return num(a[1]) < num(b[1])
+	})
 	return c
 }
 
-func schemaHash(canon []any) []byte {
-	sum := sha256.Sum256(enc(canon))
-	return append([]byte{0x01}, sum[:]...)
+func canonicalIface(i []any) []any {
+	c := deepCopy(i).([]any)
+	canonDefs(c[2].([]any), c[3].([]any), c[4].([]any))
+	return c
 }
 
-// ---------------------------------------------------------------------------
-// Delta application (section 6.6). See test-vectors/README.md, "Assumptions".
-// ---------------------------------------------------------------------------
-
-type schemaState struct {
-	doc     []any
-	retired [4]map[int64]bool // 0 type, 1 method, 2 sigil, 3 service
-}
-
-func newState(doc []any) *schemaState {
-	st := &schemaState{doc: canonical(doc)}
-	for i := range st.retired {
-		st.retired[i] = map[int64]bool{}
+func canonicalSchema(s []any) []any {
+	c := deepCopy(s).([]any)
+	parts := c[3].([]any)
+	for i, p := range parts {
+		parts[i] = canonicalPart(p.([]any))
 	}
-	return st
+	sortByInt(parts, first)
+	return c
 }
 
-func (st *schemaState) clone() *schemaState {
-	n := &schemaState{doc: deepCopy(st.doc).([]any)}
-	for i := range st.retired {
-		n.retired[i] = map[int64]bool{}
-		for k := range st.retired[i] {
-			n.retired[i][k] = true
+func h33(b []byte) []byte {
+	s := sha256.Sum256(b)
+	return append([]byte{0x01}, s[:]...)
+}
+
+// partHashInput is the canonical part with name "" and id 0.
+func partHashInput(p []any) []any {
+	c := canonicalPart(p)
+	c[pID] = 0
+	c[pName] = ""
+	return c
+}
+
+func partHash(p []any) []byte  { return h33(enc(partHashInput(p))) }
+func ifaceHash(i []any) []byte { return h33(enc(canonicalIface(i))) }
+
+// schemaHashInput is [format, name, version, [* [part_id, part_name, part_hash]], annotations].
+func schemaHashInput(s []any) []any {
+	c := canonicalSchema(s)
+	entries := []any{}
+	for _, p := range c[3].([]any) {
+		pd := p.([]any)
+		entries = append(entries, []any{pd[pID], pd[pName], partHash(pd)})
+	}
+	return []any{c[0], c[1], c[2], entries, c[4]}
+}
+
+func schemaHash(s []any) []byte { return h33(enc(schemaHashInput(s))) }
+
+// ---------------------------------------------------------------------------
+// Wire shapes and interface conformance (section 6.5)
+// ---------------------------------------------------------------------------
+
+func blankType(td []any) []any {
+	c := deepCopy(td).([]any)
+	c[2] = ""
+	c[len(c)-1] = map[string]any{}
+	switch num(c[0]) {
+	case 0, 2:
+		for _, f := range c[3].([]any) {
+			fd := f.([]any)
+			fd[1] = ""
+			fd[4] = map[string]any{}
 		}
 	}
-	return n
+	return c
 }
+
+func blankService(sd []any) []any {
+	c := deepCopy(sd).([]any)
+	c[1] = ""
+	c[3] = map[string]any{}
+	for _, m := range c[2].([]any) {
+		md := m.([]any)
+		md[1] = ""
+		md[6] = map[string]any{}
+	}
+	return c
+}
+
+func blankSigil(sg []any) []any {
+	c := deepCopy(sg).([]any)
+	c[1] = ""
+	c[3] = map[string]any{}
+	return c
+}
+
+// conforms checks a part against an interface. It returns the first
+// mismatch as [space, id] (space as in `retired`), or nil.
+func conforms(part, iface []any) []any {
+	p := canonicalPart(part)
+	i := canonicalIface(iface)
+	type group struct {
+		space       int
+		iDefs, pDef []any
+		idPos       int
+		blank       func([]any) []any
+	}
+	groups := []group{
+		{spType, i[2].([]any), p[pTypes].([]any), 1, blankType},
+		{spService, i[3].([]any), p[pServices].([]any), 0, blankService},
+		{spSigil, i[4].([]any), p[pSigils].([]any), 0, blankSigil},
+	}
+	for _, g := range groups {
+		for _, d := range g.iDefs {
+			dd := d.([]any)
+			id := num(dd[g.idPos])
+			j := indexByID(g.pDef, g.idPos, id)
+			if j < 0 || !bytes.Equal(enc(g.blank(dd)), enc(g.blank(g.pDef[j].([]any)))) {
+				return []any{g.space, id}
+			}
+		}
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Validation
+// ---------------------------------------------------------------------------
 
 type deltaError struct {
 	Code   string
@@ -179,281 +325,287 @@ func indexByID(xs []any, idPos int, id int64) int {
 	return -1
 }
 
-func (st *schemaState) apply(delta []any) (*schemaState, *deltaError) {
-	n := st.clone()
-	doc := n.doc
-	for _, opv := range delta {
-		op := opv.([]any)
-		switch num(op[0]) {
-		case 0: // add or replace type
-			td := deepCopy(op[1]).([]any)
-			id := num(td[1])
-			if n.retired[0][id] {
-				return nil, derr("retired_id_reused", "type %d was retired", id)
+func containsFloat(v any) bool {
+	switch x := v.(type) {
+	case float32, float64:
+		return true
+	case []any:
+		for _, e := range x {
+			if containsFloat(e) {
+				return true
 			}
-			types := doc[3].([]any)
-			if i := indexByID(types, 1, id); i >= 0 {
-				types[i] = td
-			} else {
-				doc[3] = append(types, td)
-			}
-		case 1: // add or replace service
-			sd := deepCopy(op[1]).([]any)
-			id := num(sd[0])
-			if n.retired[3][id] {
-				return nil, derr("retired_id_reused", "service %d was retired", id)
-			}
-			for _, m := range sd[2].([]any) {
-				mid := num(m.([]any)[0])
-				if n.retired[1][mid] {
-					return nil, derr("retired_id_reused", "method %d was retired", mid)
-				}
-			}
-			services := doc[4].([]any)
-			if i := indexByID(services, 0, id); i >= 0 {
-				old := services[i].([]any)
-				if e := checkServiceReplace(old, sd); e != nil {
-					return nil, e
-				}
-				services[i] = sd
-			} else {
-				doc[4] = append(services, sd)
-			}
-		case 2: // add sigil
-			sg := deepCopy(op[1]).([]any)
-			id := num(sg[0])
-			if n.retired[2][id] {
-				return nil, derr("retired_id_reused", "sigil %d was retired", id)
-			}
-			if indexByID(doc[5].([]any), 0, id) >= 0 {
-				return nil, derr("duplicate_id", "sigil %d already exists", id)
-			}
-			doc[5] = append(doc[5].([]any), sg)
-		case 3: // retire
-			space, id := num(op[1]), num(op[2])
-			if e := n.retire(space, id); e != nil {
-				return nil, e
-			}
-		case 4:
-			doc[6] = deepCopy(op[1])
-		case 5:
-			doc[2] = op[1]
-		default:
-			return nil, derr("unknown_delta_op", "op %d", num(op[0]))
 		}
+	case map[string]any:
+		for _, e := range x {
+			if containsFloat(e) {
+				return true
+			}
+		}
+	case map[any]any:
+		for k, e := range x {
+			if containsFloat(k) || containsFloat(e) {
+				return true
+			}
+		}
+	case cbor.Tag:
+		return containsFloat(x.Content)
 	}
-	n.doc = canonical(doc)
-	if e := validateSchema(n.doc); e != nil {
-		return nil, e
-	}
-	return n, nil
+	return false
 }
 
-func checkServiceReplace(old, nw []any) *deltaError {
-	newMethods := map[int64][]any{}
-	for _, m := range nw[2].([]any) {
-		newMethods[num(m.([]any)[0])] = m.([]any)
-	}
-	for _, m := range old[2].([]any) {
-		om := m.([]any)
-		id := num(om[0])
-		nm, ok := newMethods[id]
-		if !ok {
-			return derr("method_dropped_without_retire", "service %d replacement omits method %d", num(old[0]), id)
-		}
-		const fixed = fNotification | fInputEnd | fOutputEnd
-		if hx(enc(om[2])) != hx(enc(nm[2])) || hx(enc(om[3])) != hx(enc(nm[3])) ||
-			num(om[5])&fixed != num(nm[5])&fixed {
-			return derr("incompatible_method_change", "method %d changed input, output or flags 0x2/0x8/0x10", id)
-		}
-	}
-	return nil
+type defs struct {
+	types   map[int64][]any
+	sigils  map[int64]int64 // id -> kind
+	methods map[int64][]any
+	svcs    map[int64][]any
 }
 
-func (n *schemaState) retire(space, id int64) *deltaError {
-	doc := n.doc
-	switch space {
-	case 0:
-		types := doc[3].([]any)
-		i := indexByID(types, 1, id)
-		if i < 0 {
-			return derr("unknown_id_retired", "type %d", id)
+// validateDefs checks one part or interface: IDs, references within it,
+// End flags and stream placement (sections 6.1-6.6).
+func validateDefs(where string, types, services, sigils, ret []any) (*defs, *deltaError) {
+	d := &defs{map[int64][]any{}, map[int64]int64{}, map[int64][]any{}, map[int64][]any{}}
+	retiredSet := map[[2]int64]bool{}
+	for _, r := range ret {
+		rp := r.([]any)
+		sp := num(rp[0])
+		if sp < 0 || sp > 3 {
+			return nil, derr("bad_retired_entry", "%s: space %d", where, sp)
 		}
-		doc[3] = append(types[:i:i], types[i+1:]...)
-	case 1:
-		for _, sv := range doc[4].([]any) {
-			s := sv.([]any)
-			ms := s[2].([]any)
-			if i := indexByID(ms, 0, id); i >= 0 {
-				s[2] = append(ms[:i:i], ms[i+1:]...)
-				n.retired[1][id] = true
-				return nil
-			}
-		}
-		return derr("unknown_id_retired", "method %d", id)
-	case 2:
-		sg := doc[5].([]any)
-		i := indexByID(sg, 0, id)
-		if i < 0 {
-			return derr("unknown_id_retired", "sigil %d", id)
-		}
-		doc[5] = append(sg[:i:i], sg[i+1:]...)
-	case 3:
-		services := doc[4].([]any)
-		i := indexByID(services, 0, id)
-		if i < 0 {
-			return derr("unknown_id_retired", "service %d", id)
-		}
-		for _, m := range services[i].([]any)[2].([]any) {
-			n.retired[1][num(m.([]any)[0])] = true
-		}
-		doc[4] = append(services[:i:i], services[i+1:]...)
-	default:
-		return derr("unknown_id_space", "space %d", space)
+		retiredSet[[2]int64{sp, num(rp[1])}] = true
 	}
-	n.retired[space][id] = true
-	return nil
-}
-
-// validateSchema checks the rules this program enforces on a full schema.
-func validateSchema(doc []any) *deltaError {
-	types := map[int64][]any{}
-	for _, t := range doc[3].([]any) {
+	for _, t := range types {
 		td := t.([]any)
 		id := num(td[1])
 		if id < 64 {
-			return derr("reserved_id", "type %d is in the reserved range 0-63", id)
+			return nil, derr("reserved_id", "%s: type %d is reserved", where, id)
 		}
-		if types[id] != nil {
-			return derr("duplicate_id", "type %d", id)
+		if d.types[id] != nil {
+			return nil, derr("duplicate_id", "%s: type %d", where, id)
 		}
-		types[id] = td
+		if retiredSet[[2]int64{spType, id}] {
+			return nil, derr("retired_id_reused", "%s: type %d is retired", where, id)
+		}
+		d.types[id] = td
 	}
-	sigils := map[int64]int64{}
-	for _, s := range doc[5].([]any) {
+	for _, s := range sigils {
 		sd := s.([]any)
 		id := num(sd[0])
 		if id < 64 {
-			return derr("reserved_id", "sigil %d is in the reserved range 0-63", id)
+			return nil, derr("reserved_id", "%s: sigil %d is reserved", where, id)
 		}
-		if _, dup := sigils[id]; dup {
-			return derr("duplicate_id", "sigil %d", id)
+		if _, dup := d.sigils[id]; dup {
+			return nil, derr("duplicate_id", "%s: sigil %d", where, id)
 		}
-		sigils[id] = num(sd[2])
+		if retiredSet[[2]int64{spSigil, id}] {
+			return nil, derr("retired_id_reused", "%s: sigil %d is retired", where, id)
+		}
+		d.sigils[id] = num(sd[2])
 	}
-	var checkRef func(ref any, where string, top bool) *deltaError
-	checkRef = func(ref any, where string, top bool) *deltaError {
+	for _, sv := range services {
+		s := sv.([]any)
+		sid := num(s[0])
+		if d.svcs[sid] != nil {
+			return nil, derr("duplicate_id", "%s: service %d", where, sid)
+		}
+		if retiredSet[[2]int64{spService, sid}] {
+			return nil, derr("retired_id_reused", "%s: service %d is retired", where, sid)
+		}
+		d.svcs[sid] = s
+		for _, mv := range s[2].([]any) {
+			m := mv.([]any)
+			mid := num(m[0])
+			if d.methods[mid] != nil {
+				return nil, derr("duplicate_id", "%s: method %d appears twice", where, mid)
+			}
+			if retiredSet[[2]int64{spMethod, mid}] {
+				return nil, derr("retired_id_reused", "%s: method %d is retired", where, mid)
+			}
+			d.methods[mid] = m
+		}
+	}
+	var checkRef func(ref any, at string, top bool) *deltaError
+	checkRef = func(ref any, at string, top bool) *deltaError {
 		switch r := ref.(type) {
 		case []any:
 			switch num(r[0]) {
 			case 0, 2:
-				return checkRef(r[1], where, false)
+				return checkRef(r[1], at, false)
 			case 1:
-				if e := checkRef(r[1], where, false); e != nil {
+				if e := checkRef(r[1], at, false); e != nil {
 					return e
 				}
-				return checkRef(r[2], where, false)
+				return checkRef(r[2], at, false)
 			case 3:
 				if !top {
-					return derr("stream_type_misplaced", "%s: [3, T] outside a method input/output", where)
+					return derr("stream_type_misplaced", "%s: [3, T] not a method's whole input/output", at)
 				}
-				return checkRef(r[1], where, false)
+				return checkRef(r[1], at, false)
 			case 4:
 				return nil
 			}
-			return derr("bad_type_ref", "%s", where)
+			return derr("bad_type_ref", "%s", at)
 		default:
 			id := num(r)
-			if id <= tSymbol {
+			if id <= tSymbol || d.types[id] != nil {
 				return nil
 			}
-			if types[id] == nil {
-				return derr("dangling_reference", "%s references type %d, which is not defined", where, id)
-			}
-			return nil
+			return derr("dangling_reference", "%s references type %d, not defined in this part", at, id)
 		}
 	}
-	for _, t := range doc[3].([]any) {
+	for _, t := range types {
 		td := t.([]any)
-		where := fmt.Sprintf("type %d", num(td[1]))
+		at := fmt.Sprintf("%s: type %d", where, num(td[1]))
 		switch num(td[0]) {
-		case 0:
+		case 0, 2:
 			for _, f := range td[3].([]any) {
-				if e := checkRef(f.([]any)[2], where, false); e != nil {
-					return e
+				fd := f.([]any)
+				if num(fd[3])&ffRemoved != 0 {
+					continue // tombstones are never encoded; see Assumptions
+				}
+				if e := checkRef(fd[2], at, false); e != nil {
+					return nil, e
 				}
 			}
 		case 1:
 			for _, v := range td[3].([]any) {
 				sid := num(v)
-				if k, ok := sigils[sid]; !ok || k != 0 {
-					return derr("dangling_reference", "%s lists sigil %d, which is not a defined enum-value sigil", where, sid)
-				}
-			}
-		case 2:
-			for _, v := range td[3].([]any) {
-				if e := checkRef(v.([]any)[2], where, false); e != nil {
-					return e
+				if k, ok := d.sigils[sid]; !ok || k != 0 {
+					return nil, derr("dangling_reference", "%s lists sigil %d, not a kind-0 sigil of this part", at, sid)
 				}
 			}
 		case 3:
-			if e := checkRef(td[3], where, false); e != nil {
-				return e
+			if e := checkRef(td[3], at, false); e != nil {
+				return nil, e
 			}
 		}
 	}
-	services := map[int64]bool{}
-	methods := map[int64]bool{}
-	for _, sv := range doc[4].([]any) {
-		s := sv.([]any)
-		sid := num(s[0])
-		if sid < 64 {
-			return derr("reserved_id", "service %d is in the reserved range 0-63", sid)
-		}
-		if services[sid] {
-			return derr("duplicate_id", "service %d", sid)
-		}
-		services[sid] = true
-		for _, mv := range s[2].([]any) {
+	for _, sv := range services {
+		for _, mv := range sv.([]any)[2].([]any) {
 			m := mv.([]any)
-			mid := num(m[0])
-			if mid < 32 {
-				return derr("reserved_id", "method %d is in the reserved core range 0-31", mid)
+			at := fmt.Sprintf("%s: method %d", where, num(m[0]))
+			if e := checkRef(m[2], at, true); e != nil {
+				return nil, e
 			}
-			if methods[mid] {
-				return derr("duplicate_id", "method %d appears twice", mid)
-			}
-			methods[mid] = true
-			where := fmt.Sprintf("method %d", mid)
-			if e := checkRef(m[2], where, true); e != nil {
-				return e
-			}
-			if e := checkRef(m[3], where, true); e != nil {
-				return e
+			if e := checkRef(m[3], at, true); e != nil {
+				return nil, e
 			}
 			for _, ev := range m[4].([]any) {
 				e := num(ev)
 				if e < 32 {
 					continue
 				}
-				if k, ok := sigils[e]; !ok || k != 1 {
-					return derr("dangling_reference", "%s lists error %d, which is not a defined error sigil", where, e)
+				if k, ok := d.sigils[e]; !ok || k != 1 {
+					return nil, derr("dangling_reference", "%s lists error %d, not a kind-1 sigil of this part", at, e)
 				}
 			}
 			flags := num(m[5])
-			if needsEnd(m[2], types) && flags&fInputEnd == 0 {
-				return derr("missing_end_flag", "%s: input is a stream or contains [4] but flag 0x8 is not set", where)
+			if needsEnd(m[2], d.types) && flags&fInputEnd == 0 {
+				return nil, derr("missing_end_flag", "%s: input needs flag 0x8", at)
 			}
-			if needsEnd(m[3], types) && flags&fOutputEnd == 0 {
-				return derr("missing_end_flag", "%s: output is a stream or contains [4] but flag 0x10 is not set", where)
+			if needsEnd(m[3], d.types) && flags&fOutputEnd == 0 {
+				return nil, derr("missing_end_flag", "%s: output needs flag 0x10", at)
 			}
+		}
+	}
+	return d, nil
+}
+
+func validatePart(p []any) (*defs, *deltaError) {
+	where := fmt.Sprintf("part %d", num(p[pID]))
+	if containsFloat(p) {
+		return nil, derr("float_in_canonical_data", "%s contains a float", where)
+	}
+	return validateDefs(where, p[pTypes].([]any), p[pServices].([]any), p[pSigils].([]any), p[pRetired].([]any))
+}
+
+// validateIface also checks that the interface contains exactly what its
+// services reach (section 6.5).
+func validateIface(i []any) *deltaError {
+	if containsFloat(i) {
+		return derr("float_in_canonical_data", "interface contains a float")
+	}
+	d, e := validateDefs("interface", i[2].([]any), i[3].([]any), i[4].([]any), nil)
+	if e != nil {
+		return e
+	}
+	seenT := map[int64]bool{}
+	seenS := map[int64]bool{}
+	var walk func(ref any)
+	walk = func(ref any) {
+		switch r := ref.(type) {
+		case []any:
+			for _, x := range r[1:] {
+				walk(x)
+			}
+		default:
+			id := num(r)
+			if seenT[id] || d.types[id] == nil {
+				return
+			}
+			seenT[id] = true
+			td := d.types[id]
+			switch num(td[0]) {
+			case 0, 2:
+				for _, f := range td[3].([]any) {
+					walk(f.([]any)[2])
+				}
+			case 1:
+				for _, v := range td[3].([]any) {
+					seenS[num(v)] = true
+				}
+			case 3:
+				walk(td[3])
+			}
+		}
+	}
+	for _, m := range d.methods {
+		walk(m[2])
+		walk(m[3])
+		for _, ev := range m[4].([]any) {
+			seenS[num(ev)] = true
+		}
+	}
+	for _, t := range i[2].([]any) {
+		if id := num(t.([]any)[1]); !seenT[id] {
+			return derr("interface_not_closed", "type %d is not reached from the interface's services", id)
+		}
+	}
+	for _, s := range i[4].([]any) {
+		if id := num(s.([]any)[0]); !seenS[id] {
+			return derr("interface_not_closed", "sigil %d is not reached from the interface's services", id)
 		}
 	}
 	return nil
 }
 
-// needsEnd reports whether a method half is a stream or contains [4]
-// anywhere (following user type references).
+// validateSchema checks a whole schema document.
+func validateSchema(doc []any) *deltaError {
+	if containsFloat(doc) {
+		return derr("float_in_canonical_data", "schema contains a float")
+	}
+	ids := map[int64]bool{}
+	names := map[string]bool{}
+	for _, pv := range doc[3].([]any) {
+		p := pv.([]any)
+		id := num(p[pID])
+		name := p[pName].(string)
+		if ids[id] {
+			return derr("duplicate_part_id", "part %d", id)
+		}
+		if names[name] {
+			return derr("duplicate_part_name", "%q", name)
+		}
+		ids[id], names[name] = true, true
+		if id < 16 && !(id == 1 && name == "sparrow.web") {
+			return derr("reserved_part_id", "part %d (%q): IDs 0-15 are reserved for parts this spec defines", id, name)
+		}
+		if _, e := validatePart(p); e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
 func needsEnd(ref any, types map[int64][]any) bool {
 	if r, ok := ref.([]any); ok && num(r[0]) == 3 {
 		return true
@@ -480,15 +632,10 @@ func containsByteStream(ref any, types map[int64][]any, seen map[int64]bool) boo
 		seen[id] = true
 		td := types[id]
 		switch num(td[0]) {
-		case 0:
+		case 0, 2:
 			for _, f := range td[3].([]any) {
-				if containsByteStream(f.([]any)[2], types, seen) {
-					return true
-				}
-			}
-		case 2:
-			for _, v := range td[3].([]any) {
-				if containsByteStream(v.([]any)[2], types, seen) {
+				fd := f.([]any)
+				if num(fd[3])&ffRemoved == 0 && containsByteStream(fd[2], types, seen) {
 					return true
 				}
 			}
@@ -497,4 +644,248 @@ func containsByteStream(ref any, types map[int64][]any, seen map[int64]bool) boo
 		}
 	}
 	return false
+}
+
+// ---------------------------------------------------------------------------
+// Compatibility of a replacing part (sections 6.6 rule 2, 6.7)
+// ---------------------------------------------------------------------------
+
+func major(v string) string { return strings.SplitN(v, ".", 2)[0] }
+
+func refEq(a, b any) bool { return bytes.Equal(enc(a), enc(b)) }
+
+func compatible(old, nw []any) *deltaError {
+	pid := num(old[pID])
+	if old[pName] != nw[pName] {
+		return derr("part_renamed", "part %d: %q -> %q", pid, old[pName], nw[pName])
+	}
+	if major(old[pVersion].(string)) != major(nw[pVersion].(string)) {
+		return derr("major_version_changed", "part %d: %s -> %s; a new major version is a new part", pid, old[pVersion], nw[pVersion])
+	}
+	newRet := map[[2]int64]bool{}
+	for _, r := range nw[pRetired].([]any) {
+		rp := r.([]any)
+		newRet[[2]int64{num(rp[0]), num(rp[1])}] = true
+	}
+	for _, r := range old[pRetired].([]any) {
+		rp := r.([]any)
+		if !newRet[[2]int64{num(rp[0]), num(rp[1])}] {
+			return derr("retired_not_carried_over", "part %d: retired [%d, %d] missing", pid, num(rp[0]), num(rp[1]))
+		}
+	}
+	od, e := validatePart(old)
+	if e != nil {
+		return e
+	}
+	nd, e := validatePart(nw)
+	if e != nil {
+		return e
+	}
+	dropped := func(space int, id int64) *deltaError {
+		if !newRet[[2]int64{int64(space), id}] {
+			return derr("dropped_id_not_retired", "part %d: [%d, %d] was removed but is not in retired", pid, space, id)
+		}
+		return nil
+	}
+	for _, id := range sortedKeys(od.types) {
+		ot := od.types[id]
+		ntd, ok := nd.types[id]
+		if !ok {
+			if e := dropped(spType, id); e != nil {
+				return e
+			}
+			continue
+		}
+		if e := typeCompatible(pid, ot, ntd); e != nil {
+			return e
+		}
+	}
+	for _, id := range sortedKeys(od.svcs) {
+		if _, ok := nd.svcs[id]; !ok {
+			if e := dropped(spService, id); e != nil {
+				return e
+			}
+		}
+	}
+	for _, id := range sortedKeys(od.methods) {
+		om := od.methods[id]
+		nm, ok := nd.methods[id]
+		if !ok {
+			if e := dropped(spMethod, id); e != nil {
+				return e
+			}
+			continue
+		}
+		const fixed = fNotification | fInputEnd | fOutputEnd
+		if !refEq(om[2], nm[2]) || !refEq(om[3], nm[3]) || num(om[5])&fixed != num(nm[5])&fixed {
+			return derr("incompatible_change", "part %d: method %d changed input, output or flags 0x2/0x8/0x10", pid, id)
+		}
+	}
+	for _, id := range sortedKeys(od.sigils) {
+		k, ok := nd.sigils[id]
+		if !ok {
+			if e := dropped(spSigil, id); e != nil {
+				return e
+			}
+			continue
+		}
+		if k != od.sigils[id] {
+			return derr("incompatible_change", "part %d: sigil %d changed kind", pid, id)
+		}
+	}
+	return nil
+}
+
+func sortedKeys[V any](m map[int64]V) []int64 {
+	out := make([]int64, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
+	return out
+}
+
+func typeCompatible(pid int64, ot, nt []any) *deltaError {
+	id := num(ot[1])
+	bad := func(f string, args ...any) *deltaError {
+		return derr("incompatible_change", "part %d: type %d: %s", pid, id, fmt.Sprintf(f, args...))
+	}
+	if num(ot[0]) != num(nt[0]) {
+		return bad("kind changed")
+	}
+	switch num(ot[0]) {
+	case 0, 2: // struct, union: members by tag
+		isStruct := num(ot[0]) == 0
+		if isStruct && num(ot[4])&1 != num(nt[4])&1 {
+			return bad("sparse flag changed")
+		}
+		newM := map[int64][]any{}
+		for _, f := range nt[3].([]any) {
+			newM[first(f)] = f.([]any)
+		}
+		oldM := map[int64]bool{}
+		for _, f := range ot[3].([]any) {
+			of := f.([]any)
+			tag := num(of[0])
+			oldM[tag] = true
+			nf, ok := newM[tag]
+			if !ok {
+				return bad("tag %d disappeared (removed members stay as tombstones)", tag)
+			}
+			oRem, nRem := num(of[3])&ffRemoved != 0, num(nf[3])&ffRemoved != 0
+			switch {
+			case oRem && !nRem:
+				return bad("tag %d reused after removal", tag)
+			case oRem && nRem:
+			case nRem:
+				if isStruct && num(of[3])&ffOptional == 0 {
+					return bad("required field %d removed", tag)
+				}
+			default:
+				if !refEq(of[2], nf[2]) {
+					return bad("tag %d changed type", tag)
+				}
+				if isStruct && num(of[3])&ffOptional != 0 && num(nf[3])&ffOptional == 0 {
+					return bad("field %d made required", tag)
+				}
+			}
+		}
+		if isStruct {
+			for tag, nf := range newM {
+				if !oldM[tag] && num(nf[3])&(ffOptional|ffRemoved) == 0 {
+					return bad("new field %d is required", tag)
+				}
+			}
+		}
+	case 1:
+		nv := map[int64]bool{}
+		for _, v := range nt[3].([]any) {
+			nv[num(v)] = true
+		}
+		for _, v := range ot[3].([]any) {
+			if !nv[num(v)] {
+				return bad("enum value %d removed", num(v))
+			}
+		}
+	case 3:
+		if !refEq(ot[3], nt[3]) {
+			return bad("alias target changed")
+		}
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Delta application (section 6.6)
+// ---------------------------------------------------------------------------
+
+type schemaState struct {
+	doc     []any           // canonical schema
+	removed map[int64][]any // part ID -> last version seen, for re-adds
+}
+
+func newState(doc []any) *schemaState {
+	return &schemaState{doc: canonicalSchema(doc), removed: map[int64][]any{}}
+}
+
+func (st *schemaState) clone() *schemaState {
+	n := &schemaState{doc: deepCopy(st.doc).([]any), removed: map[int64][]any{}}
+	for k, v := range st.removed {
+		n.removed[k] = v
+	}
+	return n
+}
+
+func (st *schemaState) removedIDs() []int64 { return sortedKeys(st.removed) }
+
+func (st *schemaState) apply(delta []any) (*schemaState, *deltaError) {
+	n := st.clone()
+	doc := n.doc
+	for _, opv := range delta {
+		op := opv.([]any)
+		switch num(op[0]) {
+		case 0:
+			p := canonicalPart(op[1].([]any))
+			id := num(p[pID])
+			parts := doc[3].([]any)
+			if i := indexByID(parts, pID, id); i >= 0 {
+				if e := compatible(parts[i].([]any), p); e != nil {
+					return nil, e
+				}
+				parts[i] = p
+			} else {
+				if last, ok := n.removed[id]; ok {
+					if last[pName] != p[pName] || major(last[pVersion].(string)) != major(p[pVersion].(string)) {
+						return nil, derr("removed_part_mismatch", "part %d was %q %s; it may only come back with the same name and major version (got %q %s)",
+							id, last[pName], last[pVersion], p[pName], p[pVersion])
+					}
+					if e := compatible(last, p); e != nil {
+						return nil, e
+					}
+					delete(n.removed, id)
+				}
+				doc[3] = append(parts, p)
+			}
+		case 1:
+			id := num(op[1])
+			parts := doc[3].([]any)
+			i := indexByID(parts, pID, id)
+			if i < 0 {
+				return nil, derr("unknown_part", "part %d", id)
+			}
+			n.removed[id] = parts[i].([]any)
+			doc[3] = append(parts[:i:i], parts[i+1:]...)
+		case 2:
+			doc[4] = deepCopy(op[1])
+		case 3:
+			doc[2] = op[1]
+		default:
+			return nil, derr("unknown_delta_op", "op %d", num(op[0]))
+		}
+	}
+	n.doc = canonicalSchema(doc)
+	if e := validateSchema(n.doc); e != nil {
+		return nil, e
+	}
+	return n, nil
 }

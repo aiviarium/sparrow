@@ -1,19 +1,20 @@
 {
-  "spec_revision": "core rev108 (2026-11-26 draft)",
+  "spec_revision": "core rev164 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "status",
   "vectors": [
     {
       "name": "status/close-codes",
-      "description": "Status codes (section 8) and how each is carried when a transport is closed or a stream is reset. websocket_close_reason_prefix is null when the close code alone identifies the status.",
+      "description": "Core status codes (section 8) and how each is carried by a WebTransport stream reset, a WebTransport session close and a WebSocket close.",
       "spec": "5.6, 8",
       "type": "status_table",
+      "websocket_reason_max_bytes": 123,
+      "webtransport_reason_max_bytes": 1024,
       "entries": [
         {
           "status": 0,
           "name": "ok",
-          "websocket_close_code": 4000,
-          "websocket_close_reason_prefix": null,
+          "websocket_close_code": 1000,
           "webtransport_session_close_code": 0,
           "webtransport_stream_reset_code": 0
         },
@@ -21,7 +22,6 @@
           "status": 1,
           "name": "cancelled",
           "websocket_close_code": 4001,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 1,
           "webtransport_stream_reset_code": 1
         },
@@ -29,7 +29,6 @@
           "status": 2,
           "name": "unknown",
           "websocket_close_code": 4002,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 2,
           "webtransport_stream_reset_code": 2
         },
@@ -37,7 +36,6 @@
           "status": 3,
           "name": "invalid_argument",
           "websocket_close_code": 4003,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 3,
           "webtransport_stream_reset_code": 3
         },
@@ -45,7 +43,6 @@
           "status": 4,
           "name": "deadline_exceeded",
           "websocket_close_code": 4004,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 4,
           "webtransport_stream_reset_code": 4
         },
@@ -53,7 +50,6 @@
           "status": 5,
           "name": "not_found",
           "websocket_close_code": 4005,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 5,
           "webtransport_stream_reset_code": 5
         },
@@ -61,7 +57,6 @@
           "status": 6,
           "name": "already_exists",
           "websocket_close_code": 4006,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 6,
           "webtransport_stream_reset_code": 6
         },
@@ -69,7 +64,6 @@
           "status": 7,
           "name": "permission_denied",
           "websocket_close_code": 4007,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 7,
           "webtransport_stream_reset_code": 7
         },
@@ -77,7 +71,6 @@
           "status": 8,
           "name": "resource_exhausted",
           "websocket_close_code": 4008,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 8,
           "webtransport_stream_reset_code": 8
         },
@@ -85,7 +78,6 @@
           "status": 9,
           "name": "failed_precondition",
           "websocket_close_code": 4009,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 9,
           "webtransport_stream_reset_code": 9
         },
@@ -93,7 +85,6 @@
           "status": 10,
           "name": "aborted",
           "websocket_close_code": 4010,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 10,
           "webtransport_stream_reset_code": 10
         },
@@ -101,7 +92,6 @@
           "status": 11,
           "name": "out_of_range",
           "websocket_close_code": 4011,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 11,
           "webtransport_stream_reset_code": 11
         },
@@ -109,7 +99,6 @@
           "status": 12,
           "name": "unimplemented",
           "websocket_close_code": 4012,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 12,
           "webtransport_stream_reset_code": 12
         },
@@ -117,7 +106,6 @@
           "status": 13,
           "name": "internal",
           "websocket_close_code": 4013,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 13,
           "webtransport_stream_reset_code": 13
         },
@@ -125,7 +113,6 @@
           "status": 14,
           "name": "unavailable",
           "websocket_close_code": 4014,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 14,
           "webtransport_stream_reset_code": 14
         },
@@ -133,7 +120,6 @@
           "status": 15,
           "name": "data_loss",
           "websocket_close_code": 4015,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 15,
           "webtransport_stream_reset_code": 15
         },
@@ -141,7 +127,6 @@
           "status": 16,
           "name": "unauthenticated",
           "websocket_close_code": 4016,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 16,
           "webtransport_stream_reset_code": 16
         },
@@ -149,7 +134,6 @@
           "status": 17,
           "name": "protocol_error",
           "websocket_close_code": 4017,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 17,
           "webtransport_stream_reset_code": 17
         },
@@ -157,7 +141,6 @@
           "status": 18,
           "name": "schema_mismatch",
           "websocket_close_code": 4018,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 18,
           "webtransport_stream_reset_code": 18
         },
@@ -165,7 +148,6 @@
           "status": 19,
           "name": "unsupported_version",
           "websocket_close_code": 4019,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 19,
           "webtransport_stream_reset_code": 19
         },
@@ -173,7 +155,6 @@
           "status": 20,
           "name": "not_ready",
           "websocket_close_code": 4020,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 20,
           "webtransport_stream_reset_code": 20
         },
@@ -181,7 +162,6 @@
           "status": 21,
           "name": "going_away",
           "websocket_close_code": 4021,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 21,
           "webtransport_stream_reset_code": 21
         },
@@ -189,118 +169,89 @@
           "status": 22,
           "name": "message_too_large",
           "websocket_close_code": 4022,
-          "websocket_close_reason_prefix": null,
           "webtransport_session_close_code": 22,
           "webtransport_stream_reset_code": 22
-        },
+        }
+      ]
+    },
+    {
+      "name": "status/reserved-23-31",
+      "description": "Codes 23-31 are reserved for later core versions.",
+      "spec": "8",
+      "type": "status_reserved",
+      "entries": [
         {
           "status": 23,
           "name": "(reserved)",
           "websocket_close_code": 4023,
-          "websocket_close_reason_prefix": null,
-          "webtransport_session_close_code": 23,
-          "webtransport_stream_reset_code": 23,
-          "note": "Reserved for later core versions; still in the core range 0-31."
+          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
         },
         {
           "status": 24,
           "name": "(reserved)",
           "websocket_close_code": 4024,
-          "websocket_close_reason_prefix": null,
-          "webtransport_session_close_code": 24,
-          "webtransport_stream_reset_code": 24,
-          "note": "Reserved for later core versions; still in the core range 0-31."
+          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
         },
         {
           "status": 25,
           "name": "(reserved)",
           "websocket_close_code": 4025,
-          "websocket_close_reason_prefix": null,
-          "webtransport_session_close_code": 25,
-          "webtransport_stream_reset_code": 25,
-          "note": "Reserved for later core versions; still in the core range 0-31."
+          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
         },
         {
           "status": 26,
           "name": "(reserved)",
           "websocket_close_code": 4026,
-          "websocket_close_reason_prefix": null,
-          "webtransport_session_close_code": 26,
-          "webtransport_stream_reset_code": 26,
-          "note": "Reserved for later core versions; still in the core range 0-31."
+          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
         },
         {
           "status": 27,
           "name": "(reserved)",
           "websocket_close_code": 4027,
-          "websocket_close_reason_prefix": null,
-          "webtransport_session_close_code": 27,
-          "webtransport_stream_reset_code": 27,
-          "note": "Reserved for later core versions; still in the core range 0-31."
+          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
         },
         {
           "status": 28,
           "name": "(reserved)",
           "websocket_close_code": 4028,
-          "websocket_close_reason_prefix": null,
-          "webtransport_session_close_code": 28,
-          "webtransport_stream_reset_code": 28,
-          "note": "Reserved for later core versions; still in the core range 0-31."
+          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
         },
         {
           "status": 29,
           "name": "(reserved)",
           "websocket_close_code": 4029,
-          "websocket_close_reason_prefix": null,
-          "webtransport_session_close_code": 29,
-          "webtransport_stream_reset_code": 29,
-          "note": "Reserved for later core versions; still in the core range 0-31."
+          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
         },
         {
           "status": 30,
           "name": "(reserved)",
           "websocket_close_code": 4030,
-          "websocket_close_reason_prefix": null,
-          "webtransport_session_close_code": 30,
-          "webtransport_stream_reset_code": 30,
-          "note": "Reserved for later core versions; still in the core range 0-31."
+          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
         },
         {
           "status": 31,
           "name": "(reserved)",
           "websocket_close_code": 4031,
-          "websocket_close_reason_prefix": null,
-          "webtransport_session_close_code": 31,
-          "webtransport_stream_reset_code": 31,
-          "note": "Reserved for later core versions; still in the core range 0-31."
-        },
-        {
-          "status": 64,
-          "name": "acme.notes.quota_exceeded",
-          "websocket_close_code": 4002,
-          "websocket_close_reason_prefix": "64",
-          "webtransport_session_close_code": 64,
-          "webtransport_stream_reset_code": 64,
-          "note": "Non-core (method error sigil from the example schema)."
-        },
-        {
-          "status": 65,
-          "name": "acme.notes.conflict",
-          "websocket_close_code": 4002,
-          "websocket_close_reason_prefix": "65",
-          "webtransport_session_close_code": 65,
-          "webtransport_stream_reset_code": 65,
-          "note": "Non-core (method error sigil from the example schema)."
-        },
-        {
-          "status": 1000,
-          "name": "(application sigil 1000)",
-          "websocket_close_code": 4002,
-          "websocket_close_reason_prefix": "1000",
-          "webtransport_session_close_code": 1000,
-          "webtransport_stream_reset_code": null,
-          "note": "Non-core and above 255: no WebTransport stream reset code (see SPEC-ISSUES.md)."
+          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
         }
+      ]
+    },
+    {
+      "name": "status/application-error-not-transport",
+      "description": "An application error sigil (here conflict, 65, of part 16) travels only in an Error message; stream resets and transport closes carry core codes only, and Cancel, GoAway and AuthStatus carry core codes only.",
+      "spec": "8",
+      "type": "status_scope",
+      "status": 65,
+      "allowed_in": [
+        "Error"
+      ],
+      "not_allowed_in": [
+        "Cancel",
+        "GoAway",
+        "AuthStatus",
+        "webtransport_stream_reset",
+        "webtransport_session_close",
+        "websocket_close"
       ]
     }
   ]

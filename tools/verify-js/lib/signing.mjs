@@ -4,6 +4,13 @@
 import { createHash, createPrivateKey, createPublicKey, sign, verify } from 'node:crypto';
 import { concat, encTJ, hex, unhex, u8eq } from './cbor.mjs';
 
+/** 9.4: module id must start with the part name (minus any '<hub-id>/') and a dot. */
+export function moduleInPart(partName, moduleId) {
+  const i = partName.indexOf('/');
+  const name = i >= 0 ? partName.slice(i + 1) : partName;
+  return moduleId.startsWith(`${name}.`);
+}
+
 const PKCS8_ED25519_PREFIX = unhex('302e020100300506032b657004220420');
 const SPKI_ED25519_PREFIX = unhex('302a300506032b6570032100');
 
@@ -29,8 +36,8 @@ export const sha256 = (b) => new Uint8Array(createHash('sha256').update(b).diges
 export const keyId = (pub) => sha256(pub).subarray(0, 16);
 export const fileHash = (b) => concat([0x01], sha256(b));
 
-/** Domain string as raw UTF-8, then the canonical CBOR of the unsigned value. */
-export const signedBytes = (domain, unsignedTJ) => concat(Buffer.from(domain, 'utf8'), encTJ(unsignedTJ));
+/** Canonical CBOR of the two-element array [domain, value] (section 9.5). */
+export const signedBytes = (domain, unsignedTJ) => encTJ([domain, unsignedTJ]);
 
 export const ed25519Sign = (seed, msg) => new Uint8Array(sign(null, Buffer.from(msg), privateKeyFromSeed(seed)));
 export const ed25519Verify = (pub, msg, sig) => verify(null, Buffer.from(msg), publicKeyObject(pub), Buffer.from(sig));
@@ -51,9 +58,9 @@ export function verifyModule(entry, ctx) {
   }
   const [kidT, sigT] = entry.sig;
   const kid = hex(bytesOf(kidT));
-  if (revoked.has(kid)) return 'key_revoked';
-  let key = roots.get(kid);
+  let key = roots.get(kid); // root keys cannot be revoked
   if (!key) {
+    if (revoked.has(kid)) return 'key_revoked';
     let reason = 'unknown_key';
     for (const c of ctx.webKeys) {
       const pub = bytesOf(c[0]);
@@ -63,8 +70,8 @@ export function verifyModule(entry, ctx) {
       if (!root) reason = 'unknown_root';
       else if (!ed25519Verify(root, signedBytes(DOMAIN.cert, c.slice(0, 4)), bytesOf(c[4]))) reason = 'bad_certificate_signature';
       else if (!ns.endsWith('.')) reason = 'namespace_missing_trailing_dot';
-      else if (ctx.now >= c[2].value) reason = 'certificate_expired';
-      else if (!entry.id.startsWith(ns)) reason = 'namespace_not_covered';
+      else if (!(ctx.now < c[2].value)) reason = 'certificate_expired';
+      else if (!Buffer.from(entry.id, 'utf8').subarray(0, Buffer.byteLength(ns, 'utf8')).equals(Buffer.from(ns, 'utf8'))) reason = 'namespace_not_covered';
       else { key = pub; break; }
     }
     if (!key) return reason;

@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev108 (2026-11-26 draft)",
+  "spec_revision": "core rev164 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "credit",
   "vectors": [
@@ -152,6 +152,7 @@
       "message": [
         16,
         2,
+        16,
         1042,
         {},
         [
@@ -159,8 +160,8 @@
           true
         ]
       ],
-      "cbor": "851002190412a0826873657474696e6773f5",
-      "framed_length": 19,
+      "cbor": "86100210190412a0826873657474696e6773f5",
+      "framed_length": 20,
       "counted_bytes": 0
     },
     {

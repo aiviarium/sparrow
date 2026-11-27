@@ -1,0 +1,429 @@
+{
+  "spec_revision": "core rev164 (draft)",
+  "generator": "tools/vectorgen-go",
+  "area": "hub",
+  "vectors": [
+    {
+      "name": "forward/unary",
+      "description": "A client of session principal user:alice calls draw (method 0) of part 17, which belongs to node acme.charts. The hub authorizes it, then opens a call on the node's pipe link with a new call ID (1: the hub is the Sparrow server there, so odd), the node's own part ID (16), the same method ID and input bytes, deadline lowered by the 50 ms already spent, and context/principal set by the hub, replacing the values the caller sent. The node's Response is relayed with only the call ID changed.",
+      "spec": "10.4, 10.5, 10.6",
+      "type": "forward",
+      "session_principal": "user:alice",
+      "node_id": "acme.charts",
+      "part_map": {
+        "hub_part_id": 17,
+        "node_part_id": 16,
+        "part_hash": "01d4c62f8b9fda6c4fab89502f993f67a939508dc76600d7ec3256ba320ef6ba98"
+      },
+      "elapsed_ms": 50,
+      "client_request": {
+        "message": [
+          16,
+          4,
+          17,
+          0,
+          {
+            "$map": [
+              [
+                32,
+                5000
+              ],
+              [
+                36,
+                {
+                  "$bytes": "deadbeef"
+                }
+              ],
+              [
+                37,
+                "user:mallory"
+              ],
+              [
+                "x-tenant",
+                "acme"
+              ]
+            ]
+          },
+          [
+            64,
+            "Sales",
+            [
+              [
+                "2026",
+                [
+                  3,
+                  5,
+                  8
+                ]
+              ]
+            ]
+          ]
+        ],
+        "diag": "[16, 4, 17, 0, {32: 5000, 36: h'deadbeef', 37: \"user:mallory\", \"x-tenant\": \"acme\"}, [64, \"Sales\", [[\"2026\", [3, 5, 8]]]]]",
+        "cbor": "8610041100a41820191388182444deadbeef18256c757365723a6d616c6c6f727968782d74656e616e746461636d658318406553616c65738182643230323683030508"
+      },
+      "forwarded_request": {
+        "message": [
+          16,
+          1,
+          16,
+          0,
+          {
+            "$map": [
+              [
+                32,
+                4950
+              ],
+              [
+                36,
+                {
+                  "$bytes": "c0ffee00112233445566778899aabbcc"
+                }
+              ],
+              [
+                37,
+                "user:alice"
+              ],
+              [
+                "x-tenant",
+                "acme"
+              ]
+            ]
+          },
+          [
+            64,
+            "Sales",
+            [
+              [
+                "2026",
+                [
+                  3,
+                  5,
+                  8
+                ]
+              ]
+            ]
+          ]
+        ],
+        "diag": "[16, 1, 16, 0, {32: 4950, 36: h'c0ffee00112233445566778899aabbcc', 37: \"user:alice\", \"x-tenant\": \"acme\"}, [64, \"Sales\", [[\"2026\", [3, 5, 8]]]]]",
+        "cbor": "8610011000a41820191356182450c0ffee00112233445566778899aabbcc18256a757365723a616c69636568782d74656e616e746461636d658318406553616c65738182643230323683030508"
+      },
+      "payload_cbor": "8318406553616c65738182643230323683030508",
+      "node_response": {
+        "message": [
+          17,
+          1,
+          {
+            "$bytes": "3c73766720786d6c6e733d22687474703a2f2f7777772e77332e6f72672f323030302f737667222f3e"
+          }
+        ],
+        "diag": "[17, 1, h'3c73766720786d6c6e733d22687474703a2f2f7777772e77332e6f72672f323030302f737667222f3e']",
+        "cbor": "83110158293c73766720786d6c6e733d22687474703a2f2f7777772e77332e6f72672f323030302f737667222f3e"
+      },
+      "relayed_response": {
+        "message": [
+          17,
+          4,
+          {
+            "$bytes": "3c73766720786d6c6e733d22687474703a2f2f7777772e77332e6f72672f323030302f737667222f3e"
+          }
+        ],
+        "diag": "[17, 4, h'3c73766720786d6c6e733d22687474703a2f2f7777772e77332e6f72672f323030302f737667222f3e']",
+        "cbor": "83110458293c73766720786d6c6e733d22687474703a2f2f7777772e77332e6f72672f323030302f737667222f3e"
+      },
+      "response_payload_cbor": "58293c73766720786d6c6e733d22687474703a2f2f7777772e77332e6f72672f323030302f737667222f3e"
+    },
+    {
+      "name": "forward/error-relay",
+      "description": "The node answers with its part's error sigil 66 instead; the hub relays the Error changing only the call ID. Sigil 66 means the same in the hub's part 17 because the part is the same part.",
+      "spec": "10.5",
+      "type": "relay",
+      "from_node": {
+        "message": [
+          20,
+          1,
+          66,
+          "unsupported chart kind",
+          null
+        ],
+        "diag": "[20, 1, 66, \"unsupported chart kind\", null]",
+        "cbor": "851401184276756e737570706f72746564206368617274206b696e64f6"
+      },
+      "to_client": {
+        "message": [
+          20,
+          4,
+          66,
+          "unsupported chart kind",
+          null
+        ],
+        "diag": "[20, 4, 66, \"unsupported chart kind\", null]",
+        "cbor": "851404184276756e737570706f72746564206368617274206b696e64f6"
+      },
+      "call_id_map": {
+        "node": 1,
+        "client": 4
+      }
+    },
+    {
+      "name": "forward/node-call-with-context",
+      "description": "While handling the forwarded call, the node calls get (100) of part 16 in the hub's schema for it, passing the hub's context. Its call ID is even (the node is the Sparrow client on the pipe). The hub checks both the context's principal and node:acme.charts.",
+      "spec": "10.4, 10.6",
+      "type": "message_with_principals",
+      "request": {
+        "message": [
+          16,
+          2,
+          16,
+          100,
+          {
+            "$map": [
+              [
+                36,
+                {
+                  "$bytes": "c0ffee00112233445566778899aabbcc"
+                }
+              ]
+            ]
+          },
+          {
+            "$tag": 37,
+            "value": {
+              "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+            }
+          }
+        ],
+        "diag": "[16, 2, 16, 100, {36: h'c0ffee00112233445566778899aabbcc'}, 37(h'6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b')]",
+        "cbor": "861002101864a1182450c0ffee00112233445566778899aabbccd825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+      },
+      "acting_principals": [
+        "user:alice",
+        "node:acme.charts"
+      ],
+      "refs": {
+        "schema": "welcome/node-pipe"
+      }
+    },
+    {
+      "name": "hub/view-for-node",
+      "description": "The schema the hub sends node acme.charts: the server schema without the node's own part 17 (section 10.3).",
+      "spec": "10.3",
+      "type": "schema_view",
+      "from": "schema/server-base",
+      "omitted_part_ids": [
+        17
+      ],
+      "hash": "01946706ae8b354c38673532c8c13c0ca78777512b9b8469c15409f275453941b6"
+    },
+    {
+      "name": "hub/node-ids",
+      "description": "Node IDs match [a-z0-9-]+(\\.[a-z0-9-]+)* (section 10.2).",
+      "spec": "10.2",
+      "type": "node_id_table",
+      "entries": [
+        {
+          "node_id": "acme.charts",
+          "valid": true
+        },
+        {
+          "node_id": "acme",
+          "valid": true
+        },
+        {
+          "node_id": "my-node.v2",
+          "valid": true
+        },
+        {
+          "node_id": "hub-b",
+          "valid": true
+        },
+        {
+          "node_id": "Acme",
+          "valid": false
+        },
+        {
+          "node_id": "acme..charts",
+          "valid": false
+        },
+        {
+          "node_id": "acme/charts",
+          "valid": false
+        },
+        {
+          "node_id": ".acme",
+          "valid": false
+        },
+        {
+          "node_id": "acme.",
+          "valid": false
+        },
+        {
+          "node_id": "",
+          "valid": false
+        },
+        {
+          "node_id": "acme_charts",
+          "valid": false
+        }
+      ]
+    },
+    {
+      "name": "hub/part-names",
+      "description": "Every part a node publishes is named after the node: equal to the node ID, or the node ID and a dot followed by more (section 10.2). Otherwise GoAway(invalid_argument).",
+      "spec": "10.2",
+      "type": "part_owner_table",
+      "entries": [
+        {
+          "node_id": "acme.charts",
+          "part_name": "acme.charts",
+          "allowed": true
+        },
+        {
+          "node_id": "acme.charts",
+          "part_name": "acme.charts.admin",
+          "allowed": true
+        },
+        {
+          "node_id": "acme.charts",
+          "part_name": "acme.chartsx",
+          "allowed": false
+        },
+        {
+          "node_id": "acme.charts",
+          "part_name": "acme",
+          "allowed": false
+        },
+        {
+          "node_id": "acme.charts",
+          "part_name": "acme.notes",
+          "allowed": false
+        }
+      ]
+    },
+    {
+      "name": "hub/imported-name",
+      "description": "An importing hub lists a part imported from peer hub-b as '<peer-id>/<name>'. Names are not hashed, so the part hash is unchanged (see schema/part-hash-invariance).",
+      "spec": "10.8",
+      "type": "imported_name",
+      "peer_id": "hub-b",
+      "part_name": "acme.notes",
+      "imported_name": "hub-b/acme.notes"
+    },
+    {
+      "name": "hub/principals",
+      "description": "Principal strings: kind:id with kind user, group or node and id of letters, digits and . _ - @; a peer principal is peer:<hub-id>/ followed by a non-peer principal (section 10.4).",
+      "spec": "10.4",
+      "type": "principal_table",
+      "entries": [
+        {
+          "principal": "user:alice",
+          "valid": true
+        },
+        {
+          "principal": "group:admins",
+          "valid": true
+        },
+        {
+          "principal": "node:acme.charts",
+          "valid": true
+        },
+        {
+          "principal": "user:alice@example.com",
+          "valid": true
+        },
+        {
+          "principal": "user:a_b-c.d",
+          "valid": true
+        },
+        {
+          "principal": "peer:hub-b/user:alice",
+          "valid": true
+        },
+        {
+          "principal": "peer:hub-b/peer:hub-c/user:x",
+          "valid": false
+        },
+        {
+          "principal": "admin:root",
+          "valid": false
+        },
+        {
+          "principal": "user:",
+          "valid": false
+        },
+        {
+          "principal": "user:a b",
+          "valid": false
+        },
+        {
+          "principal": "peer:hub-b/",
+          "valid": false
+        },
+        {
+          "principal": "peer:Hub/user:a",
+          "valid": false
+        },
+        {
+          "principal": "peer:user:alice",
+          "valid": false
+        }
+      ]
+    },
+    {
+      "name": "hub/acting-principals",
+      "description": "Acting principals the hub checks for a call, by where it arrives from (section 10.4). acting null means the hub refuses the call.",
+      "spec": "10.4, 10.8",
+      "type": "acting_principals_table",
+      "entries": [
+        {
+          "from": "client_session",
+          "session_principal": "user:alice",
+          "acting": [
+            "user:alice"
+          ]
+        },
+        {
+          "from": "node",
+          "node_id": "acme.charts",
+          "context": null,
+          "acting": [
+            "node:acme.charts"
+          ]
+        },
+        {
+          "from": "node",
+          "node_id": "acme.charts",
+          "context": "valid, issued for user:alice",
+          "acting": [
+            "user:alice",
+            "node:acme.charts"
+          ]
+        },
+        {
+          "from": "peer_hub",
+          "node_id": "hub-b",
+          "principal": null,
+          "acting": [
+            "node:hub-b"
+          ]
+        },
+        {
+          "from": "peer_hub",
+          "node_id": "hub-b",
+          "principal": "user:bob",
+          "acting": [
+            "node:hub-b",
+            "peer:hub-b/user:bob"
+          ]
+        },
+        {
+          "from": "peer_hub",
+          "node_id": "hub-b",
+          "principal": "peer:hub-c/user:x",
+          "acting": null,
+          "note": "refused: a named principal may not already start with peer:"
+        }
+      ]
+    }
+  ]
+}

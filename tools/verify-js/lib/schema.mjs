@@ -1,34 +1,113 @@
-// Independent implementation of the schema canonical form, hash and delta
-// application (sections 6.2-6.6), working on tjson trees.
+// Independent implementation of the part-based schema model (section 6):
+// canonical forms, part / interface / schema hashes, wire shapes and
+// interface conformance, validation, compatibility and delta application.
+// Works on tjson trees.
 
 import { createHash } from 'node:crypto';
-import { encTJ, concat } from './cbor.mjs';
+import { encTJ, concat, hex } from './cbor.mjs';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const byNum = (f) => (a, b) => f(a) - f(b);
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-export function canonical(doc) {
-  const c = clone(doc);
-  c[3].sort(byNum((t) => t[1]));
-  for (const t of c[3]) {
-    if (t[0] === 0 || t[0] === 2) t[3].sort(byNum((f) => f[0])); // fields / variants by tag
-    if (t[0] === 1) t[3].sort((a, b) => a - b); // enum values by sigil
+// part = [id, name, version, types, services, sigils, implements, retired, annotations]
+export const P = { id: 0, name: 1, version: 2, types: 3, services: 4, sigils: 5, implements: 6, retired: 7, ann: 8 };
+export const SPACE = { type: 0, service: 1, method: 2, sigil: 3 };
+const REMOVED = 0x4;
+
+function canonDefs(types, services, sigils) {
+  types.sort(byNum((t) => t[1]));
+  for (const t of types) {
+    if (t[0] === 0 || t[0] === 2) t[3].sort(byNum((f) => f[0]));
+    if (t[0] === 1) t[3].sort((a, b) => a - b);
   }
-  c[4].sort(byNum((s) => s[0]));
-  for (const s of c[4]) {
+  services.sort(byNum((s) => s[0]));
+  for (const s of services) {
     s[2].sort(byNum((m) => m[0]));
     for (const m of s[2]) m[4].sort((a, b) => a - b);
   }
-  c[5].sort(byNum((s) => s[0]));
+  sigils.sort(byNum((s) => s[0]));
+}
+
+export function canonicalPart(p) {
+  const c = clone(p);
+  canonDefs(c[P.types], c[P.services], c[P.sigils]);
+  c[P.retired].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   return c;
 }
 
-export const canonicalBytes = (doc) => encTJ(canonical(doc));
-
-export function schemaHash(doc) {
-  const sha = createHash('sha256').update(canonicalBytes(doc)).digest();
-  return concat([0x01], sha);
+export function canonicalIface(i) {
+  const c = clone(i);
+  canonDefs(c[2], c[3], c[4]);
+  return c;
 }
+
+export function canonicalSchema(s) {
+  const c = clone(s);
+  c[3] = c[3].map(canonicalPart).sort(byNum((p) => p[P.id]));
+  return c;
+}
+
+const h33 = (bytes) => concat([0x01], createHash('sha256').update(bytes).digest());
+
+export function partHashInput(p) {
+  const c = canonicalPart(p);
+  c[P.id] = 0;
+  c[P.name] = '';
+  return c;
+}
+export const partHash = (p) => h33(encTJ(partHashInput(p)));
+export const ifaceHash = (i) => h33(encTJ(canonicalIface(i)));
+
+export function schemaHashInput(s) {
+  const c = canonicalSchema(s);
+  return [c[0], c[1], c[2], c[3].map((p) => [p[P.id], p[P.name], { $bytes: hex(partHash(p)) }]), c[4]];
+}
+export const schemaHash = (s) => h33(encTJ(schemaHashInput(s)));
+
+// ---- wire shapes and conformance (6.5) ----
+
+function blankType(td) {
+  const c = clone(td);
+  c[2] = '';
+  c[c.length - 1] = {};
+  if (c[0] === 0 || c[0] === 2) for (const f of c[3]) { f[1] = ''; f[4] = {}; }
+  return c;
+}
+function blankService(sd) {
+  const c = clone(sd);
+  c[1] = '';
+  c[3] = {};
+  for (const m of c[2]) { m[1] = ''; m[6] = {}; }
+  return c;
+}
+function blankSigil(sg) {
+  const c = clone(sg);
+  c[1] = '';
+  c[3] = {};
+  return c;
+}
+const bytesEq = (a, b) => hex(encTJ(a)) === hex(encTJ(b));
+
+/** First mismatch as [space, id], or null when the part conforms. */
+export function conforms(part, iface) {
+  const p = canonicalPart(part);
+  const i = canonicalIface(iface);
+  const groups = [
+    [SPACE.type, i[2], p[P.types], 1, blankType],
+    [SPACE.service, i[3], p[P.services], 0, blankService],
+    [SPACE.sigil, i[4], p[P.sigils], 0, blankSigil],
+  ];
+  for (const [space, idefs, pdefs, pos, blank] of groups) {
+    for (const d of idefs) {
+      const m = pdefs.find((x) => x[pos] === d[pos]);
+      if (!m || !bytesEq(blank(d), blank(m))) return [space, d[pos]];
+    }
+  }
+  return null;
+}
+
+// ---- validation ----
 
 export class DeltaError extends Error {
   constructor(code, detail) {
@@ -37,157 +116,116 @@ export class DeltaError extends Error {
   }
 }
 
-const SPACES = ['types', 'methods', 'sigils', 'services'];
-
-export class SchemaState {
-  constructor(doc, retired) {
-    this.doc = canonical(doc);
-    this.retired = retired ? retired.map((s) => new Set(s)) : [new Set(), new Set(), new Set(), new Set()];
-  }
-
-  retiredJSON() {
-    return Object.fromEntries(SPACES.map((n, i) => [n, [...this.retired[i]].sort((a, b) => a - b)]));
-  }
-
-  apply(delta) {
-    const n = new SchemaState(this.doc, this.retired);
-    const doc = n.doc;
-    for (const op of delta) {
-      switch (op[0]) {
-        case 0: {
-          const td = clone(op[1]);
-          if (n.retired[0].has(td[1])) throw new DeltaError('retired_id_reused', `type ${td[1]}`);
-          const i = doc[3].findIndex((t) => t[1] === td[1]);
-          if (i >= 0) doc[3][i] = td; else doc[3].push(td);
-          break;
-        }
-        case 1: {
-          const sd = clone(op[1]);
-          if (n.retired[3].has(sd[0])) throw new DeltaError('retired_id_reused', `service ${sd[0]}`);
-          for (const m of sd[2]) if (n.retired[1].has(m[0])) throw new DeltaError('retired_id_reused', `method ${m[0]}`);
-          const i = doc[4].findIndex((s) => s[0] === sd[0]);
-          if (i >= 0) {
-            checkServiceReplace(doc[4][i], sd);
-            doc[4][i] = sd;
-          } else doc[4].push(sd);
-          break;
-        }
-        case 2: {
-          const sg = clone(op[1]);
-          if (n.retired[2].has(sg[0])) throw new DeltaError('retired_id_reused', `sigil ${sg[0]}`);
-          if (doc[5].some((s) => s[0] === sg[0])) throw new DeltaError('duplicate_id', `sigil ${sg[0]}`);
-          doc[5].push(sg);
-          break;
-        }
-        case 3:
-          n.retire(op[1], op[2]);
-          break;
-        case 4:
-          doc[6] = clone(op[1]);
-          break;
-        case 5:
-          doc[2] = op[1];
-          break;
-        default:
-          throw new DeltaError('unknown_delta_op', String(op[0]));
-      }
-    }
-    n.doc = canonical(doc);
-    validate(n.doc);
-    return n;
-  }
-
-  retire(space, id) {
-    const doc = this.doc;
-    const drop = (arr, pos) => {
-      const i = arr.findIndex((x) => x[pos] === id);
-      if (i < 0) throw new DeltaError('unknown_id_retired', `${SPACES[space]} ${id}`);
-      return arr.splice(i, 1)[0];
-    };
-    if (space === 0) drop(doc[3], 1);
-    else if (space === 1) {
-      const svc = doc[4].find((s) => s[2].some((m) => m[0] === id));
-      if (!svc) throw new DeltaError('unknown_id_retired', `method ${id}`);
-      drop(svc[2], 0);
-    } else if (space === 2) drop(doc[5], 0);
-    else if (space === 3) {
-      const s = drop(doc[4], 0);
-      for (const m of s[2]) this.retired[1].add(m[0]);
-    } else throw new DeltaError('unknown_id_space', String(space));
-    this.retired[space].add(id);
-  }
-}
-
-function checkServiceReplace(old, nw) {
-  const fixed = 0x2 | 0x8 | 0x10;
-  for (const om of old[2]) {
-    const nm = nw[2].find((m) => m[0] === om[0]);
-    if (!nm) throw new DeltaError('method_dropped_without_retire', `method ${om[0]}`);
-    if (JSON.stringify(om[2]) !== JSON.stringify(nm[2]) || JSON.stringify(om[3]) !== JSON.stringify(nm[3]) ||
-        (om[5] & fixed) !== (nm[5] & fixed)) {
-      throw new DeltaError('incompatible_method_change', `method ${om[0]}`);
-    }
-  }
+export function containsFloat(t) {
+  if (t === null || typeof t !== 'object') return false;
+  if (Array.isArray(t)) return t.some(containsFloat);
+  if ('$float' in t) return true;
+  if ('$map' in t) return t.$map.some(([k, v]) => containsFloat(k) || containsFloat(v));
+  if ('$tag' in t) return containsFloat(t.value);
+  if ('$bytes' in t || '$int' in t) return false;
+  return Object.values(t).some(containsFloat);
 }
 
 const LAST_BUILTIN = 11;
 
-export function validate(doc) {
-  const types = new Map();
-  for (const t of doc[3]) {
-    if (t[1] < 64) throw new DeltaError('reserved_id', `type ${t[1]}`);
-    if (types.has(t[1])) throw new DeltaError('duplicate_id', `type ${t[1]}`);
-    types.set(t[1], t);
+function validateDefs(where, types, services, sigils, retired) {
+  const ret = new Set();
+  for (const [sp, id] of retired) {
+    if (sp < 0 || sp > 3) throw new DeltaError('bad_retired_entry', where);
+    ret.add(`${sp}:${id}`);
   }
-  const sigils = new Map();
-  for (const s of doc[5]) {
-    if (s[0] < 64) throw new DeltaError('reserved_id', `sigil ${s[0]}`);
-    if (sigils.has(s[0])) throw new DeltaError('duplicate_id', `sigil ${s[0]}`);
-    sigils.set(s[0], s[2]);
+  const d = { types: new Map(), sigils: new Map(), methods: new Map(), services: new Map() };
+  for (const t of types) {
+    if (t[1] < 64) throw new DeltaError('reserved_id', `${where} type ${t[1]}`);
+    if (d.types.has(t[1])) throw new DeltaError('duplicate_id', `${where} type ${t[1]}`);
+    if (ret.has(`0:${t[1]}`)) throw new DeltaError('retired_id_reused', `${where} type ${t[1]}`);
+    d.types.set(t[1], t);
   }
-  const ref = (r, where, top) => {
+  for (const s of sigils) {
+    if (s[0] < 64) throw new DeltaError('reserved_id', `${where} sigil ${s[0]}`);
+    if (d.sigils.has(s[0])) throw new DeltaError('duplicate_id', `${where} sigil ${s[0]}`);
+    if (ret.has(`3:${s[0]}`)) throw new DeltaError('retired_id_reused', `${where} sigil ${s[0]}`);
+    d.sigils.set(s[0], s[2]);
+  }
+  for (const s of services) {
+    if (d.services.has(s[0])) throw new DeltaError('duplicate_id', `${where} service ${s[0]}`);
+    if (ret.has(`1:${s[0]}`)) throw new DeltaError('retired_id_reused', `${where} service ${s[0]}`);
+    d.services.set(s[0], s);
+    for (const m of s[2]) {
+      if (d.methods.has(m[0])) throw new DeltaError('duplicate_id', `${where} method ${m[0]}`);
+      if (ret.has(`2:${m[0]}`)) throw new DeltaError('retired_id_reused', `${where} method ${m[0]}`);
+      d.methods.set(m[0], m);
+    }
+  }
+  const ref = (r, at, top) => {
     if (typeof r === 'number') {
-      if (r <= LAST_BUILTIN || types.has(r)) return;
-      throw new DeltaError('dangling_reference', `${where} -> type ${r}`);
+      if (r <= LAST_BUILTIN || d.types.has(r)) return;
+      throw new DeltaError('dangling_reference', `${at} -> type ${r}`);
     }
     switch (r[0]) {
-      case 0: case 2: return ref(r[1], where, false);
-      case 1: ref(r[1], where, false); return ref(r[2], where, false);
+      case 0: case 2: return ref(r[1], at, false);
+      case 1: ref(r[1], at, false); return ref(r[2], at, false);
       case 3:
-        if (!top) throw new DeltaError('stream_type_misplaced', where);
-        return ref(r[1], where, false);
-      case 4: return;
-      default: throw new DeltaError('bad_type_ref', where);
+        if (!top) throw new DeltaError('stream_type_misplaced', at);
+        return ref(r[1], at, false);
+      case 4: return undefined;
+      default: throw new DeltaError('bad_type_ref', at);
     }
   };
-  for (const t of doc[3]) {
-    const where = `type ${t[1]}`;
-    if (t[0] === 0) t[3].forEach((f) => ref(f[2], where, false));
+  for (const t of types) {
+    const at = `${where} type ${t[1]}`;
+    if (t[0] === 0 || t[0] === 2) for (const f of t[3]) { if (!(f[3] & REMOVED)) ref(f[2], at, false); }
     else if (t[0] === 1) {
-      for (const v of t[3]) if (sigils.get(v) !== 0) throw new DeltaError('dangling_reference', `${where} -> sigil ${v}`);
-    } else if (t[0] === 2) t[3].forEach((v) => ref(v[2], where, false));
-    else if (t[0] === 3) ref(t[3], where, false);
+      for (const v of t[3]) if (d.sigils.get(v) !== 0) throw new DeltaError('dangling_reference', `${at} -> sigil ${v}`);
+    } else if (t[0] === 3) ref(t[3], at, false);
   }
-  const services = new Set();
-  const methods = new Set();
-  for (const s of doc[4]) {
-    if (s[0] < 64) throw new DeltaError('reserved_id', `service ${s[0]}`);
-    if (services.has(s[0])) throw new DeltaError('duplicate_id', `service ${s[0]}`);
-    services.add(s[0]);
-    for (const m of s[2]) {
-      const where = `method ${m[0]}`;
-      if (m[0] < 32) throw new DeltaError('reserved_id', where);
-      if (methods.has(m[0])) throw new DeltaError('duplicate_id', where);
-      methods.add(m[0]);
-      ref(m[2], where, true);
-      ref(m[3], where, true);
-      for (const e of m[4]) {
-        if (e < 32) continue;
-        if (sigils.get(e) !== 1) throw new DeltaError('dangling_reference', `${where} -> error ${e}`);
-      }
-      if (needsEnd(m[2], types) && !(m[5] & 0x8)) throw new DeltaError('missing_end_flag', `${where} input`);
-      if (needsEnd(m[3], types) && !(m[5] & 0x10)) throw new DeltaError('missing_end_flag', `${where} output`);
-    }
+  for (const m of d.methods.values()) {
+    const at = `${where} method ${m[0]}`;
+    ref(m[2], at, true);
+    ref(m[3], at, true);
+    for (const e of m[4]) if (e >= 32 && d.sigils.get(e) !== 1) throw new DeltaError('dangling_reference', `${at} -> error ${e}`);
+    if (needsEnd(m[2], d.types) && !(m[5] & 0x8)) throw new DeltaError('missing_end_flag', `${at} input`);
+    if (needsEnd(m[3], d.types) && !(m[5] & 0x10)) throw new DeltaError('missing_end_flag', `${at} output`);
+  }
+  return d;
+}
+
+export function validatePart(p) {
+  const where = `part ${p[P.id]}`;
+  if (containsFloat(p)) throw new DeltaError('float_in_canonical_data', where);
+  return validateDefs(where, p[P.types], p[P.services], p[P.sigils], p[P.retired]);
+}
+
+export function validateIface(i) {
+  if (containsFloat(i)) throw new DeltaError('float_in_canonical_data', 'interface');
+  const d = validateDefs('interface', i[2], i[3], i[4], []);
+  const seenT = new Set();
+  const seenS = new Set();
+  const walk = (r) => {
+    if (Array.isArray(r)) { r.slice(1).forEach(walk); return; }
+    if (seenT.has(r) || !d.types.has(r)) return;
+    seenT.add(r);
+    const t = d.types.get(r);
+    if (t[0] === 0 || t[0] === 2) t[3].forEach((f) => walk(f[2]));
+    else if (t[0] === 1) t[3].forEach((v) => seenS.add(v));
+    else if (t[0] === 3) walk(t[3]);
+  };
+  for (const m of d.methods.values()) { walk(m[2]); walk(m[3]); m[4].forEach((e) => seenS.add(e)); }
+  for (const t of i[2]) if (!seenT.has(t[1])) throw new DeltaError('interface_not_closed', `type ${t[1]}`);
+  for (const s of i[4]) if (!seenS.has(s[0])) throw new DeltaError('interface_not_closed', `sigil ${s[0]}`);
+}
+
+export function validateSchema(doc) {
+  if (containsFloat(doc)) throw new DeltaError('float_in_canonical_data', 'schema');
+  const ids = new Set();
+  const names = new Set();
+  for (const p of doc[3]) {
+    if (ids.has(p[P.id])) throw new DeltaError('duplicate_part_id', String(p[P.id]));
+    if (names.has(p[P.name])) throw new DeltaError('duplicate_part_name', p[P.name]);
+    ids.add(p[P.id]);
+    names.add(p[P.name]);
+    if (p[P.id] < 16 && !(p[P.id] === 1 && p[P.name] === 'sparrow.web')) throw new DeltaError('reserved_part_id', String(p[P.id]));
+    validatePart(p);
   }
 }
 
@@ -195,7 +233,6 @@ function needsEnd(r, types) {
   if (Array.isArray(r) && r[0] === 3) return true;
   return hasByteStream(r, types, new Set());
 }
-
 function hasByteStream(r, types, seen) {
   if (Array.isArray(r)) {
     if (r[0] === 4) return true;
@@ -205,7 +242,123 @@ function hasByteStream(r, types, seen) {
   const t = types.get(r);
   if (!t || seen.has(r)) return false;
   seen.add(r);
-  if (t[0] === 0 || t[0] === 2) return t[3].some((f) => hasByteStream(f[2], types, seen));
+  if (t[0] === 0 || t[0] === 2) return t[3].some((f) => !(f[3] & REMOVED) && hasByteStream(f[2], types, seen));
   if (t[0] === 3) return hasByteStream(t[3], types, seen);
   return false;
+}
+
+// ---- compatibility (6.6 rule 2, 6.7) ----
+
+const major = (v) => v.split('.')[0];
+
+export function compatible(old, nw) {
+  const pid = old[P.id];
+  if (old[P.name] !== nw[P.name]) throw new DeltaError('part_renamed', `part ${pid}`);
+  if (major(old[P.version]) !== major(nw[P.version])) throw new DeltaError('major_version_changed', `part ${pid}`);
+  const newRet = new Set(nw[P.retired].map(([s, i]) => `${s}:${i}`));
+  for (const [s, i] of old[P.retired]) if (!newRet.has(`${s}:${i}`)) throw new DeltaError('retired_not_carried_over', `[${s}, ${i}]`);
+  const od = validatePart(old);
+  const nd = validatePart(nw);
+  const dropped = (space, id) => {
+    if (!newRet.has(`${space}:${id}`)) throw new DeltaError('dropped_id_not_retired', `[${space}, ${id}]`);
+  };
+  const sortedIds = (m) => [...m.keys()].sort((a, b) => a - b);
+  for (const id of sortedIds(od.types)) {
+    if (!nd.types.has(id)) dropped(SPACE.type, id);
+    else typeCompatible(pid, od.types.get(id), nd.types.get(id));
+  }
+  for (const id of sortedIds(od.services)) if (!nd.services.has(id)) dropped(SPACE.service, id);
+  for (const id of sortedIds(od.methods)) {
+    const om = od.methods.get(id);
+    const nm = nd.methods.get(id);
+    if (!nm) { dropped(SPACE.method, id); continue; }
+    const fixed = 0x2 | 0x8 | 0x10;
+    if (!same(om[2], nm[2]) || !same(om[3], nm[3]) || (om[5] & fixed) !== (nm[5] & fixed)) {
+      throw new DeltaError('incompatible_change', `method ${id}`);
+    }
+  }
+  for (const id of sortedIds(od.sigils)) {
+    if (!nd.sigils.has(id)) dropped(SPACE.sigil, id);
+    else if (nd.sigils.get(id) !== od.sigils.get(id)) throw new DeltaError('incompatible_change', `sigil ${id} kind`);
+  }
+}
+
+function typeCompatible(pid, ot, nt) {
+  const bad = (what) => { throw new DeltaError('incompatible_change', `part ${pid} type ${ot[1]}: ${what}`); };
+  if (ot[0] !== nt[0]) bad('kind');
+  if (ot[0] === 0 || ot[0] === 2) {
+    const isStruct = ot[0] === 0;
+    if (isStruct && (ot[4] & 1) !== (nt[4] & 1)) bad('sparse');
+    const newM = new Map(nt[3].map((f) => [f[0], f]));
+    const oldTags = new Set();
+    for (const of_ of ot[3]) {
+      const f0 = of_;
+      oldTags.add(f0[0]);
+      const nf = newM.get(f0[0]);
+      if (!nf) bad(`tag ${f0[0]} disappeared`);
+      const oRem = !!(f0[3] & REMOVED);
+      const nRem = !!(nf[3] & REMOVED);
+      if (oRem && !nRem) bad(`tag ${f0[0]} reused`);
+      else if (!oRem && nRem) { if (isStruct && !(f0[3] & 1)) bad(`required field ${f0[0]} removed`); }
+      else if (!oRem && !nRem) {
+        if (!same(f0[2], nf[2])) bad(`tag ${f0[0]} type`);
+        if (isStruct && (f0[3] & 1) && !(nf[3] & 1)) bad(`field ${f0[0]} made required`);
+      }
+    }
+    if (isStruct) for (const [tag, nf] of newM) if (!oldTags.has(tag) && !(nf[3] & (1 | REMOVED))) bad(`new field ${tag} required`);
+  } else if (ot[0] === 1) {
+    const nv = new Set(nt[3]);
+    for (const v of ot[3]) if (!nv.has(v)) bad(`enum value ${v} removed`);
+  } else if (ot[0] === 3 && !same(ot[3], nt[3])) bad('alias target');
+}
+
+// ---- deltas ----
+
+export class SchemaState {
+  constructor(doc, removed) {
+    this.doc = canonicalSchema(doc);
+    this.removed = new Map(removed ?? []);
+  }
+
+  removedIds() { return [...this.removed.keys()].sort((a, b) => a - b); }
+
+  apply(delta) {
+    const n = new SchemaState(this.doc, this.removed);
+    const doc = n.doc;
+    for (const op of delta) {
+      switch (op[0]) {
+        case 0: {
+          const p = canonicalPart(op[1]);
+          const i = doc[3].findIndex((x) => x[P.id] === p[P.id]);
+          if (i >= 0) {
+            compatible(doc[3][i], p);
+            doc[3][i] = p;
+          } else {
+            const last = n.removed.get(p[P.id]);
+            if (last) {
+              if (last[P.name] !== p[P.name] || major(last[P.version]) !== major(p[P.version])) {
+                throw new DeltaError('removed_part_mismatch', `part ${p[P.id]}`);
+              }
+              compatible(last, p);
+              n.removed.delete(p[P.id]);
+            }
+            doc[3].push(p);
+          }
+          break;
+        }
+        case 1: {
+          const i = doc[3].findIndex((x) => x[P.id] === op[1]);
+          if (i < 0) throw new DeltaError('unknown_part', String(op[1]));
+          n.removed.set(op[1], doc[3].splice(i, 1)[0]);
+          break;
+        }
+        case 2: doc[4] = clone(op[1]); break;
+        case 3: doc[2] = op[1]; break;
+        default: throw new DeltaError('unknown_delta_op', String(op[0]));
+      }
+    }
+    n.doc = canonicalSchema(doc);
+    validateSchema(n.doc);
+    return n;
+  }
 }

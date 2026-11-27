@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev108 (2026-11-26 draft)",
+  "spec_revision": "core rev164 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "encoding",
   "vectors": [
@@ -304,7 +304,7 @@
     },
     {
       "name": "float/float64/1",
-      "description": "Integral float value 1.0 declared float64: shortest exact width is half precision. NOTE: a JavaScript encoder that is not told the declared type encodes the number 1 as integer 0x01 instead (see SPEC-ISSUES.md).",
+      "description": "Integral float value 1.0 declared float64: shortest exact width is half precision. A JavaScript sender may also send integer 0x01, which decoders MUST accept (section 3.1). Floats never appear in canonical data (section 3.2).",
       "spec": "3.1, 3.2",
       "type": "value",
       "rule": "float",
@@ -321,7 +321,7 @@
     },
     {
       "name": "float/float64/100000",
-      "description": "Integral float 100000.0: not exact in half, exact in single precision. Same JavaScript caveat as float/float64/1.",
+      "description": "Integral float 100000.0: not exact in half, exact in single precision.",
       "spec": "3.1, 3.2",
       "type": "value",
       "rule": "float",
@@ -536,7 +536,7 @@
     },
     {
       "name": "struct/note",
-      "description": "Note (type 64): tag 5 is a removed field, encoded as null so later fields do not shift; tag 7 'pinned' is absent, so the trailing null is omitted.",
+      "description": "Note (type 64 of part 16): tag 5 is a tombstoned field (flag 0x4), encoded as null so later fields do not shift; tag 7 'pinned' is absent, so the trailing null is omitted.",
       "spec": "3.4",
       "type": "value",
       "rule": "struct",
@@ -738,7 +738,7 @@
       "spec": "3.4, 7.7",
       "type": "value",
       "rule": "struct",
-      "schema_type": "sparrow.ui.OpenPanel (example, not in the test schema)",
+      "schema_type": "OpenPanel (example, not in the test schema)",
       "logical": {
         "type": "sparrow.ui.OpenPanel",
         "fields": [
@@ -1024,11 +1024,11 @@
       "cbor": "8202f6"
     },
     {
-      "name": "any/note",
-      "description": "any: [type_id, value] for a Note.",
+      "name": "dynamic/note",
+      "description": "dynamic: [type_id, value] for a Note (a named type of the same part).",
       "spec": "3.4, 6.3",
       "type": "value",
-      "rule": "any",
+      "rule": "dynamic",
       "schema_type": 10,
       "logical": {
         "type_id": 64,
@@ -1078,11 +1078,11 @@
       "cbor": "82184087d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b6947726f6365726965736a6d696c6b2c20656767738164686f6d65c11a6b08c800f61847"
     },
     {
-      "name": "any/string",
-      "description": "any carrying a built-in string (type 6).",
+      "name": "dynamic/string",
+      "description": "dynamic carrying a built-in string (type 6).",
       "spec": "3.4, 6.3",
       "type": "value",
-      "rule": "any",
+      "rule": "dynamic",
       "schema_type": 10,
       "logical": {
         "type_id": 6,
@@ -1424,6 +1424,60 @@
       },
       "diag": "{0: \"z\", 23: \"a\", 24: \"b\", 256: \"c\"}",
       "cbor": "a400617a176161181861621901006163"
+    },
+    {
+      "name": "map/metadata-hub",
+      "description": "Metadata with all core keys a hub sets when forwarding (section 10.6): deadline (32), context (36, bytes), principal (37, string), plus an application text key.",
+      "spec": "3.2, 3.4",
+      "type": "value",
+      "rule": "map",
+      "schema_type": "metadata",
+      "logical": {
+        "entries": [
+          [
+            37,
+            "user:alice"
+          ],
+          [
+            "x-tenant",
+            "acme"
+          ],
+          [
+            36,
+            {
+              "$bytes": "c0ffee00112233445566778899aabbcc"
+            }
+          ],
+          [
+            32,
+            4950
+          ]
+        ]
+      },
+      "value": {
+        "$map": [
+          [
+            32,
+            4950
+          ],
+          [
+            36,
+            {
+              "$bytes": "c0ffee00112233445566778899aabbcc"
+            }
+          ],
+          [
+            37,
+            "user:alice"
+          ],
+          [
+            "x-tenant",
+            "acme"
+          ]
+        ]
+      },
+      "diag": "{32: 4950, 36: h'c0ffee00112233445566778899aabbcc', 37: \"user:alice\", \"x-tenant\": \"acme\"}",
+      "cbor": "a41820191356182450c0ffee00112233445566778899aabbcc18256a757365723a616c69636568782d74656e616e746461636d65"
     },
     {
       "name": "map/mixed-keys",

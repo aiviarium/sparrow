@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 )
 
-const specRevision = "core rev108 (2026-11-26 draft)"
+const specRevision = "core rev164 (draft)"
 
 func main() {
 	out := flag.String("out", "../../test-vectors", "output directory")
@@ -31,6 +31,7 @@ func main() {
 		{"schema.json", schemaVectors},
 		{"signing.json", signingVectors},
 		{"status.json", statusVectors},
+		{"hub.json", hubVectors},
 	}
 	must(os.MkdirAll(*out, 0o755))
 	for _, f := range files {

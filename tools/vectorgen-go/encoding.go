@@ -92,8 +92,8 @@ func encodingVectors() O {
 		desc    string
 	}{
 		{"float64", "1.5", "Exact in half precision."},
-		{"float64", "1", "Integral float value 1.0 declared float64: shortest exact width is half precision. NOTE: a JavaScript encoder that is not told the declared type encodes the number 1 as integer 0x01 instead (see SPEC-ISSUES.md)."},
-		{"float64", "100000", "Integral float 100000.0: not exact in half, exact in single precision. Same JavaScript caveat as float/float64/1."},
+		{"float64", "1", "Integral float value 1.0 declared float64: shortest exact width is half precision. A JavaScript sender may also send integer 0x01, which decoders MUST accept (section 3.1). Floats never appear in canonical data (section 3.2)."},
+		{"float64", "100000", "Integral float 100000.0: not exact in half, exact in single precision."},
 		{"float64", "65504", "Largest finite half-precision value."},
 		{"float64", "5.960464477539063e-08", "Smallest positive half-precision subnormal."},
 		{"float64", "0.1", "Not exact in single precision: needs double."},
@@ -136,7 +136,7 @@ func encodingVectors() O {
 		{0, "id", noteUUID}, {1, "title", "Groceries"}, {2, "body", "milk, eggs"}, {3, "tags", []any{"home"}},
 		{4, "updated", ts(1795737600)}, {6, "color", sgGreen},
 	}
-	add(encVec("struct/note", "Note (type 64): tag 5 is a removed field, encoded as null so later fields do not shift; tag 7 'pinned' is absent, so the trailing null is omitted.",
+	add(encVec("struct/note", "Note (type 64 of part 16): tag 5 is a tombstoned field (flag 0x4), encoded as null so later fields do not shift; tag 7 'pinned' is absent, so the trailing null is omitted.",
 		"3.4", "struct", tyNote, fieldsLogical("acme.notes.Note", noteFields), structValue(noteFields)))
 	noteNoBody := []fieldVal{{0, "id", noteUUID}, {1, "title", "Empty"}, {3, "tags", []any{}}, {4, "updated", ts(1795737600)}}
 	add(encVec("struct/note-trailing-nulls", "Note with body and color absent: the null slot for body (tag 2) stays; tags 5 and 6 are trailing nulls and are omitted.",
@@ -145,7 +145,7 @@ func encodingVectors() O {
 	add(encVec("struct/note-pinned", "Note with the deprecated field pinned (tag 7) set: slots 2, 5 and 6 are null.",
 		"3.4", "struct", tyNote, fieldsLogical("acme.notes.Note", notePinned), structValue(notePinned)))
 	panel := []fieldVal{{0, "name", "settings"}, {1, "focus", true}}
-	add(encVec("struct/7.7-input", "The input struct of the section 7.7 example.", "3.4, 7.7", "struct", "sparrow.ui.OpenPanel (example, not in the test schema)",
+	add(encVec("struct/7.7-input", "The input struct of the section 7.7 example.", "3.4, 7.7", "struct", "OpenPanel (example, not in the test schema)",
 		fieldsLogical("sparrow.ui.OpenPanel", panel), structValue(panel)))
 	att := []fieldVal{{0, "name", "a.txt"}, {2, "data", 1}}
 	add(encVec("struct/attachment-token", "Attachment (type 69) with mime absent and the [4] field carrying byte token 1.",
@@ -170,9 +170,9 @@ func encodingVectors() O {
 		o("type", "acme.notes.Change", "variant_tag", 1, "variant", "deleted", "value", tj(note2UUID)), []any{1, note2UUID}))
 	add(encVec("union/change-cleared", "Union Change, variant 2 'cleared' carrying unit (null).", "3.4", "union", tyChange,
 		o("type", "acme.notes.Change", "variant_tag", 2, "variant", "cleared", "value", nil), []any{2, nil}))
-	add(encVec("any/note", "any: [type_id, value] for a Note.", "3.4, 6.3", "any", tAny,
+	add(encVec("dynamic/note", "dynamic: [type_id, value] for a Note (a named type of the same part).", "3.4, 6.3", "dynamic", tDynamic,
 		o("type_id", tyNote, "value", tj(structValue(noteFields))), []any{tyNote, structValue(noteFields)}))
-	add(encVec("any/string", "any carrying a built-in string (type 6).", "3.4, 6.3", "any", tAny,
+	add(encVec("dynamic/string", "dynamic carrying a built-in string (type 6).", "3.4, 6.3", "dynamic", tDynamic,
 		o("type_id", tString, "value", "hello"), []any{tString, "hello"}))
 	add(encVec("symbol/with-sigil", "symbol whose string has a sigil (note.updated = 80): the sigil is sent.", "6.3", "symbol", tSymbol,
 		o("text", "note.updated", "sigil", sgUpdated), sgUpdated))
@@ -209,6 +209,8 @@ func encodingVectors() O {
 		tMap(tString, tUint), [][2]any{{"aa", 1}, {"b", 2}, {"ab", 3}, {"a", 4}})
 	mapCase("map/uint-keys", "Map uint => string: 24 (18 18) sorts after 23 (17).", tMap(tUint, tString),
 		[][2]any{{256, "c"}, {24, "b"}, {23, "a"}, {0, "z"}})
+	mapCase("map/metadata-hub", "Metadata with all core keys a hub sets when forwarding (section 10.6): deadline (32), context (36, bytes), principal (37, string), plus an application text key.",
+		"metadata", [][2]any{{37, "user:alice"}, {"x-tenant", "acme"}, {36, hubContext}, {32, 4950}})
 	mapCase("map/mixed-keys", "Mixed key types as in metadata ({* symbol => any}) or annotations: uints (major type 0) before negative ints (1) before text (3); bytewise order, so 24 (18 18) sorts before -1 (20).",
 		"metadata / any map", [][2]any{{"x-tenant", "acme"}, {-1, "neg"}, {35, 262144}, {24, "u24"}, {1, "one"}, {"", "empty"}, {-25, "neg25"}})
 	mapCase("map/params", "A params map (section 5.4) in canonical order.", "params",

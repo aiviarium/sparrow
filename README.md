@@ -13,7 +13,7 @@ server is Go and the primary client is a browser.
 ## Repository layout
 
 ```
-spec/core.md             Core protocol specification (snapshot of draft revision 108)
+spec/core.md             Core protocol specification with the Web and Hub profiles (snapshot of draft revision 164)
 SPEC-ISSUES.md           Open questions and assumptions found while writing the test vectors
 test-vectors/            Test vectors, one JSON file per area, and their format (README.md)
 tools/vectorgen-go/      Go program that generates the vectors (canonical reference)
@@ -23,10 +23,10 @@ tools/verify-js/         Independent Node.js verifier (cbor2 + node:crypto)
 
 ## Test vectors
 
-Section 6.6 of the spec requires reference implementations to publish test vectors so Go and
-JavaScript can confirm they agree. The vectors cover encoding, framing, the handshake, call and
-control messages, credit accounting, schema canonical form, hashes and deltas, module signing and
-status codes. See [`test-vectors/README.md`](test-vectors/README.md) for the file format and the
+Section 6.6 of the spec requires reference implementations to publish test vectors for parts,
+interfaces, schemas, deltas and their hashes, so Go and JavaScript can confirm they agree. The vectors cover encoding, framing (including the pipe binding),
+the handshake, call and control messages, credit accounting, parts, interfaces, schemas, their
+hashes and deltas, module signing, status codes and Hub Profile forwarding. See [`test-vectors/README.md`](test-vectors/README.md) for the file format and the
 assumptions behind them.
 
 All keys in the vectors are **test-only** keys derived from trivial seeds. Never trust them in a

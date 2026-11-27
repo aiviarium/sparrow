@@ -1,169 +1,16 @@
 {
-  "spec_revision": "core rev108 (2026-11-26 draft)",
+  "spec_revision": "core rev164 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "signing",
   "test_only_keys": "Every key in this file is derived from a trivial TEST-ONLY seed. Never use these keys outside tests.",
   "verification_context": {
-    "description": "Shared context for all 'verify' vectors: the root keys built into the client, the schema annotations web.keys and web.revoked (all certificates and the revocation list in this file), and the time at which certificate expiry is checked.",
+    "description": "Shared context for all 'verify' vectors: the root keys built into the client, the certificates offered in web.keys (all 'certificate' vectors in file order), the revocation list named by each vector, and the time at which certificate expiry is checked.",
     "root_public_keys": [
       "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c"
     ],
     "now": 1795737600,
     "now_iso": "2026-11-27T00:00:00Z",
-    "web_keys": "all 'certificate' vectors, in file order",
-    "web_revoked": "revocation/list-3"
-  },
-  "web_annotations_example": {
-    "description": "The web.* top-level schema annotations as a server would publish them: all certificates, the revocation list and the modules that verify. Encoded canonically.",
-    "value": {
-      "web.keys": [
-        [
-          {
-            "$bytes": "8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394"
-          },
-          "acme.",
-          {
-            "$tag": 1,
-            "value": 1798761600
-          },
-          {
-            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
-          },
-          {
-            "$bytes": "624131ca15d7c058bc42e8a04c9a8a55308762bb63e51781a53810dfa29650749208f7ea0e4f057a4e5cd2097cce2e4196edbb99c3b53d6cc1f0a793051d240b"
-          }
-        ],
-        [
-          {
-            "$bytes": "ed4928c628d1c2c6eae90338905995612959273a5c63f93636c14614ac8737d1"
-          },
-          "beta.",
-          {
-            "$tag": 1,
-            "value": 1798761600
-          },
-          {
-            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
-          },
-          {
-            "$bytes": "103fa48d7b60d49f5b9ed41133f880fb33eca5af86a7acb48374a7f8685955be7e247dd549a73c2ef463a488044ea6889df0d7400ec52a9db8f79c1831018607"
-          }
-        ],
-        [
-          {
-            "$bytes": "6e7a1cdd29b0b78fd13af4c5598feff4ef2a97166e3ca6f2e4fbfccd80505bf1"
-          },
-          "gamma.",
-          {
-            "$tag": 1,
-            "value": 1793491200
-          },
-          {
-            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
-          },
-          {
-            "$bytes": "323f81edca3894951d61a092ffe28987adeea737984b38784381cec0f5dd49ac34c1916c64b63dfd4a73218f12622d67bed76389cd08217544a15b8b2d26c007"
-          }
-        ],
-        [
-          {
-            "$bytes": "8a875fff1eb38451577acd5afee405456568dd7c89e090863a0557bc7af49f17"
-          },
-          "delta",
-          {
-            "$tag": 1,
-            "value": 1798761600
-          },
-          {
-            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
-          },
-          {
-            "$bytes": "c876bb3e212e5a43a1add3b3a771a1ca37c65af795e614ce684085ad9b37ce5bb8395928ad020a74fa2c24701676960c710ed09d8f88446d7995375cbf627507"
-          }
-        ],
-        [
-          {
-            "$bytes": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c"
-          },
-          "omega.",
-          {
-            "$tag": 1,
-            "value": 1798761600
-          },
-          {
-            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
-          },
-          {
-            "$bytes": "efb5aefe195c4c5b48f6190c2c6e37925c36dd28473d4a8f8c622cff71f1b8a662ee2f5c8d5660b73dde9f37fdd0ad14f83902769e3e3664806c893acb97de09"
-          }
-        ]
-      ],
-      "web.modules": [
-        {
-          "id": "acme.charts",
-          "sig": [
-            {
-              "$bytes": "6a3803d5f059902a1c6dafbc9ba47292"
-            },
-            {
-              "$bytes": "6cdffd5a9b14434c2a16e8889bf561b6d27102fdd2dc06e11c1b4c427174d452cdde6bb9d55538da5a5ce2902a1de712e050ffab0a8223ba9bdaa9e10063d902"
-            }
-          ],
-          "url": "/sparrow/mods/AVzPjsDOaK1lYpaDH4gVwyKNuNYOiEOjpAD_ZN-JFQ55.js",
-          "deps": [
-            "acme.core"
-          ],
-          "hash": {
-            "$bytes": "015ccf8ec0ce68ad656296831f8815c3228db8d60e8843a3a400ff64df89150e79"
-          },
-          "load": "lazy",
-          "assets": [
-            {
-              "hash": {
-                "$bytes": "014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db654987"
-              },
-              "path": "charts.css"
-            }
-          ],
-          "hostApi": "^3.1",
-          "version": "1.4.2"
-        },
-        {
-          "id": "acme.core",
-          "sig": [
-            {
-              "$bytes": "34750f98bd59fcfc946da45aaabe933b"
-            },
-            {
-              "$bytes": "6b2677bb6929cc4b71db325a536e2ef1edea87c95a3bc4e01912f26019fbacd764fa0b304a255641a8404ed23242f0140a97d9a5e0c2221756267b947aefcd06"
-            }
-          ],
-          "url": "/sparrow/mods/Af9aBe7iw9I7jJDio1OBdm7CBPkGSIP5eqk8ocElx8kz.js",
-          "deps": [],
-          "hash": {
-            "$bytes": "01ff5a05eee2c3d23b8c90e2a35381766ec204f9064883f97aa93ca1c125c7c933"
-          },
-          "load": "eager",
-          "hostApi": "^3.1",
-          "version": "3.1.0"
-        }
-      ],
-      "web.revoked": [
-        3,
-        [
-          {
-            "$bytes": "b62e867fa2f33afe62d5d6b1642e1621"
-          }
-        ],
-        {
-          "$bytes": "34750f98bd59fcfc946da45aaabe933b"
-        },
-        {
-          "$bytes": "728c12b2a33c1cc4ceb4ccf26aec0fc256d4598db32b900679fbf06f883b2d7858c8e9ba0a3558ba4edb987b6b79e29ab7fafec4a24bf79ec48133b565e49c04"
-        }
-      ]
-    },
-    "cbor": "a3687765622e6b657973858558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b5840624131ca15d7c058bc42e8a04c9a8a55308762bb63e51781a53810dfa29650749208f7ea0e4f057a4e5cd2097cce2e4196edbb99c3b53d6cc1f0a793051d240b855820ed4928c628d1c2c6eae90338905995612959273a5c63f93636c14614ac8737d165626574612ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b5840103fa48d7b60d49f5b9ed41133f880fb33eca5af86a7acb48374a7f8685955be7e247dd549a73c2ef463a488044ea6889df0d7400ec52a9db8f79c18310186078558206e7a1cdd29b0b78fd13af4c5598feff4ef2a97166e3ca6f2e4fbfccd80505bf16667616d6d612ec11a6ae681005034750f98bd59fcfc946da45aaabe933b5840323f81edca3894951d61a092ffe28987adeea737984b38784381cec0f5dd49ac34c1916c64b63dfd4a73218f12622d67bed76389cd08217544a15b8b2d26c0078558208a875fff1eb38451577acd5afee405456568dd7c89e090863a0557bc7af49f176564656c7461c11a6b36ec805034750f98bd59fcfc946da45aaabe933b5840c876bb3e212e5a43a1add3b3a771a1ca37c65af795e614ce684085ad9b37ce5bb8395928ad020a74fa2c24701676960c710ed09d8f88446d7995375cbf627507855820ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c666f6d6567612ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b5840efb5aefe195c4c5b48f6190c2c6e37925c36dd28473d4a8f8c622cff71f1b8a662ee2f5c8d5660b73dde9f37fdd0ad14f83902769e3e3664806c893acb97de096b7765622e6d6f64756c657382a96269646b61636d652e6368617274736373696782506a3803d5f059902a1c6dafbc9ba4729258406cdffd5a9b14434c2a16e8889bf561b6d27102fdd2dc06e11c1b4c427174d452cdde6bb9d55538da5a5ce2902a1de712e050ffab0a8223ba9bdaa9e10063d9026375726c783d2f73706172726f772f6d6f64732f41567a506a73444f614b316c597061444834675677794b4e754e594f69454f6a7041445f5a4e2d4a465135352e6a736464657073816961636d652e636f726564686173685821015ccf8ec0ce68ad656296831f8815c3228db8d60e8843a3a400ff64df89150e79646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32a86269646961636d652e636f726563736967825034750f98bd59fcfc946da45aaabe933b58406b2677bb6929cc4b71db325a536e2ef1edea87c95a3bc4e01912f26019fbacd764fa0b304a255641a8404ed23242f0140a97d9a5e0c2221756267b947aefcd066375726c783d2f73706172726f772f6d6f64732f4166396142653769773949376a4a44696f314f42646d374342506b475349503565716b386f63456c78386b7a2e6a736464657073806468617368582101ff5a05eee2c3d23b8c90e2a35381766ec204f9064883f97aa93ca1c125c7c933646c6f616465656167657267686f7374417069645e332e316776657273696f6e65332e312e306b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840728c12b2a33c1cc4ceb4ccf26aec0fc256d4598db32b900679fbf06f883b2d7858c8e9ba0a3558ba4edb987b6b79e29ab7fafec4a24bf79ec48133b565e49c04"
+    "web_keys": "all 'certificate' vectors, in file order"
   },
   "vectors": [
     {
@@ -244,13 +91,34 @@
       "key_id": "fe812c12f3ab4ce6ac5db69ac352f906"
     },
     {
+      "name": "key/publisher-08",
+      "description": "TEST-ONLY publisher key 'epsilon', certificate expires exactly at the verification time (seed 32 x 0x08). key_id = first 16 bytes of SHA-256 of the raw 32-byte public key.",
+      "spec": "9.5",
+      "type": "key",
+      "test_only": true,
+      "seed": "0808080808080808080808080808080808080808080808080808080808080808",
+      "public_key": "1398f62c6d1a457c51ba6a4b5f3dbd2f69fca93216218dc8997e416bd17d93ca",
+      "sha256_public_key": "5c29b78f10a35a49a6231d08ee840a04bcc3a37a4f9d46df327dec56b8a9b7c9",
+      "key_id": "5c29b78f10a35a49a6231d08ee840a04"
+    },
+    {
+      "name": "key/publisher-09",
+      "description": "TEST-ONLY publisher key 'cafe', non-ASCII namespace (seed 32 x 0x09). key_id = first 16 bytes of SHA-256 of the raw 32-byte public key.",
+      "spec": "9.5",
+      "type": "key",
+      "test_only": true,
+      "seed": "0909090909090909090909090909090909090909090909090909090909090909",
+      "public_key": "fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f618",
+      "sha256_public_key": "dbc298251c51321b7266e78d1c151c2b62aff8cb95b293096d3463018544face",
+      "key_id": "dbc298251c51321b7266e78d1c151c2b"
+    },
+    {
       "name": "cert/acme",
       "description": "Publisher certificate: key 'acme' may sign modules whose id starts with 'acme.' until 2027-01-01.",
       "spec": "9.5",
       "type": "certificate",
       "signer_seed": "0101010101010101010101010101010101010101010101010101010101010101",
       "domain": "sparrow-cert-v1",
-      "domain_hex": "73706172726f772d636572742d7631",
       "unsigned": [
         {
           "$bytes": "8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394"
@@ -264,10 +132,25 @@
           "$bytes": "34750f98bd59fcfc946da45aaabe933b"
         }
       ],
-      "unsigned_diag": "[h'8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394', \"acme.\", 1(1798761600), h'34750f98bd59fcfc946da45aaabe933b']",
-      "unsigned_cbor": "8458208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b",
-      "signed_bytes": "73706172726f772d636572742d76318458208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b",
-      "signature": "624131ca15d7c058bc42e8a04c9a8a55308762bb63e51781a53810dfa29650749208f7ea0e4f057a4e5cd2097cce2e4196edbb99c3b53d6cc1f0a793051d240b",
+      "signed_value": [
+        "sparrow-cert-v1",
+        [
+          {
+            "$bytes": "8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394"
+          },
+          "acme.",
+          {
+            "$tag": 1,
+            "value": 1798761600
+          },
+          {
+            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+          }
+        ]
+      ],
+      "signed_diag": "[\"sparrow-cert-v1\", [h'8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394', \"acme.\", 1(1798761600), h'34750f98bd59fcfc946da45aaabe933b']]",
+      "signed_bytes": "826f73706172726f772d636572742d76318458208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b",
+      "signature": "8b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909",
       "certificate": [
         {
           "$bytes": "8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394"
@@ -281,19 +164,18 @@
           "$bytes": "34750f98bd59fcfc946da45aaabe933b"
         },
         {
-          "$bytes": "624131ca15d7c058bc42e8a04c9a8a55308762bb63e51781a53810dfa29650749208f7ea0e4f057a4e5cd2097cce2e4196edbb99c3b53d6cc1f0a793051d240b"
+          "$bytes": "8b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909"
         }
       ],
-      "certificate_cbor": "8558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b5840624131ca15d7c058bc42e8a04c9a8a55308762bb63e51781a53810dfa29650749208f7ea0e4f057a4e5cd2097cce2e4196edbb99c3b53d6cc1f0a793051d240b"
+      "certificate_cbor": "8558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909"
     },
     {
       "name": "cert/beta",
-      "description": "Publisher certificate for key 'beta' (namespace 'beta.'). The key is later revoked.",
+      "description": "Publisher certificate for key 'beta' (namespace 'beta.'). The key is revoked by revocation/list-3.",
       "spec": "9.5",
       "type": "certificate",
       "signer_seed": "0101010101010101010101010101010101010101010101010101010101010101",
       "domain": "sparrow-cert-v1",
-      "domain_hex": "73706172726f772d636572742d7631",
       "unsigned": [
         {
           "$bytes": "ed4928c628d1c2c6eae90338905995612959273a5c63f93636c14614ac8737d1"
@@ -307,10 +189,25 @@
           "$bytes": "34750f98bd59fcfc946da45aaabe933b"
         }
       ],
-      "unsigned_diag": "[h'ed4928c628d1c2c6eae90338905995612959273a5c63f93636c14614ac8737d1', \"beta.\", 1(1798761600), h'34750f98bd59fcfc946da45aaabe933b']",
-      "unsigned_cbor": "845820ed4928c628d1c2c6eae90338905995612959273a5c63f93636c14614ac8737d165626574612ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b",
-      "signed_bytes": "73706172726f772d636572742d7631845820ed4928c628d1c2c6eae90338905995612959273a5c63f93636c14614ac8737d165626574612ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b",
-      "signature": "103fa48d7b60d49f5b9ed41133f880fb33eca5af86a7acb48374a7f8685955be7e247dd549a73c2ef463a488044ea6889df0d7400ec52a9db8f79c1831018607",
+      "signed_value": [
+        "sparrow-cert-v1",
+        [
+          {
+            "$bytes": "ed4928c628d1c2c6eae90338905995612959273a5c63f93636c14614ac8737d1"
+          },
+          "beta.",
+          {
+            "$tag": 1,
+            "value": 1798761600
+          },
+          {
+            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+          }
+        ]
+      ],
+      "signed_diag": "[\"sparrow-cert-v1\", [h'ed4928c628d1c2c6eae90338905995612959273a5c63f93636c14614ac8737d1', \"beta.\", 1(1798761600), h'34750f98bd59fcfc946da45aaabe933b']]",
+      "signed_bytes": "826f73706172726f772d636572742d7631845820ed4928c628d1c2c6eae90338905995612959273a5c63f93636c14614ac8737d165626574612ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b",
+      "signature": "24e730a8d9b856cb3261e6e387a471fbe8ddf2a1d8eb98213e5019c3109d5e6124f6cb85be08d57b4c0a74b523ea5f5a940307f49f0ad60345e6cb881dd52202",
       "certificate": [
         {
           "$bytes": "ed4928c628d1c2c6eae90338905995612959273a5c63f93636c14614ac8737d1"
@@ -324,10 +221,10 @@
           "$bytes": "34750f98bd59fcfc946da45aaabe933b"
         },
         {
-          "$bytes": "103fa48d7b60d49f5b9ed41133f880fb33eca5af86a7acb48374a7f8685955be7e247dd549a73c2ef463a488044ea6889df0d7400ec52a9db8f79c1831018607"
+          "$bytes": "24e730a8d9b856cb3261e6e387a471fbe8ddf2a1d8eb98213e5019c3109d5e6124f6cb85be08d57b4c0a74b523ea5f5a940307f49f0ad60345e6cb881dd52202"
         }
       ],
-      "certificate_cbor": "855820ed4928c628d1c2c6eae90338905995612959273a5c63f93636c14614ac8737d165626574612ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b5840103fa48d7b60d49f5b9ed41133f880fb33eca5af86a7acb48374a7f8685955be7e247dd549a73c2ef463a488044ea6889df0d7400ec52a9db8f79c1831018607"
+      "certificate_cbor": "855820ed4928c628d1c2c6eae90338905995612959273a5c63f93636c14614ac8737d165626574612ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b584024e730a8d9b856cb3261e6e387a471fbe8ddf2a1d8eb98213e5019c3109d5e6124f6cb85be08d57b4c0a74b523ea5f5a940307f49f0ad60345e6cb881dd52202"
     },
     {
       "name": "cert/gamma-expired",
@@ -336,7 +233,6 @@
       "type": "certificate",
       "signer_seed": "0101010101010101010101010101010101010101010101010101010101010101",
       "domain": "sparrow-cert-v1",
-      "domain_hex": "73706172726f772d636572742d7631",
       "unsigned": [
         {
           "$bytes": "6e7a1cdd29b0b78fd13af4c5598feff4ef2a97166e3ca6f2e4fbfccd80505bf1"
@@ -350,10 +246,25 @@
           "$bytes": "34750f98bd59fcfc946da45aaabe933b"
         }
       ],
-      "unsigned_diag": "[h'6e7a1cdd29b0b78fd13af4c5598feff4ef2a97166e3ca6f2e4fbfccd80505bf1', \"gamma.\", 1(1793491200), h'34750f98bd59fcfc946da45aaabe933b']",
-      "unsigned_cbor": "8458206e7a1cdd29b0b78fd13af4c5598feff4ef2a97166e3ca6f2e4fbfccd80505bf16667616d6d612ec11a6ae681005034750f98bd59fcfc946da45aaabe933b",
-      "signed_bytes": "73706172726f772d636572742d76318458206e7a1cdd29b0b78fd13af4c5598feff4ef2a97166e3ca6f2e4fbfccd80505bf16667616d6d612ec11a6ae681005034750f98bd59fcfc946da45aaabe933b",
-      "signature": "323f81edca3894951d61a092ffe28987adeea737984b38784381cec0f5dd49ac34c1916c64b63dfd4a73218f12622d67bed76389cd08217544a15b8b2d26c007",
+      "signed_value": [
+        "sparrow-cert-v1",
+        [
+          {
+            "$bytes": "6e7a1cdd29b0b78fd13af4c5598feff4ef2a97166e3ca6f2e4fbfccd80505bf1"
+          },
+          "gamma.",
+          {
+            "$tag": 1,
+            "value": 1793491200
+          },
+          {
+            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+          }
+        ]
+      ],
+      "signed_diag": "[\"sparrow-cert-v1\", [h'6e7a1cdd29b0b78fd13af4c5598feff4ef2a97166e3ca6f2e4fbfccd80505bf1', \"gamma.\", 1(1793491200), h'34750f98bd59fcfc946da45aaabe933b']]",
+      "signed_bytes": "826f73706172726f772d636572742d76318458206e7a1cdd29b0b78fd13af4c5598feff4ef2a97166e3ca6f2e4fbfccd80505bf16667616d6d612ec11a6ae681005034750f98bd59fcfc946da45aaabe933b",
+      "signature": "9d419962b3523fe8d389ddfc7b29d9b2ffc92a86dfaaaca2d1518b2b88381717af2c8a1278d81d1680beae7267988f72506aacdfa4b8e0878664abe3cde95908",
       "certificate": [
         {
           "$bytes": "6e7a1cdd29b0b78fd13af4c5598feff4ef2a97166e3ca6f2e4fbfccd80505bf1"
@@ -367,19 +278,18 @@
           "$bytes": "34750f98bd59fcfc946da45aaabe933b"
         },
         {
-          "$bytes": "323f81edca3894951d61a092ffe28987adeea737984b38784381cec0f5dd49ac34c1916c64b63dfd4a73218f12622d67bed76389cd08217544a15b8b2d26c007"
+          "$bytes": "9d419962b3523fe8d389ddfc7b29d9b2ffc92a86dfaaaca2d1518b2b88381717af2c8a1278d81d1680beae7267988f72506aacdfa4b8e0878664abe3cde95908"
         }
       ],
-      "certificate_cbor": "8558206e7a1cdd29b0b78fd13af4c5598feff4ef2a97166e3ca6f2e4fbfccd80505bf16667616d6d612ec11a6ae681005034750f98bd59fcfc946da45aaabe933b5840323f81edca3894951d61a092ffe28987adeea737984b38784381cec0f5dd49ac34c1916c64b63dfd4a73218f12622d67bed76389cd08217544a15b8b2d26c007"
+      "certificate_cbor": "8558206e7a1cdd29b0b78fd13af4c5598feff4ef2a97166e3ca6f2e4fbfccd80505bf16667616d6d612ec11a6ae681005034750f98bd59fcfc946da45aaabe933b58409d419962b3523fe8d389ddfc7b29d9b2ffc92a86dfaaaca2d1518b2b88381717af2c8a1278d81d1680beae7267988f72506aacdfa4b8e0878664abe3cde95908"
     },
     {
       "name": "cert/delta-no-dot",
-      "description": "INVALID: namespace 'delta' does not end with a dot (section 9.5). Correctly signed, but must be rejected.",
+      "description": "INVALID: namespace 'delta' does not end with a dot. Correctly signed, but must be rejected.",
       "spec": "9.5",
       "type": "certificate",
       "signer_seed": "0101010101010101010101010101010101010101010101010101010101010101",
       "domain": "sparrow-cert-v1",
-      "domain_hex": "73706172726f772d636572742d7631",
       "unsigned": [
         {
           "$bytes": "8a875fff1eb38451577acd5afee405456568dd7c89e090863a0557bc7af49f17"
@@ -393,10 +303,25 @@
           "$bytes": "34750f98bd59fcfc946da45aaabe933b"
         }
       ],
-      "unsigned_diag": "[h'8a875fff1eb38451577acd5afee405456568dd7c89e090863a0557bc7af49f17', \"delta\", 1(1798761600), h'34750f98bd59fcfc946da45aaabe933b']",
-      "unsigned_cbor": "8458208a875fff1eb38451577acd5afee405456568dd7c89e090863a0557bc7af49f176564656c7461c11a6b36ec805034750f98bd59fcfc946da45aaabe933b",
-      "signed_bytes": "73706172726f772d636572742d76318458208a875fff1eb38451577acd5afee405456568dd7c89e090863a0557bc7af49f176564656c7461c11a6b36ec805034750f98bd59fcfc946da45aaabe933b",
-      "signature": "c876bb3e212e5a43a1add3b3a771a1ca37c65af795e614ce684085ad9b37ce5bb8395928ad020a74fa2c24701676960c710ed09d8f88446d7995375cbf627507",
+      "signed_value": [
+        "sparrow-cert-v1",
+        [
+          {
+            "$bytes": "8a875fff1eb38451577acd5afee405456568dd7c89e090863a0557bc7af49f17"
+          },
+          "delta",
+          {
+            "$tag": 1,
+            "value": 1798761600
+          },
+          {
+            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+          }
+        ]
+      ],
+      "signed_diag": "[\"sparrow-cert-v1\", [h'8a875fff1eb38451577acd5afee405456568dd7c89e090863a0557bc7af49f17', \"delta\", 1(1798761600), h'34750f98bd59fcfc946da45aaabe933b']]",
+      "signed_bytes": "826f73706172726f772d636572742d76318458208a875fff1eb38451577acd5afee405456568dd7c89e090863a0557bc7af49f176564656c7461c11a6b36ec805034750f98bd59fcfc946da45aaabe933b",
+      "signature": "efc90338ec2158ef527c99fe1d37186e99d8421e47bb3d1b457d52a2fb5479de924717a1d66a8f86112526ca05feac6bf299befe7954e1bfbfc8f531bcadc304",
       "certificate": [
         {
           "$bytes": "8a875fff1eb38451577acd5afee405456568dd7c89e090863a0557bc7af49f17"
@@ -410,19 +335,18 @@
           "$bytes": "34750f98bd59fcfc946da45aaabe933b"
         },
         {
-          "$bytes": "c876bb3e212e5a43a1add3b3a771a1ca37c65af795e614ce684085ad9b37ce5bb8395928ad020a74fa2c24701676960c710ed09d8f88446d7995375cbf627507"
+          "$bytes": "efc90338ec2158ef527c99fe1d37186e99d8421e47bb3d1b457d52a2fb5479de924717a1d66a8f86112526ca05feac6bf299befe7954e1bfbfc8f531bcadc304"
         }
       ],
-      "certificate_cbor": "8558208a875fff1eb38451577acd5afee405456568dd7c89e090863a0557bc7af49f176564656c7461c11a6b36ec805034750f98bd59fcfc946da45aaabe933b5840c876bb3e212e5a43a1add3b3a771a1ca37c65af795e614ce684085ad9b37ce5bb8395928ad020a74fa2c24701676960c710ed09d8f88446d7995375cbf627507"
+      "certificate_cbor": "8558208a875fff1eb38451577acd5afee405456568dd7c89e090863a0557bc7af49f176564656c7461c11a6b36ec805034750f98bd59fcfc946da45aaabe933b5840efc90338ec2158ef527c99fe1d37186e99d8421e47bb3d1b457d52a2fb5479de924717a1d66a8f86112526ca05feac6bf299befe7954e1bfbfc8f531bcadc304"
     },
     {
       "name": "cert/omega-wrong-domain",
-      "description": "INVALID: signed over 'sparrow-module-v1' instead of 'sparrow-cert-v1'.",
+      "description": "INVALID: signed over ['sparrow-module-v1', ...] instead of ['sparrow-cert-v1', ...].",
       "spec": "9.5",
       "type": "certificate",
       "signer_seed": "0101010101010101010101010101010101010101010101010101010101010101",
       "domain": "sparrow-module-v1",
-      "domain_hex": "73706172726f772d6d6f64756c652d7631",
       "unsigned": [
         {
           "$bytes": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c"
@@ -436,10 +360,25 @@
           "$bytes": "34750f98bd59fcfc946da45aaabe933b"
         }
       ],
-      "unsigned_diag": "[h'ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c', \"omega.\", 1(1798761600), h'34750f98bd59fcfc946da45aaabe933b']",
-      "unsigned_cbor": "845820ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c666f6d6567612ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b",
-      "signed_bytes": "73706172726f772d6d6f64756c652d7631845820ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c666f6d6567612ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b",
-      "signature": "efb5aefe195c4c5b48f6190c2c6e37925c36dd28473d4a8f8c622cff71f1b8a662ee2f5c8d5660b73dde9f37fdd0ad14f83902769e3e3664806c893acb97de09",
+      "signed_value": [
+        "sparrow-module-v1",
+        [
+          {
+            "$bytes": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c"
+          },
+          "omega.",
+          {
+            "$tag": 1,
+            "value": 1798761600
+          },
+          {
+            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+          }
+        ]
+      ],
+      "signed_diag": "[\"sparrow-module-v1\", [h'ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c', \"omega.\", 1(1798761600), h'34750f98bd59fcfc946da45aaabe933b']]",
+      "signed_bytes": "827173706172726f772d6d6f64756c652d7631845820ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c666f6d6567612ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b",
+      "signature": "8a3109ffae1b8306eacefa855017d464a3022b94b490d34512c34261c7a0f1bb015a54c3ef0ffa7f91990774e8925392753c2beb3d296d3c19e1d0315d36af0e",
       "certificate": [
         {
           "$bytes": "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c"
@@ -453,19 +392,132 @@
           "$bytes": "34750f98bd59fcfc946da45aaabe933b"
         },
         {
-          "$bytes": "efb5aefe195c4c5b48f6190c2c6e37925c36dd28473d4a8f8c622cff71f1b8a662ee2f5c8d5660b73dde9f37fdd0ad14f83902769e3e3664806c893acb97de09"
+          "$bytes": "8a3109ffae1b8306eacefa855017d464a3022b94b490d34512c34261c7a0f1bb015a54c3ef0ffa7f91990774e8925392753c2beb3d296d3c19e1d0315d36af0e"
         }
       ],
-      "certificate_cbor": "855820ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c666f6d6567612ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b5840efb5aefe195c4c5b48f6190c2c6e37925c36dd28473d4a8f8c622cff71f1b8a662ee2f5c8d5660b73dde9f37fdd0ad14f83902769e3e3664806c893acb97de09"
+      "certificate_cbor": "855820ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c666f6d6567612ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408a3109ffae1b8306eacefa855017d464a3022b94b490d34512c34261c7a0f1bb015a54c3ef0ffa7f91990774e8925392753c2beb3d296d3c19e1d0315d36af0e"
+    },
+    {
+      "name": "cert/epsilon-boundary",
+      "description": "Certificate whose expires equals the verification time: not valid (valid only strictly before expires).",
+      "spec": "9.5",
+      "type": "certificate",
+      "signer_seed": "0101010101010101010101010101010101010101010101010101010101010101",
+      "domain": "sparrow-cert-v1",
+      "unsigned": [
+        {
+          "$bytes": "1398f62c6d1a457c51ba6a4b5f3dbd2f69fca93216218dc8997e416bd17d93ca"
+        },
+        "epsilon.",
+        {
+          "$tag": 1,
+          "value": 1795737600
+        },
+        {
+          "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+        }
+      ],
+      "signed_value": [
+        "sparrow-cert-v1",
+        [
+          {
+            "$bytes": "1398f62c6d1a457c51ba6a4b5f3dbd2f69fca93216218dc8997e416bd17d93ca"
+          },
+          "epsilon.",
+          {
+            "$tag": 1,
+            "value": 1795737600
+          },
+          {
+            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+          }
+        ]
+      ],
+      "signed_diag": "[\"sparrow-cert-v1\", [h'1398f62c6d1a457c51ba6a4b5f3dbd2f69fca93216218dc8997e416bd17d93ca', \"epsilon.\", 1(1795737600), h'34750f98bd59fcfc946da45aaabe933b']]",
+      "signed_bytes": "826f73706172726f772d636572742d76318458201398f62c6d1a457c51ba6a4b5f3dbd2f69fca93216218dc8997e416bd17d93ca68657073696c6f6e2ec11a6b08c8005034750f98bd59fcfc946da45aaabe933b",
+      "signature": "809b0c2a21aedf5947ceb365afa7f522e421b7e6bc98b423b029326374976c97b8ba7a8408f4defcdfd6c0897c98dc31c1cc617939a6d29daa15735d48269a03",
+      "certificate": [
+        {
+          "$bytes": "1398f62c6d1a457c51ba6a4b5f3dbd2f69fca93216218dc8997e416bd17d93ca"
+        },
+        "epsilon.",
+        {
+          "$tag": 1,
+          "value": 1795737600
+        },
+        {
+          "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+        },
+        {
+          "$bytes": "809b0c2a21aedf5947ceb365afa7f522e421b7e6bc98b423b029326374976c97b8ba7a8408f4defcdfd6c0897c98dc31c1cc617939a6d29daa15735d48269a03"
+        }
+      ],
+      "certificate_cbor": "8558201398f62c6d1a457c51ba6a4b5f3dbd2f69fca93216218dc8997e416bd17d93ca68657073696c6f6e2ec11a6b08c8005034750f98bd59fcfc946da45aaabe933b5840809b0c2a21aedf5947ceb365afa7f522e421b7e6bc98b423b029326374976c97b8ba7a8408f4defcdfd6c0897c98dc31c1cc617939a6d29daa15735d48269a03"
+    },
+    {
+      "name": "cert/cafe-utf8",
+      "description": "Certificate with a non-ASCII namespace 'café.' (NFC, U+00E9). Coverage is a UTF-8 byte-prefix match.",
+      "spec": "9.5",
+      "type": "certificate",
+      "signer_seed": "0101010101010101010101010101010101010101010101010101010101010101",
+      "domain": "sparrow-cert-v1",
+      "unsigned": [
+        {
+          "$bytes": "fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f618"
+        },
+        "café.",
+        {
+          "$tag": 1,
+          "value": 1798761600
+        },
+        {
+          "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+        }
+      ],
+      "signed_value": [
+        "sparrow-cert-v1",
+        [
+          {
+            "$bytes": "fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f618"
+          },
+          "café.",
+          {
+            "$tag": 1,
+            "value": 1798761600
+          },
+          {
+            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+          }
+        ]
+      ],
+      "signed_diag": "[\"sparrow-cert-v1\", [h'fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f618', \"caf\\u00e9.\", 1(1798761600), h'34750f98bd59fcfc946da45aaabe933b']]",
+      "signed_bytes": "826f73706172726f772d636572742d7631845820fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f61866636166c3a92ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b",
+      "signature": "5e456e9d69d64e5ea075f748ac36d50f1f1e45ab2510e0741ffe3c4377c9ba7523fd1afbb51d13f4dfc5dadf7a6900446ea8646cfbca3937e5ed921084ab7d05",
+      "certificate": [
+        {
+          "$bytes": "fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f618"
+        },
+        "café.",
+        {
+          "$tag": 1,
+          "value": 1798761600
+        },
+        {
+          "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+        },
+        {
+          "$bytes": "5e456e9d69d64e5ea075f748ac36d50f1f1e45ab2510e0741ffe3c4377c9ba7523fd1afbb51d13f4dfc5dadf7a6900446ea8646cfbca3937e5ed921084ab7d05"
+        }
+      ],
+      "certificate_cbor": "855820fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f61866636166c3a92ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58405e456e9d69d64e5ea075f748ac36d50f1f1e45ab2510e0741ffe3c4377c9ba7523fd1afbb51d13f4dfc5dadf7a6900446ea8646cfbca3937e5ed921084ab7d05"
     },
     {
       "name": "revocation/list-3",
-      "description": "Revocation list with seq 3 revoking key 'beta', signed by the root key.",
+      "description": "Revocation list seq 3 revoking key 'beta', signed by the root key. Used by the default verification context.",
       "spec": "9.5",
       "type": "revocation",
       "signer_seed": "0101010101010101010101010101010101010101010101010101010101010101",
       "domain": "sparrow-revoked-v1",
-      "domain_hex": "73706172726f772d7265766f6b65642d7631",
       "unsigned": [
         3,
         [
@@ -477,10 +529,23 @@
           "$bytes": "34750f98bd59fcfc946da45aaabe933b"
         }
       ],
-      "unsigned_diag": "[3, [h'b62e867fa2f33afe62d5d6b1642e1621'], h'34750f98bd59fcfc946da45aaabe933b']",
-      "unsigned_cbor": "83038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b",
-      "signed_bytes": "73706172726f772d7265766f6b65642d763183038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b",
-      "signature": "728c12b2a33c1cc4ceb4ccf26aec0fc256d4598db32b900679fbf06f883b2d7858c8e9ba0a3558ba4edb987b6b79e29ab7fafec4a24bf79ec48133b565e49c04",
+      "signed_value": [
+        "sparrow-revoked-v1",
+        [
+          3,
+          [
+            {
+              "$bytes": "b62e867fa2f33afe62d5d6b1642e1621"
+            }
+          ],
+          {
+            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+          }
+        ]
+      ],
+      "signed_diag": "[\"sparrow-revoked-v1\", [3, [h'b62e867fa2f33afe62d5d6b1642e1621'], h'34750f98bd59fcfc946da45aaabe933b']]",
+      "signed_bytes": "827273706172726f772d7265766f6b65642d763183038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b",
+      "signature": "c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d",
       "revocation": [
         3,
         [
@@ -492,28 +557,139 @@
           "$bytes": "34750f98bd59fcfc946da45aaabe933b"
         },
         {
-          "$bytes": "728c12b2a33c1cc4ceb4ccf26aec0fc256d4598db32b900679fbf06f883b2d7858c8e9ba0a3558ba4edb987b6b79e29ab7fafec4a24bf79ec48133b565e49c04"
+          "$bytes": "c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d"
         }
       ],
-      "revocation_cbor": "84038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840728c12b2a33c1cc4ceb4ccf26aec0fc256d4598db32b900679fbf06f883b2d7858c8e9ba0a3558ba4edb987b6b79e29ab7fafec4a24bf79ec48133b565e49c04"
+      "revocation_cbor": "84038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d"
+    },
+    {
+      "name": "revocation/lists-root",
+      "description": "Root-signed list (seq 4) that also lists the root key's own key_id. Root keys cannot be revoked this way, so the root key stays trusted.",
+      "spec": "9.5",
+      "type": "revocation",
+      "signer_seed": "0101010101010101010101010101010101010101010101010101010101010101",
+      "domain": "sparrow-revoked-v1",
+      "unsigned": [
+        4,
+        [
+          {
+            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+          },
+          {
+            "$bytes": "b62e867fa2f33afe62d5d6b1642e1621"
+          }
+        ],
+        {
+          "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+        }
+      ],
+      "signed_value": [
+        "sparrow-revoked-v1",
+        [
+          4,
+          [
+            {
+              "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+            },
+            {
+              "$bytes": "b62e867fa2f33afe62d5d6b1642e1621"
+            }
+          ],
+          {
+            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+          }
+        ]
+      ],
+      "signed_diag": "[\"sparrow-revoked-v1\", [4, [h'34750f98bd59fcfc946da45aaabe933b', h'b62e867fa2f33afe62d5d6b1642e1621'], h'34750f98bd59fcfc946da45aaabe933b']]",
+      "signed_bytes": "827273706172726f772d7265766f6b65642d76318304825034750f98bd59fcfc946da45aaabe933b50b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b",
+      "signature": "0b9ec6b284cb377b78234c7c79b061002658b0a75bbbe53b3b135ec3c569de5b1b4d8d6dc88e3f95ba0fb4f031f90c060fa0906441c4182848b17e43f1b20004",
+      "revocation": [
+        4,
+        [
+          {
+            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+          },
+          {
+            "$bytes": "b62e867fa2f33afe62d5d6b1642e1621"
+          }
+        ],
+        {
+          "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+        },
+        {
+          "$bytes": "0b9ec6b284cb377b78234c7c79b061002658b0a75bbbe53b3b135ec3c569de5b1b4d8d6dc88e3f95ba0fb4f031f90c060fa0906441c4182848b17e43f1b20004"
+        }
+      ],
+      "revocation_cbor": "8404825034750f98bd59fcfc946da45aaabe933b50b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b58400b9ec6b284cb377b78234c7c79b061002658b0a75bbbe53b3b135ec3c569de5b1b4d8d6dc88e3f95ba0fb4f031f90c060fa0906441c4182848b17e43f1b20004"
+    },
+    {
+      "name": "revocation/forged",
+      "description": "List claiming root_key_id of the root key but signed by publisher key 'acme', revoking 'acme'. Only a list signed by a root key counts, so it is ignored.",
+      "spec": "9.5",
+      "type": "revocation",
+      "signer_seed": "0202020202020202020202020202020202020202020202020202020202020202",
+      "domain": "sparrow-revoked-v1",
+      "unsigned": [
+        9,
+        [
+          {
+            "$bytes": "6a3803d5f059902a1c6dafbc9ba47292"
+          }
+        ],
+        {
+          "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+        }
+      ],
+      "signed_value": [
+        "sparrow-revoked-v1",
+        [
+          9,
+          [
+            {
+              "$bytes": "6a3803d5f059902a1c6dafbc9ba47292"
+            }
+          ],
+          {
+            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+          }
+        ]
+      ],
+      "signed_diag": "[\"sparrow-revoked-v1\", [9, [h'6a3803d5f059902a1c6dafbc9ba47292'], h'34750f98bd59fcfc946da45aaabe933b']]",
+      "signed_bytes": "827273706172726f772d7265766f6b65642d7631830981506a3803d5f059902a1c6dafbc9ba472925034750f98bd59fcfc946da45aaabe933b",
+      "signature": "f1d851def04509bdb10190107dd431167c7052d4af1b0d40df9a6cdb24ba85ac42a750acf80d2bf796f70e381ccd974715b3a4d55ce78a1b7992c2bdcd699f04",
+      "revocation": [
+        9,
+        [
+          {
+            "$bytes": "6a3803d5f059902a1c6dafbc9ba47292"
+          }
+        ],
+        {
+          "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+        },
+        {
+          "$bytes": "f1d851def04509bdb10190107dd431167c7052d4af1b0d40df9a6cdb24ba85ac42a750acf80d2bf796f70e381ccd974715b3a4d55ce78a1b7992c2bdcd699f04"
+        }
+      ],
+      "revocation_cbor": "840981506a3803d5f059902a1c6dafbc9ba472925034750f98bd59fcfc946da45aaabe933b5840f1d851def04509bdb10190107dd431167c7052d4af1b0d40df9a6cdb24ba85ac42a750acf80d2bf796f70e381ccd974715b3a4d55ce78a1b7992c2bdcd699f04"
     },
     {
       "name": "module/acme-charts",
-      "description": "Module signed by the certified publisher key 'acme'; has assets and load.",
+      "description": "Module 'acme.charts.ui' of part acme.charts, signed by the certified publisher key 'acme'; has assets and load.",
       "spec": "9.4, 9.5",
       "type": "module",
-      "file_utf8": "// acme.charts@1.4.2 (test fixture)\nexport default function register(host) {\n  return { id: 'acme.charts' };\n}\n",
-      "file_hash": "015ccf8ec0ce68ad656296831f8815c3228db8d60e8843a3a400ff64df89150e79",
+      "file_utf8": "// acme.charts.ui@1.4.2 (test fixture)\nexport default function register(host) {\n  return { id: 'acme.charts.ui' };\n}\n",
+      "file_hash": "017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27",
       "signer_seed": "0202020202020202020202020202020202020202020202020202020202020202",
       "domain": "sparrow-module-v1",
       "unsigned": {
-        "id": "acme.charts",
-        "url": "/sparrow/mods/AVzPjsDOaK1lYpaDH4gVwyKNuNYOiEOjpAD_ZN-JFQ55.js",
+        "id": "acme.charts.ui",
+        "url": "/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js",
         "deps": [
-          "acme.core"
+          "acme.core.boot"
         ],
         "hash": {
-          "$bytes": "015ccf8ec0ce68ad656296831f8815c3228db8d60e8843a3a400ff64df89150e79"
+          "$bytes": "017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27"
         },
         "load": "lazy",
         "assets": [
@@ -527,26 +703,48 @@
         "hostApi": "^3.1",
         "version": "1.4.2"
       },
-      "unsigned_diag": "{\"id\": \"acme.charts\", \"url\": \"/sparrow/mods/AVzPjsDOaK1lYpaDH4gVwyKNuNYOiEOjpAD_ZN-JFQ55.js\", \"deps\": [\"acme.core\"], \"hash\": h'015ccf8ec0ce68ad656296831f8815c3228db8d60e8843a3a400ff64df89150e79', \"load\": \"lazy\", \"assets\": [{\"hash\": h'014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db654987', \"path\": \"charts.css\"}], \"hostApi\": \"^3.1\", \"version\": \"1.4.2\"}",
-      "unsigned_cbor": "a86269646b61636d652e6368617274736375726c783d2f73706172726f772f6d6f64732f41567a506a73444f614b316c597061444834675677794b4e754e594f69454f6a7041445f5a4e2d4a465135352e6a736464657073816961636d652e636f726564686173685821015ccf8ec0ce68ad656296831f8815c3228db8d60e8843a3a400ff64df89150e79646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32",
-      "signed_bytes": "73706172726f772d6d6f64756c652d7631a86269646b61636d652e6368617274736375726c783d2f73706172726f772f6d6f64732f41567a506a73444f614b316c597061444834675677794b4e754e594f69454f6a7041445f5a4e2d4a465135352e6a736464657073816961636d652e636f726564686173685821015ccf8ec0ce68ad656296831f8815c3228db8d60e8843a3a400ff64df89150e79646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32",
-      "signature": "6cdffd5a9b14434c2a16e8889bf561b6d27102fdd2dc06e11c1b4c427174d452cdde6bb9d55538da5a5ce2902a1de712e050ffab0a8223ba9bdaa9e10063d902",
+      "signed_value": [
+        "sparrow-module-v1",
+        {
+          "id": "acme.charts.ui",
+          "url": "/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js",
+          "deps": [
+            "acme.core.boot"
+          ],
+          "hash": {
+            "$bytes": "017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27"
+          },
+          "load": "lazy",
+          "assets": [
+            {
+              "hash": {
+                "$bytes": "014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db654987"
+              },
+              "path": "charts.css"
+            }
+          ],
+          "hostApi": "^3.1",
+          "version": "1.4.2"
+        }
+      ],
+      "signed_bytes": "827173706172726f772d6d6f64756c652d7631a86269646e61636d652e6368617274732e75696375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32",
+      "signature": "0228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff03",
       "entry": {
-        "id": "acme.charts",
+        "id": "acme.charts.ui",
         "sig": [
           {
             "$bytes": "6a3803d5f059902a1c6dafbc9ba47292"
           },
           {
-            "$bytes": "6cdffd5a9b14434c2a16e8889bf561b6d27102fdd2dc06e11c1b4c427174d452cdde6bb9d55538da5a5ce2902a1de712e050ffab0a8223ba9bdaa9e10063d902"
+            "$bytes": "0228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff03"
           }
         ],
-        "url": "/sparrow/mods/AVzPjsDOaK1lYpaDH4gVwyKNuNYOiEOjpAD_ZN-JFQ55.js",
+        "url": "/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js",
         "deps": [
-          "acme.core"
+          "acme.core.boot"
         ],
         "hash": {
-          "$bytes": "015ccf8ec0ce68ad656296831f8815c3228db8d60e8843a3a400ff64df89150e79"
+          "$bytes": "017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27"
         },
         "load": "lazy",
         "assets": [
@@ -560,95 +758,118 @@
         "hostApi": "^3.1",
         "version": "1.4.2"
       },
-      "entry_cbor": "a96269646b61636d652e6368617274736373696782506a3803d5f059902a1c6dafbc9ba4729258406cdffd5a9b14434c2a16e8889bf561b6d27102fdd2dc06e11c1b4c427174d452cdde6bb9d55538da5a5ce2902a1de712e050ffab0a8223ba9bdaa9e10063d9026375726c783d2f73706172726f772f6d6f64732f41567a506a73444f614b316c597061444834675677794b4e754e594f69454f6a7041445f5a4e2d4a465135352e6a736464657073816961636d652e636f726564686173685821015ccf8ec0ce68ad656296831f8815c3228db8d60e8843a3a400ff64df89150e79646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32"
+      "entry_cbor": "a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32"
     },
     {
       "name": "module/acme-core",
       "description": "Module signed directly by the root key.",
       "spec": "9.4, 9.5",
       "type": "module",
-      "file_utf8": "// acme.core@3.1.0 (test fixture)\nexport default function register(host) {\n  return { id: 'acme.core' };\n}\n",
-      "file_hash": "01ff5a05eee2c3d23b8c90e2a35381766ec204f9064883f97aa93ca1c125c7c933",
+      "file_utf8": "// acme.core.boot@3.1.0 (test fixture)\nexport default function register(host) {\n  return { id: 'acme.core.boot' };\n}\n",
+      "file_hash": "015a943d538d4cb70456fc98ddd334a33786777188737d0cfe5db43d43541189c1",
       "signer_seed": "0101010101010101010101010101010101010101010101010101010101010101",
       "domain": "sparrow-module-v1",
       "unsigned": {
-        "id": "acme.core",
-        "url": "/sparrow/mods/Af9aBe7iw9I7jJDio1OBdm7CBPkGSIP5eqk8ocElx8kz.js",
+        "id": "acme.core.boot",
+        "url": "/sparrow/mods/AVqUPVONTLcEVvyY3dM0ozeGd3GIc30M_l20PUNUEYnB.js",
         "deps": [],
         "hash": {
-          "$bytes": "01ff5a05eee2c3d23b8c90e2a35381766ec204f9064883f97aa93ca1c125c7c933"
+          "$bytes": "015a943d538d4cb70456fc98ddd334a33786777188737d0cfe5db43d43541189c1"
         },
         "load": "eager",
         "hostApi": "^3.1",
         "version": "3.1.0"
       },
-      "unsigned_diag": "{\"id\": \"acme.core\", \"url\": \"/sparrow/mods/Af9aBe7iw9I7jJDio1OBdm7CBPkGSIP5eqk8ocElx8kz.js\", \"deps\": [], \"hash\": h'01ff5a05eee2c3d23b8c90e2a35381766ec204f9064883f97aa93ca1c125c7c933', \"load\": \"eager\", \"hostApi\": \"^3.1\", \"version\": \"3.1.0\"}",
-      "unsigned_cbor": "a76269646961636d652e636f72656375726c783d2f73706172726f772f6d6f64732f4166396142653769773949376a4a44696f314f42646d374342506b475349503565716b386f63456c78386b7a2e6a736464657073806468617368582101ff5a05eee2c3d23b8c90e2a35381766ec204f9064883f97aa93ca1c125c7c933646c6f616465656167657267686f7374417069645e332e316776657273696f6e65332e312e30",
-      "signed_bytes": "73706172726f772d6d6f64756c652d7631a76269646961636d652e636f72656375726c783d2f73706172726f772f6d6f64732f4166396142653769773949376a4a44696f314f42646d374342506b475349503565716b386f63456c78386b7a2e6a736464657073806468617368582101ff5a05eee2c3d23b8c90e2a35381766ec204f9064883f97aa93ca1c125c7c933646c6f616465656167657267686f7374417069645e332e316776657273696f6e65332e312e30",
-      "signature": "6b2677bb6929cc4b71db325a536e2ef1edea87c95a3bc4e01912f26019fbacd764fa0b304a255641a8404ed23242f0140a97d9a5e0c2221756267b947aefcd06",
+      "signed_value": [
+        "sparrow-module-v1",
+        {
+          "id": "acme.core.boot",
+          "url": "/sparrow/mods/AVqUPVONTLcEVvyY3dM0ozeGd3GIc30M_l20PUNUEYnB.js",
+          "deps": [],
+          "hash": {
+            "$bytes": "015a943d538d4cb70456fc98ddd334a33786777188737d0cfe5db43d43541189c1"
+          },
+          "load": "eager",
+          "hostApi": "^3.1",
+          "version": "3.1.0"
+        }
+      ],
+      "signed_bytes": "827173706172726f772d6d6f64756c652d7631a76269646e61636d652e636f72652e626f6f746375726c783d2f73706172726f772f6d6f64732f4156715550564f4e544c63455676795933644d306f7a6547643347496333304d5f6c323050554e5545596e422e6a7364646570738064686173685821015a943d538d4cb70456fc98ddd334a33786777188737d0cfe5db43d43541189c1646c6f616465656167657267686f7374417069645e332e316776657273696f6e65332e312e30",
+      "signature": "b074b9e895b82ba129d50430499565c898b9cc0cce880900fcea10e0f1019b169b1067bbf65b2e604f30604b3e81eec8d8dc9336213778ff5fec5e51262e2909",
       "entry": {
-        "id": "acme.core",
+        "id": "acme.core.boot",
         "sig": [
           {
             "$bytes": "34750f98bd59fcfc946da45aaabe933b"
           },
           {
-            "$bytes": "6b2677bb6929cc4b71db325a536e2ef1edea87c95a3bc4e01912f26019fbacd764fa0b304a255641a8404ed23242f0140a97d9a5e0c2221756267b947aefcd06"
+            "$bytes": "b074b9e895b82ba129d50430499565c898b9cc0cce880900fcea10e0f1019b169b1067bbf65b2e604f30604b3e81eec8d8dc9336213778ff5fec5e51262e2909"
           }
         ],
-        "url": "/sparrow/mods/Af9aBe7iw9I7jJDio1OBdm7CBPkGSIP5eqk8ocElx8kz.js",
+        "url": "/sparrow/mods/AVqUPVONTLcEVvyY3dM0ozeGd3GIc30M_l20PUNUEYnB.js",
         "deps": [],
         "hash": {
-          "$bytes": "01ff5a05eee2c3d23b8c90e2a35381766ec204f9064883f97aa93ca1c125c7c933"
+          "$bytes": "015a943d538d4cb70456fc98ddd334a33786777188737d0cfe5db43d43541189c1"
         },
         "load": "eager",
         "hostApi": "^3.1",
         "version": "3.1.0"
       },
-      "entry_cbor": "a86269646961636d652e636f726563736967825034750f98bd59fcfc946da45aaabe933b58406b2677bb6929cc4b71db325a536e2ef1edea87c95a3bc4e01912f26019fbacd764fa0b304a255641a8404ed23242f0140a97d9a5e0c2221756267b947aefcd066375726c783d2f73706172726f772f6d6f64732f4166396142653769773949376a4a44696f314f42646d374342506b475349503565716b386f63456c78386b7a2e6a736464657073806468617368582101ff5a05eee2c3d23b8c90e2a35381766ec204f9064883f97aa93ca1c125c7c933646c6f616465656167657267686f7374417069645e332e316776657273696f6e65332e312e30"
+      "entry_cbor": "a86269646e61636d652e636f72652e626f6f7463736967825034750f98bd59fcfc946da45aaabe933b5840b074b9e895b82ba129d50430499565c898b9cc0cce880900fcea10e0f1019b169b1067bbf65b2e604f30604b3e81eec8d8dc9336213778ff5fec5e51262e29096375726c783d2f73706172726f772f6d6f64732f4156715550564f4e544c63455676795933644d306f7a6547643347496333304d5f6c323050554e5545596e422e6a7364646570738064686173685821015a943d538d4cb70456fc98ddd334a33786777188737d0cfe5db43d43541189c1646c6f616465656167657267686f7374417069645e332e316776657273696f6e65332e312e30"
     },
     {
       "name": "module/wrong-domain",
-      "description": "Signed by 'acme' over 'sparrow-cert-v1' instead of 'sparrow-module-v1'.",
+      "description": "Signed by 'acme' over ['sparrow-cert-v1', entry] instead of ['sparrow-module-v1', entry].",
       "spec": "9.4, 9.5",
       "type": "module",
-      "file_utf8": "// acme.grid@0.9.0 (test fixture)\nexport default function register(host) {\n  return { id: 'acme.grid' };\n}\n",
-      "file_hash": "012ff8fabaf865b4a48df94a20c8d472ebf1e37d771394e50a01e3a2e5f449f1ff",
+      "file_utf8": "// acme.grid.ui@0.9.0 (test fixture)\nexport default function register(host) {\n  return { id: 'acme.grid.ui' };\n}\n",
+      "file_hash": "01560a57232c97daa177067e9b7c1e9201353c8c452f13d928bbf0beef6dd65eef",
       "signer_seed": "0202020202020202020202020202020202020202020202020202020202020202",
       "domain": "sparrow-cert-v1",
       "unsigned": {
-        "id": "acme.grid",
-        "url": "/sparrow/mods/AS_4-rr4ZbSkjflKIMjUcuvx4313E5TlCgHjouX0SfH_.js",
+        "id": "acme.grid.ui",
+        "url": "/sparrow/mods/AVYKVyMsl9qhdwZ-m3wekgE1PIxFLxPZKLvwvu9t1l7v.js",
         "deps": [],
         "hash": {
-          "$bytes": "012ff8fabaf865b4a48df94a20c8d472ebf1e37d771394e50a01e3a2e5f449f1ff"
+          "$bytes": "01560a57232c97daa177067e9b7c1e9201353c8c452f13d928bbf0beef6dd65eef"
         },
         "hostApi": "^3.1",
         "version": "0.9.0"
       },
-      "unsigned_diag": "{\"id\": \"acme.grid\", \"url\": \"/sparrow/mods/AS_4-rr4ZbSkjflKIMjUcuvx4313E5TlCgHjouX0SfH_.js\", \"deps\": [], \"hash\": h'012ff8fabaf865b4a48df94a20c8d472ebf1e37d771394e50a01e3a2e5f449f1ff', \"hostApi\": \"^3.1\", \"version\": \"0.9.0\"}",
-      "unsigned_cbor": "a66269646961636d652e677269646375726c783d2f73706172726f772f6d6f64732f41535f342d7272345a62536b6a666c4b494d6a5563757678343331334535546c4367486a6f7558305366485f2e6a7364646570738064686173685821012ff8fabaf865b4a48df94a20c8d472ebf1e37d771394e50a01e3a2e5f449f1ff67686f7374417069645e332e316776657273696f6e65302e392e30",
-      "signed_bytes": "73706172726f772d636572742d7631a66269646961636d652e677269646375726c783d2f73706172726f772f6d6f64732f41535f342d7272345a62536b6a666c4b494d6a5563757678343331334535546c4367486a6f7558305366485f2e6a7364646570738064686173685821012ff8fabaf865b4a48df94a20c8d472ebf1e37d771394e50a01e3a2e5f449f1ff67686f7374417069645e332e316776657273696f6e65302e392e30",
-      "signature": "7b0812efe4c4034f8728e8e323c14a97a463fdfdacb57e8cbfc82719b53857e880159e0583edc4ebd36131fadc96eb0900a44ff8cf398b1f9fac917504b9c20a",
+      "signed_value": [
+        "sparrow-cert-v1",
+        {
+          "id": "acme.grid.ui",
+          "url": "/sparrow/mods/AVYKVyMsl9qhdwZ-m3wekgE1PIxFLxPZKLvwvu9t1l7v.js",
+          "deps": [],
+          "hash": {
+            "$bytes": "01560a57232c97daa177067e9b7c1e9201353c8c452f13d928bbf0beef6dd65eef"
+          },
+          "hostApi": "^3.1",
+          "version": "0.9.0"
+        }
+      ],
+      "signed_bytes": "826f73706172726f772d636572742d7631a66269646c61636d652e677269642e75696375726c783d2f73706172726f772f6d6f64732f4156594b56794d736c39716864775a2d6d3377656b674531504978464c78505a4b4c767776753974316c37762e6a736464657073806468617368582101560a57232c97daa177067e9b7c1e9201353c8c452f13d928bbf0beef6dd65eef67686f7374417069645e332e316776657273696f6e65302e392e30",
+      "signature": "64537b7c94ed78d6dd7b91572fcc005dd157008a16e683ffcbd7ce8fc57382bc010877342fdc30c18934cab6c447048edc351773773d745c646835bae309010b",
       "entry": {
-        "id": "acme.grid",
+        "id": "acme.grid.ui",
         "sig": [
           {
             "$bytes": "6a3803d5f059902a1c6dafbc9ba47292"
           },
           {
-            "$bytes": "7b0812efe4c4034f8728e8e323c14a97a463fdfdacb57e8cbfc82719b53857e880159e0583edc4ebd36131fadc96eb0900a44ff8cf398b1f9fac917504b9c20a"
+            "$bytes": "64537b7c94ed78d6dd7b91572fcc005dd157008a16e683ffcbd7ce8fc57382bc010877342fdc30c18934cab6c447048edc351773773d745c646835bae309010b"
           }
         ],
-        "url": "/sparrow/mods/AS_4-rr4ZbSkjflKIMjUcuvx4313E5TlCgHjouX0SfH_.js",
+        "url": "/sparrow/mods/AVYKVyMsl9qhdwZ-m3wekgE1PIxFLxPZKLvwvu9t1l7v.js",
         "deps": [],
         "hash": {
-          "$bytes": "012ff8fabaf865b4a48df94a20c8d472ebf1e37d771394e50a01e3a2e5f449f1ff"
+          "$bytes": "01560a57232c97daa177067e9b7c1e9201353c8c452f13d928bbf0beef6dd65eef"
         },
         "hostApi": "^3.1",
         "version": "0.9.0"
       },
-      "entry_cbor": "a76269646961636d652e677269646373696782506a3803d5f059902a1c6dafbc9ba4729258407b0812efe4c4034f8728e8e323c14a97a463fdfdacb57e8cbfc82719b53857e880159e0583edc4ebd36131fadc96eb0900a44ff8cf398b1f9fac917504b9c20a6375726c783d2f73706172726f772f6d6f64732f41535f342d7272345a62536b6a666c4b494d6a5563757678343331334535546c4367486a6f7558305366485f2e6a7364646570738064686173685821012ff8fabaf865b4a48df94a20c8d472ebf1e37d771394e50a01e3a2e5f449f1ff67686f7374417069645e332e316776657273696f6e65302e392e30"
+      "entry_cbor": "a76269646c61636d652e677269642e75696373696782506a3803d5f059902a1c6dafbc9ba47292584064537b7c94ed78d6dd7b91572fcc005dd157008a16e683ffcbd7ce8fc57382bc010877342fdc30c18934cab6c447048edc351773773d745c646835bae309010b6375726c783d2f73706172726f772f6d6f64732f4156594b56794d736c39716864775a2d6d3377656b674531504978464c78505a4b4c767776753974316c37762e6a736464657073806468617368582101560a57232c97daa177067e9b7c1e9201353c8c452f13d928bbf0beef6dd65eef67686f7374417069645e332e316776657273696f6e65302e392e30"
     },
     {
       "name": "module/namespace-not-covered",
@@ -669,10 +890,21 @@
         "hostApi": "^3.1",
         "version": "1.0.0"
       },
-      "unsigned_diag": "{\"id\": \"acmecorp.widgets\", \"url\": \"/sparrow/mods/AY8wWNW5dZWxfGE019Yu1uyQtMgjDF5JavCtzTinwWqK.js\", \"deps\": [], \"hash\": h'018f3058d5b97595b17c6134d7d62ed6ec90b4c8230c5e496af0adcd38a7c16a8a', \"hostApi\": \"^3.1\", \"version\": \"1.0.0\"}",
-      "unsigned_cbor": "a66269647061636d65636f72702e776964676574736375726c783d2f73706172726f772f6d6f64732f41593877574e5735645a5778664745303139597531757951744d676a4446354a617643747a54696e7757714b2e6a7364646570738064686173685821018f3058d5b97595b17c6134d7d62ed6ec90b4c8230c5e496af0adcd38a7c16a8a67686f7374417069645e332e316776657273696f6e65312e302e30",
-      "signed_bytes": "73706172726f772d6d6f64756c652d7631a66269647061636d65636f72702e776964676574736375726c783d2f73706172726f772f6d6f64732f41593877574e5735645a5778664745303139597531757951744d676a4446354a617643747a54696e7757714b2e6a7364646570738064686173685821018f3058d5b97595b17c6134d7d62ed6ec90b4c8230c5e496af0adcd38a7c16a8a67686f7374417069645e332e316776657273696f6e65312e302e30",
-      "signature": "49f40d35c1b48c814c419da81024f137306fc249263bd65ad840973cee370e4d1fa8eab03754f8e2a94633b1c3b64218b19f84547a03697b86b3e928cfb05505",
+      "signed_value": [
+        "sparrow-module-v1",
+        {
+          "id": "acmecorp.widgets",
+          "url": "/sparrow/mods/AY8wWNW5dZWxfGE019Yu1uyQtMgjDF5JavCtzTinwWqK.js",
+          "deps": [],
+          "hash": {
+            "$bytes": "018f3058d5b97595b17c6134d7d62ed6ec90b4c8230c5e496af0adcd38a7c16a8a"
+          },
+          "hostApi": "^3.1",
+          "version": "1.0.0"
+        }
+      ],
+      "signed_bytes": "827173706172726f772d6d6f64756c652d7631a66269647061636d65636f72702e776964676574736375726c783d2f73706172726f772f6d6f64732f41593877574e5735645a5778664745303139597531757951744d676a4446354a617643747a54696e7757714b2e6a7364646570738064686173685821018f3058d5b97595b17c6134d7d62ed6ec90b4c8230c5e496af0adcd38a7c16a8a67686f7374417069645e332e316776657273696f6e65312e302e30",
+      "signature": "1878e791c5da5dfedb1a004fab924057e25a769c0b5ae1948b6ce245c153d652a5e9b7080e245f97ecdb7151f798825b95297db9eecc47f85e78f2d445081601",
       "entry": {
         "id": "acmecorp.widgets",
         "sig": [
@@ -680,7 +912,7 @@
             "$bytes": "6a3803d5f059902a1c6dafbc9ba47292"
           },
           {
-            "$bytes": "49f40d35c1b48c814c419da81024f137306fc249263bd65ad840973cee370e4d1fa8eab03754f8e2a94633b1c3b64218b19f84547a03697b86b3e928cfb05505"
+            "$bytes": "1878e791c5da5dfedb1a004fab924057e25a769c0b5ae1948b6ce245c153d652a5e9b7080e245f97ecdb7151f798825b95297db9eecc47f85e78f2d445081601"
           }
         ],
         "url": "/sparrow/mods/AY8wWNW5dZWxfGE019Yu1uyQtMgjDF5JavCtzTinwWqK.js",
@@ -691,7 +923,7 @@
         "hostApi": "^3.1",
         "version": "1.0.0"
       },
-      "entry_cbor": "a76269647061636d65636f72702e776964676574736373696782506a3803d5f059902a1c6dafbc9ba47292584049f40d35c1b48c814c419da81024f137306fc249263bd65ad840973cee370e4d1fa8eab03754f8e2a94633b1c3b64218b19f84547a03697b86b3e928cfb055056375726c783d2f73706172726f772f6d6f64732f41593877574e5735645a5778664745303139597531757951744d676a4446354a617643747a54696e7757714b2e6a7364646570738064686173685821018f3058d5b97595b17c6134d7d62ed6ec90b4c8230c5e496af0adcd38a7c16a8a67686f7374417069645e332e316776657273696f6e65312e302e30"
+      "entry_cbor": "a76269647061636d65636f72702e776964676574736373696782506a3803d5f059902a1c6dafbc9ba4729258401878e791c5da5dfedb1a004fab924057e25a769c0b5ae1948b6ce245c153d652a5e9b7080e245f97ecdb7151f798825b95297db9eecc47f85e78f2d4450816016375726c783d2f73706172726f772f6d6f64732f41593877574e5735645a5778664745303139597531757951744d676a4446354a617643747a54696e7757714b2e6a7364646570738064686173685821018f3058d5b97595b17c6134d7d62ed6ec90b4c8230c5e496af0adcd38a7c16a8a67686f7374417069645e332e316776657273696f6e65312e302e30"
     },
     {
       "name": "module/namespace-no-dot",
@@ -712,10 +944,21 @@
         "hostApi": "^3.1",
         "version": "1.0.0"
       },
-      "unsigned_diag": "{\"id\": \"delta.maps\", \"url\": \"/sparrow/mods/AXajudEQmJX5vkPrbclz7HZq1SFsnmaGlbAYDLuHupYb.js\", \"deps\": [], \"hash\": h'0176a3b9d1109895f9be43eb6dc973ec766ad5216c9e668695b0180cbb87ba961b', \"hostApi\": \"^3.1\", \"version\": \"1.0.0\"}",
-      "unsigned_cbor": "a66269646a64656c74612e6d6170736375726c783d2f73706172726f772f6d6f64732f4158616a756445516d4a5835766b507262636c7a37485a71315346736e6d61476c624159444c7548757059622e6a73646465707380646861736858210176a3b9d1109895f9be43eb6dc973ec766ad5216c9e668695b0180cbb87ba961b67686f7374417069645e332e316776657273696f6e65312e302e30",
-      "signed_bytes": "73706172726f772d6d6f64756c652d7631a66269646a64656c74612e6d6170736375726c783d2f73706172726f772f6d6f64732f4158616a756445516d4a5835766b507262636c7a37485a71315346736e6d61476c624159444c7548757059622e6a73646465707380646861736858210176a3b9d1109895f9be43eb6dc973ec766ad5216c9e668695b0180cbb87ba961b67686f7374417069645e332e316776657273696f6e65312e302e30",
-      "signature": "f542a1b79ea2de3781e018f03290cb1833700174cbe213aba651d389f5eeab7b981eaf6a53483214f7ef4cef6ccce8ffbb28e9cdd90f090ce0309d9772f5380a",
+      "signed_value": [
+        "sparrow-module-v1",
+        {
+          "id": "delta.maps",
+          "url": "/sparrow/mods/AXajudEQmJX5vkPrbclz7HZq1SFsnmaGlbAYDLuHupYb.js",
+          "deps": [],
+          "hash": {
+            "$bytes": "0176a3b9d1109895f9be43eb6dc973ec766ad5216c9e668695b0180cbb87ba961b"
+          },
+          "hostApi": "^3.1",
+          "version": "1.0.0"
+        }
+      ],
+      "signed_bytes": "827173706172726f772d6d6f64756c652d7631a66269646a64656c74612e6d6170736375726c783d2f73706172726f772f6d6f64732f4158616a756445516d4a5835766b507262636c7a37485a71315346736e6d61476c624159444c7548757059622e6a73646465707380646861736858210176a3b9d1109895f9be43eb6dc973ec766ad5216c9e668695b0180cbb87ba961b67686f7374417069645e332e316776657273696f6e65312e302e30",
+      "signature": "cac9d8e43ad292d2afbf990a52593133adfb74fedbbd2d24e17b495b70acda2348b72b25205fd644c84eefc1bbeb42a82857163d729925dddd9970d1f8314308",
       "entry": {
         "id": "delta.maps",
         "sig": [
@@ -723,7 +966,7 @@
             "$bytes": "72456720412037a6b339f884ce6d91bb"
           },
           {
-            "$bytes": "f542a1b79ea2de3781e018f03290cb1833700174cbe213aba651d389f5eeab7b981eaf6a53483214f7ef4cef6ccce8ffbb28e9cdd90f090ce0309d9772f5380a"
+            "$bytes": "cac9d8e43ad292d2afbf990a52593133adfb74fedbbd2d24e17b495b70acda2348b72b25205fd644c84eefc1bbeb42a82857163d729925dddd9970d1f8314308"
           }
         ],
         "url": "/sparrow/mods/AXajudEQmJX5vkPrbclz7HZq1SFsnmaGlbAYDLuHupYb.js",
@@ -734,11 +977,11 @@
         "hostApi": "^3.1",
         "version": "1.0.0"
       },
-      "entry_cbor": "a76269646a64656c74612e6d61707363736967825072456720412037a6b339f884ce6d91bb5840f542a1b79ea2de3781e018f03290cb1833700174cbe213aba651d389f5eeab7b981eaf6a53483214f7ef4cef6ccce8ffbb28e9cdd90f090ce0309d9772f5380a6375726c783d2f73706172726f772f6d6f64732f4158616a756445516d4a5835766b507262636c7a37485a71315346736e6d61476c624159444c7548757059622e6a73646465707380646861736858210176a3b9d1109895f9be43eb6dc973ec766ad5216c9e668695b0180cbb87ba961b67686f7374417069645e332e316776657273696f6e65312e302e30"
+      "entry_cbor": "a76269646a64656c74612e6d61707363736967825072456720412037a6b339f884ce6d91bb5840cac9d8e43ad292d2afbf990a52593133adfb74fedbbd2d24e17b495b70acda2348b72b25205fd644c84eefc1bbeb42a82857163d729925dddd9970d1f83143086375726c783d2f73706172726f772f6d6f64732f4158616a756445516d4a5835766b507262636c7a37485a71315346736e6d61476c624159444c7548757059622e6a73646465707380646861736858210176a3b9d1109895f9be43eb6dc973ec766ad5216c9e668695b0180cbb87ba961b67686f7374417069645e332e316776657273696f6e65312e302e30"
     },
     {
       "name": "module/revoked-key",
-      "description": "Signed by 'beta', which the revocation list revokes.",
+      "description": "Signed by 'beta', which revocation/list-3 revokes.",
       "spec": "9.4, 9.5",
       "type": "module",
       "file_utf8": "// beta.tools@2.0.0 (test fixture)\nexport default function register(host) {\n  return { id: 'beta.tools' };\n}\n",
@@ -755,10 +998,21 @@
         "hostApi": "^3.1",
         "version": "2.0.0"
       },
-      "unsigned_diag": "{\"id\": \"beta.tools\", \"url\": \"/sparrow/mods/AV95tQ-JnoFuPzjAsQNf_jn84XJ5I6_EA3B4baDLYBQ1.js\", \"deps\": [], \"hash\": h'015f79b50f899e816e3f38c0b1035ffe39fce1727923afc40370786da0cb601435', \"hostApi\": \"^3.1\", \"version\": \"2.0.0\"}",
-      "unsigned_cbor": "a66269646a626574612e746f6f6c736375726c783d2f73706172726f772f6d6f64732f4156393574512d4a6e6f4675507a6a4173514e665f6a6e3834584a3549365f45413342346261444c594251312e6a7364646570738064686173685821015f79b50f899e816e3f38c0b1035ffe39fce1727923afc40370786da0cb60143567686f7374417069645e332e316776657273696f6e65322e302e30",
-      "signed_bytes": "73706172726f772d6d6f64756c652d7631a66269646a626574612e746f6f6c736375726c783d2f73706172726f772f6d6f64732f4156393574512d4a6e6f4675507a6a4173514e665f6a6e3834584a3549365f45413342346261444c594251312e6a7364646570738064686173685821015f79b50f899e816e3f38c0b1035ffe39fce1727923afc40370786da0cb60143567686f7374417069645e332e316776657273696f6e65322e302e30",
-      "signature": "371f7f037c37126be61c10e918faa9bb3052906a75ae196dcb9ed3768b199913bc8ac30f28ae047b847673454ef2f037b798c4966f498508fad8df349800d308",
+      "signed_value": [
+        "sparrow-module-v1",
+        {
+          "id": "beta.tools",
+          "url": "/sparrow/mods/AV95tQ-JnoFuPzjAsQNf_jn84XJ5I6_EA3B4baDLYBQ1.js",
+          "deps": [],
+          "hash": {
+            "$bytes": "015f79b50f899e816e3f38c0b1035ffe39fce1727923afc40370786da0cb601435"
+          },
+          "hostApi": "^3.1",
+          "version": "2.0.0"
+        }
+      ],
+      "signed_bytes": "827173706172726f772d6d6f64756c652d7631a66269646a626574612e746f6f6c736375726c783d2f73706172726f772f6d6f64732f4156393574512d4a6e6f4675507a6a4173514e665f6a6e3834584a3549365f45413342346261444c594251312e6a7364646570738064686173685821015f79b50f899e816e3f38c0b1035ffe39fce1727923afc40370786da0cb60143567686f7374417069645e332e316776657273696f6e65322e302e30",
+      "signature": "96345313d89218837273d7bac048560280498ad7e1a5f10b7d579c691401fa40f5175685a04e0e95c042c4fe2c4f939218eb5b17ff3be96a68e354f43bb23502",
       "entry": {
         "id": "beta.tools",
         "sig": [
@@ -766,7 +1020,7 @@
             "$bytes": "b62e867fa2f33afe62d5d6b1642e1621"
           },
           {
-            "$bytes": "371f7f037c37126be61c10e918faa9bb3052906a75ae196dcb9ed3768b199913bc8ac30f28ae047b847673454ef2f037b798c4966f498508fad8df349800d308"
+            "$bytes": "96345313d89218837273d7bac048560280498ad7e1a5f10b7d579c691401fa40f5175685a04e0e95c042c4fe2c4f939218eb5b17ff3be96a68e354f43bb23502"
           }
         ],
         "url": "/sparrow/mods/AV95tQ-JnoFuPzjAsQNf_jn84XJ5I6_EA3B4baDLYBQ1.js",
@@ -777,7 +1031,7 @@
         "hostApi": "^3.1",
         "version": "2.0.0"
       },
-      "entry_cbor": "a76269646a626574612e746f6f6c73637369678250b62e867fa2f33afe62d5d6b1642e16215840371f7f037c37126be61c10e918faa9bb3052906a75ae196dcb9ed3768b199913bc8ac30f28ae047b847673454ef2f037b798c4966f498508fad8df349800d3086375726c783d2f73706172726f772f6d6f64732f4156393574512d4a6e6f4675507a6a4173514e665f6a6e3834584a3549365f45413342346261444c594251312e6a7364646570738064686173685821015f79b50f899e816e3f38c0b1035ffe39fce1727923afc40370786da0cb60143567686f7374417069645e332e316776657273696f6e65322e302e30"
+      "entry_cbor": "a76269646a626574612e746f6f6c73637369678250b62e867fa2f33afe62d5d6b1642e1621584096345313d89218837273d7bac048560280498ad7e1a5f10b7d579c691401fa40f5175685a04e0e95c042c4fe2c4f939218eb5b17ff3be96a68e354f43bb235026375726c783d2f73706172726f772f6d6f64732f4156393574512d4a6e6f4675507a6a4173514e665f6a6e3834584a3549365f45413342346261444c594251312e6a7364646570738064686173685821015f79b50f899e816e3f38c0b1035ffe39fce1727923afc40370786da0cb60143567686f7374417069645e332e316776657273696f6e65322e302e30"
     },
     {
       "name": "module/expired-cert",
@@ -798,10 +1052,21 @@
         "hostApi": "^3.1",
         "version": "1.0.0"
       },
-      "unsigned_diag": "{\"id\": \"gamma.reports\", \"url\": \"/sparrow/mods/AeynWpXD_nJHGYuzDeSbXmTh2iBH2mzhSBVpm38BIDUp.js\", \"deps\": [], \"hash\": h'01eca75a95c3fe7247198bb30de49b5e64e1da2047da6ce14815699b7f01203529', \"hostApi\": \"^3.1\", \"version\": \"1.0.0\"}",
-      "unsigned_cbor": "a66269646d67616d6d612e7265706f7274736375726c783d2f73706172726f772f6d6f64732f4165796e577058445f6e4a484759757a44655362586d546832694248326d7a68534256706d333842494455702e6a736464657073806468617368582101eca75a95c3fe7247198bb30de49b5e64e1da2047da6ce14815699b7f0120352967686f7374417069645e332e316776657273696f6e65312e302e30",
-      "signed_bytes": "73706172726f772d6d6f64756c652d7631a66269646d67616d6d612e7265706f7274736375726c783d2f73706172726f772f6d6f64732f4165796e577058445f6e4a484759757a44655362586d546832694248326d7a68534256706d333842494455702e6a736464657073806468617368582101eca75a95c3fe7247198bb30de49b5e64e1da2047da6ce14815699b7f0120352967686f7374417069645e332e316776657273696f6e65312e302e30",
-      "signature": "1f188c02e90084132627a3b021d98b7d30fe6d6c97a2d3de5996be55c36000a9d926e29f26d6cd218d6ed830ebdbd5d172b37d3657093de1acf51c794c4f9d09",
+      "signed_value": [
+        "sparrow-module-v1",
+        {
+          "id": "gamma.reports",
+          "url": "/sparrow/mods/AeynWpXD_nJHGYuzDeSbXmTh2iBH2mzhSBVpm38BIDUp.js",
+          "deps": [],
+          "hash": {
+            "$bytes": "01eca75a95c3fe7247198bb30de49b5e64e1da2047da6ce14815699b7f01203529"
+          },
+          "hostApi": "^3.1",
+          "version": "1.0.0"
+        }
+      ],
+      "signed_bytes": "827173706172726f772d6d6f64756c652d7631a66269646d67616d6d612e7265706f7274736375726c783d2f73706172726f772f6d6f64732f4165796e577058445f6e4a484759757a44655362586d546832694248326d7a68534256706d333842494455702e6a736464657073806468617368582101eca75a95c3fe7247198bb30de49b5e64e1da2047da6ce14815699b7f0120352967686f7374417069645e332e316776657273696f6e65312e302e30",
+      "signature": "88b7438952dda17dfa19bfa97afcafbc761d1f126f4d564558969c2d5dabf6d67f10c641dcbf2c9b27b467c54c2758fe53043f702008d422473c86c5b24deb0f",
       "entry": {
         "id": "gamma.reports",
         "sig": [
@@ -809,7 +1074,7 @@
             "$bytes": "7599776c3085e3f9da0d13071eb0b4ab"
           },
           {
-            "$bytes": "1f188c02e90084132627a3b021d98b7d30fe6d6c97a2d3de5996be55c36000a9d926e29f26d6cd218d6ed830ebdbd5d172b37d3657093de1acf51c794c4f9d09"
+            "$bytes": "88b7438952dda17dfa19bfa97afcafbc761d1f126f4d564558969c2d5dabf6d67f10c641dcbf2c9b27b467c54c2758fe53043f702008d422473c86c5b24deb0f"
           }
         ],
         "url": "/sparrow/mods/AeynWpXD_nJHGYuzDeSbXmTh2iBH2mzhSBVpm38BIDUp.js",
@@ -820,7 +1085,61 @@
         "hostApi": "^3.1",
         "version": "1.0.0"
       },
-      "entry_cbor": "a76269646d67616d6d612e7265706f7274736373696782507599776c3085e3f9da0d13071eb0b4ab58401f188c02e90084132627a3b021d98b7d30fe6d6c97a2d3de5996be55c36000a9d926e29f26d6cd218d6ed830ebdbd5d172b37d3657093de1acf51c794c4f9d096375726c783d2f73706172726f772f6d6f64732f4165796e577058445f6e4a484759757a44655362586d546832694248326d7a68534256706d333842494455702e6a736464657073806468617368582101eca75a95c3fe7247198bb30de49b5e64e1da2047da6ce14815699b7f0120352967686f7374417069645e332e316776657273696f6e65312e302e30"
+      "entry_cbor": "a76269646d67616d6d612e7265706f7274736373696782507599776c3085e3f9da0d13071eb0b4ab584088b7438952dda17dfa19bfa97afcafbc761d1f126f4d564558969c2d5dabf6d67f10c641dcbf2c9b27b467c54c2758fe53043f702008d422473c86c5b24deb0f6375726c783d2f73706172726f772f6d6f64732f4165796e577058445f6e4a484759757a44655362586d546832694248326d7a68534256706d333842494455702e6a736464657073806468617368582101eca75a95c3fe7247198bb30de49b5e64e1da2047da6ce14815699b7f0120352967686f7374417069645e332e316776657273696f6e65312e302e30"
+    },
+    {
+      "name": "module/expiry-boundary",
+      "description": "Signed by 'epsilon', whose certificate expires exactly at the verification time (strictly-before rule).",
+      "spec": "9.4, 9.5",
+      "type": "module",
+      "file_utf8": "// epsilon.x@1.0.0 (test fixture)\nexport default function register(host) {\n  return { id: 'epsilon.x' };\n}\n",
+      "file_hash": "0125cc7eca6b2e6dd398d563ec8738528f2b89b318f71019500f60994a8f473657",
+      "signer_seed": "0808080808080808080808080808080808080808080808080808080808080808",
+      "domain": "sparrow-module-v1",
+      "unsigned": {
+        "id": "epsilon.x",
+        "url": "/sparrow/mods/ASXMfsprLm3TmNVj7Ic4Uo8ribMY9xAZUA9gmUqPRzZX.js",
+        "deps": [],
+        "hash": {
+          "$bytes": "0125cc7eca6b2e6dd398d563ec8738528f2b89b318f71019500f60994a8f473657"
+        },
+        "hostApi": "^3.1",
+        "version": "1.0.0"
+      },
+      "signed_value": [
+        "sparrow-module-v1",
+        {
+          "id": "epsilon.x",
+          "url": "/sparrow/mods/ASXMfsprLm3TmNVj7Ic4Uo8ribMY9xAZUA9gmUqPRzZX.js",
+          "deps": [],
+          "hash": {
+            "$bytes": "0125cc7eca6b2e6dd398d563ec8738528f2b89b318f71019500f60994a8f473657"
+          },
+          "hostApi": "^3.1",
+          "version": "1.0.0"
+        }
+      ],
+      "signed_bytes": "827173706172726f772d6d6f64756c652d7631a662696469657073696c6f6e2e786375726c783d2f73706172726f772f6d6f64732f4153584d667370724c6d33546d4e566a37496334556f387269624d593978415a554139676d557150527a5a582e6a73646465707380646861736858210125cc7eca6b2e6dd398d563ec8738528f2b89b318f71019500f60994a8f47365767686f7374417069645e332e316776657273696f6e65312e302e30",
+      "signature": "25178edd6b061d2e8777c3ac8a7e8005361bc987f9605c91abc17a9d916d80f6cb571d16d0edf3442f3c12a2f581d5e2c552365f71276142dd848de7a6fae203",
+      "entry": {
+        "id": "epsilon.x",
+        "sig": [
+          {
+            "$bytes": "5c29b78f10a35a49a6231d08ee840a04"
+          },
+          {
+            "$bytes": "25178edd6b061d2e8777c3ac8a7e8005361bc987f9605c91abc17a9d916d80f6cb571d16d0edf3442f3c12a2f581d5e2c552365f71276142dd848de7a6fae203"
+          }
+        ],
+        "url": "/sparrow/mods/ASXMfsprLm3TmNVj7Ic4Uo8ribMY9xAZUA9gmUqPRzZX.js",
+        "deps": [],
+        "hash": {
+          "$bytes": "0125cc7eca6b2e6dd398d563ec8738528f2b89b318f71019500f60994a8f473657"
+        },
+        "hostApi": "^3.1",
+        "version": "1.0.0"
+      },
+      "entry_cbor": "a762696469657073696c6f6e2e786373696782505c29b78f10a35a49a6231d08ee840a04584025178edd6b061d2e8777c3ac8a7e8005361bc987f9605c91abc17a9d916d80f6cb571d16d0edf3442f3c12a2f581d5e2c552365f71276142dd848de7a6fae2036375726c783d2f73706172726f772f6d6f64732f4153584d667370724c6d33546d4e566a37496334556f387269624d593978415a554139676d557150527a5a582e6a73646465707380646861736858210125cc7eca6b2e6dd398d563ec8738528f2b89b318f71019500f60994a8f47365767686f7374417069645e332e316776657273696f6e65312e302e30"
     },
     {
       "name": "module/cert-wrong-domain",
@@ -841,10 +1160,21 @@
         "hostApi": "^3.1",
         "version": "1.0.0"
       },
-      "unsigned_diag": "{\"id\": \"omega.maps\", \"url\": \"/sparrow/mods/AcUx-XECvQwGyZyv4P2q5-unWgKMUQ91jBh1GfMan-w5.js\", \"deps\": [], \"hash\": h'01c531f97102bd0c06c99cafe0fdaae7eba75a028c510f758c187519f31a9fec39', \"hostApi\": \"^3.1\", \"version\": \"1.0.0\"}",
-      "unsigned_cbor": "a66269646a6f6d6567612e6d6170736375726c783d2f73706172726f772f6d6f64732f416355782d58454376517747795a797634503271352d756e57674b4d555139316a42683147664d616e2d77352e6a736464657073806468617368582101c531f97102bd0c06c99cafe0fdaae7eba75a028c510f758c187519f31a9fec3967686f7374417069645e332e316776657273696f6e65312e302e30",
-      "signed_bytes": "73706172726f772d6d6f64756c652d7631a66269646a6f6d6567612e6d6170736375726c783d2f73706172726f772f6d6f64732f416355782d58454376517747795a797634503271352d756e57674b4d555139316a42683147664d616e2d77352e6a736464657073806468617368582101c531f97102bd0c06c99cafe0fdaae7eba75a028c510f758c187519f31a9fec3967686f7374417069645e332e316776657273696f6e65312e302e30",
-      "signature": "dce87f667098ed3502ededb3d68a48de2b774010f18238a540c0544cd18e417ed6757c7aa70604950d102fdf60eff036130da74a6072fb86ec46f8883a86e00a",
+      "signed_value": [
+        "sparrow-module-v1",
+        {
+          "id": "omega.maps",
+          "url": "/sparrow/mods/AcUx-XECvQwGyZyv4P2q5-unWgKMUQ91jBh1GfMan-w5.js",
+          "deps": [],
+          "hash": {
+            "$bytes": "01c531f97102bd0c06c99cafe0fdaae7eba75a028c510f758c187519f31a9fec39"
+          },
+          "hostApi": "^3.1",
+          "version": "1.0.0"
+        }
+      ],
+      "signed_bytes": "827173706172726f772d6d6f64756c652d7631a66269646a6f6d6567612e6d6170736375726c783d2f73706172726f772f6d6f64732f416355782d58454376517747795a797634503271352d756e57674b4d555139316a42683147664d616e2d77352e6a736464657073806468617368582101c531f97102bd0c06c99cafe0fdaae7eba75a028c510f758c187519f31a9fec3967686f7374417069645e332e316776657273696f6e65312e302e30",
+      "signature": "e1bd6325783b473598262b571e07f805ad6e5559a4d1f384b1ebf909c753ce746a909c239853d5be795f644d9508229d3386746473afe388d50ba5e0c4344704",
       "entry": {
         "id": "omega.maps",
         "sig": [
@@ -852,7 +1182,7 @@
             "$bytes": "fe812c12f3ab4ce6ac5db69ac352f906"
           },
           {
-            "$bytes": "dce87f667098ed3502ededb3d68a48de2b774010f18238a540c0544cd18e417ed6757c7aa70604950d102fdf60eff036130da74a6072fb86ec46f8883a86e00a"
+            "$bytes": "e1bd6325783b473598262b571e07f805ad6e5559a4d1f384b1ebf909c753ce746a909c239853d5be795f644d9508229d3386746473afe388d50ba5e0c4344704"
           }
         ],
         "url": "/sparrow/mods/AcUx-XECvQwGyZyv4P2q5-unWgKMUQ91jBh1GfMan-w5.js",
@@ -863,7 +1193,7 @@
         "hostApi": "^3.1",
         "version": "1.0.0"
       },
-      "entry_cbor": "a76269646a6f6d6567612e6d617073637369678250fe812c12f3ab4ce6ac5db69ac352f9065840dce87f667098ed3502ededb3d68a48de2b774010f18238a540c0544cd18e417ed6757c7aa70604950d102fdf60eff036130da74a6072fb86ec46f8883a86e00a6375726c783d2f73706172726f772f6d6f64732f416355782d58454376517747795a797634503271352d756e57674b4d555139316a42683147664d616e2d77352e6a736464657073806468617368582101c531f97102bd0c06c99cafe0fdaae7eba75a028c510f758c187519f31a9fec3967686f7374417069645e332e316776657273696f6e65312e302e30"
+      "entry_cbor": "a76269646a6f6d6567612e6d617073637369678250fe812c12f3ab4ce6ac5db69ac352f9065840e1bd6325783b473598262b571e07f805ad6e5559a4d1f384b1ebf909c753ce746a909c239853d5be795f644d9508229d3386746473afe388d50ba5e0c43447046375726c783d2f73706172726f772f6d6f64732f416355782d58454376517747795a797634503271352d756e57674b4d555139316a42683147664d616e2d77352e6a736464657073806468617368582101c531f97102bd0c06c99cafe0fdaae7eba75a028c510f758c187519f31a9fec3967686f7374417069645e332e316776657273696f6e65312e302e30"
     },
     {
       "name": "module/uncertified-key",
@@ -884,10 +1214,21 @@
         "hostApi": "^3.1",
         "version": "1.0.0"
       },
-      "unsigned_diag": "{\"id\": \"acme.extra\", \"url\": \"/sparrow/mods/AbGmCWWhbAYtT0qMesKIZ3vmXx-LxjGteCoWqF_65ITu.js\", \"deps\": [], \"hash\": h'01b1a60965a16c062d4f4a8c7ac288677be65f1f8bc631ad782a16a85ffae484ee', \"hostApi\": \"^3.1\", \"version\": \"1.0.0\"}",
-      "unsigned_cbor": "a66269646a61636d652e65787472616375726c783d2f73706172726f772f6d6f64732f4162476d43575768624159745430714d65734b495a33766d58782d4c786a477465436f5771465f36354954752e6a736464657073806468617368582101b1a60965a16c062d4f4a8c7ac288677be65f1f8bc631ad782a16a85ffae484ee67686f7374417069645e332e316776657273696f6e65312e302e30",
-      "signed_bytes": "73706172726f772d6d6f64756c652d7631a66269646a61636d652e65787472616375726c783d2f73706172726f772f6d6f64732f4162476d43575768624159745430714d65734b495a33766d58782d4c786a477465436f5771465f36354954752e6a736464657073806468617368582101b1a60965a16c062d4f4a8c7ac288677be65f1f8bc631ad782a16a85ffae484ee67686f7374417069645e332e316776657273696f6e65312e302e30",
-      "signature": "7ed98fad11a7e0549a11d9e9b1b6ff0b48eca8fe01727f7657f91bebc56a247278a358fab09eefda0faa14ac1b95b33b7ea952b71254272594ad57d034933f02",
+      "signed_value": [
+        "sparrow-module-v1",
+        {
+          "id": "acme.extra",
+          "url": "/sparrow/mods/AbGmCWWhbAYtT0qMesKIZ3vmXx-LxjGteCoWqF_65ITu.js",
+          "deps": [],
+          "hash": {
+            "$bytes": "01b1a60965a16c062d4f4a8c7ac288677be65f1f8bc631ad782a16a85ffae484ee"
+          },
+          "hostApi": "^3.1",
+          "version": "1.0.0"
+        }
+      ],
+      "signed_bytes": "827173706172726f772d6d6f64756c652d7631a66269646a61636d652e65787472616375726c783d2f73706172726f772f6d6f64732f4162476d43575768624159745430714d65734b495a33766d58782d4c786a477465436f5771465f36354954752e6a736464657073806468617368582101b1a60965a16c062d4f4a8c7ac288677be65f1f8bc631ad782a16a85ffae484ee67686f7374417069645e332e316776657273696f6e65312e302e30",
+      "signature": "cd9f2420f8b50a1613cec417bb61b83fe17ab1f54e9c4ba1e68beda6af23451263ee352ed01709b602d9d5864651d882c911f39e09aced98bd9d3bf760403908",
       "entry": {
         "id": "acme.extra",
         "sig": [
@@ -895,7 +1236,7 @@
             "$bytes": "c5b940ed3f65c391965de8295fc5d25f"
           },
           {
-            "$bytes": "7ed98fad11a7e0549a11d9e9b1b6ff0b48eca8fe01727f7657f91bebc56a247278a358fab09eefda0faa14ac1b95b33b7ea952b71254272594ad57d034933f02"
+            "$bytes": "cd9f2420f8b50a1613cec417bb61b83fe17ab1f54e9c4ba1e68beda6af23451263ee352ed01709b602d9d5864651d882c911f39e09aced98bd9d3bf760403908"
           }
         ],
         "url": "/sparrow/mods/AbGmCWWhbAYtT0qMesKIZ3vmXx-LxjGteCoWqF_65ITu.js",
@@ -906,54 +1247,175 @@
         "hostApi": "^3.1",
         "version": "1.0.0"
       },
-      "entry_cbor": "a76269646a61636d652e6578747261637369678250c5b940ed3f65c391965de8295fc5d25f58407ed98fad11a7e0549a11d9e9b1b6ff0b48eca8fe01727f7657f91bebc56a247278a358fab09eefda0faa14ac1b95b33b7ea952b71254272594ad57d034933f026375726c783d2f73706172726f772f6d6f64732f4162476d43575768624159745430714d65734b495a33766d58782d4c786a477465436f5771465f36354954752e6a736464657073806468617368582101b1a60965a16c062d4f4a8c7ac288677be65f1f8bc631ad782a16a85ffae484ee67686f7374417069645e332e316776657273696f6e65312e302e30"
+      "entry_cbor": "a76269646a61636d652e6578747261637369678250c5b940ed3f65c391965de8295fc5d25f5840cd9f2420f8b50a1613cec417bb61b83fe17ab1f54e9c4ba1e68beda6af23451263ee352ed01709b602d9d5864651d882c911f39e09aced98bd9d3bf7604039086375726c783d2f73706172726f772f6d6f64732f4162476d43575768624159745430714d65734b495a33766d58782d4c786a477465436f5771465f36354954752e6a736464657073806468617368582101b1a60965a16c062d4f4a8c7ac288677be65f1f8bc631ad782a16a85ffae484ee67686f7374417069645e332e316776657273696f6e65312e302e30"
     },
     {
       "name": "module/tampered",
       "description": "Signed for version 1.4.2, then 'version' changed to 1.4.3 after signing.",
       "spec": "9.4, 9.5",
       "type": "module",
-      "file_utf8": "// acme.charts@1.4.2 (test fixture)\nexport default function register(host) {\n  return { id: 'acme.charts' };\n}\n",
-      "file_hash": "015ccf8ec0ce68ad656296831f8815c3228db8d60e8843a3a400ff64df89150e79",
+      "file_utf8": "// acme.charts.ui@1.4.2 (test fixture)\nexport default function register(host) {\n  return { id: 'acme.charts.ui' };\n}\n",
+      "file_hash": "017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27",
       "signer_seed": "0202020202020202020202020202020202020202020202020202020202020202",
       "domain": "sparrow-module-v1",
       "unsigned": {
-        "id": "acme.charts",
-        "url": "/sparrow/mods/AVzPjsDOaK1lYpaDH4gVwyKNuNYOiEOjpAD_ZN-JFQ55.js",
+        "id": "acme.charts.ui",
+        "url": "/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js",
         "deps": [
-          "acme.core"
+          "acme.core.boot"
         ],
         "hash": {
-          "$bytes": "015ccf8ec0ce68ad656296831f8815c3228db8d60e8843a3a400ff64df89150e79"
+          "$bytes": "017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27"
         },
         "hostApi": "^3.1",
         "version": "1.4.2"
       },
-      "unsigned_diag": "{\"id\": \"acme.charts\", \"url\": \"/sparrow/mods/AVzPjsDOaK1lYpaDH4gVwyKNuNYOiEOjpAD_ZN-JFQ55.js\", \"deps\": [\"acme.core\"], \"hash\": h'015ccf8ec0ce68ad656296831f8815c3228db8d60e8843a3a400ff64df89150e79', \"hostApi\": \"^3.1\", \"version\": \"1.4.2\"}",
-      "unsigned_cbor": "a66269646b61636d652e6368617274736375726c783d2f73706172726f772f6d6f64732f41567a506a73444f614b316c597061444834675677794b4e754e594f69454f6a7041445f5a4e2d4a465135352e6a736464657073816961636d652e636f726564686173685821015ccf8ec0ce68ad656296831f8815c3228db8d60e8843a3a400ff64df89150e7967686f7374417069645e332e316776657273696f6e65312e342e32",
-      "signed_bytes": "73706172726f772d6d6f64756c652d7631a66269646b61636d652e6368617274736375726c783d2f73706172726f772f6d6f64732f41567a506a73444f614b316c597061444834675677794b4e754e594f69454f6a7041445f5a4e2d4a465135352e6a736464657073816961636d652e636f726564686173685821015ccf8ec0ce68ad656296831f8815c3228db8d60e8843a3a400ff64df89150e7967686f7374417069645e332e316776657273696f6e65312e342e32",
-      "signature": "552a92f6e43b88e7885893eba120fb7803a16275ea32b4805bdc8e56fe233944c49790c5f649dacd886b582dc33432647d8c869a638b605593aa735d78bdff06",
+      "signed_value": [
+        "sparrow-module-v1",
+        {
+          "id": "acme.charts.ui",
+          "url": "/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js",
+          "deps": [
+            "acme.core.boot"
+          ],
+          "hash": {
+            "$bytes": "017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27"
+          },
+          "hostApi": "^3.1",
+          "version": "1.4.2"
+        }
+      ],
+      "signed_bytes": "827173706172726f772d6d6f64756c652d7631a66269646e61636d652e6368617274732e75696375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef2767686f7374417069645e332e316776657273696f6e65312e342e32",
+      "signature": "762c8db7c4e33447d9895ca30390412deebb72b6f59e8f83c234357cd185d501723d8744d4ea56e6c012926aad5e0f6d76ca3d0a0e0b799fa1fd6c4ded1d2c04",
       "entry": {
-        "id": "acme.charts",
+        "id": "acme.charts.ui",
         "sig": [
           {
             "$bytes": "6a3803d5f059902a1c6dafbc9ba47292"
           },
           {
-            "$bytes": "552a92f6e43b88e7885893eba120fb7803a16275ea32b4805bdc8e56fe233944c49790c5f649dacd886b582dc33432647d8c869a638b605593aa735d78bdff06"
+            "$bytes": "762c8db7c4e33447d9895ca30390412deebb72b6f59e8f83c234357cd185d501723d8744d4ea56e6c012926aad5e0f6d76ca3d0a0e0b799fa1fd6c4ded1d2c04"
           }
         ],
-        "url": "/sparrow/mods/AVzPjsDOaK1lYpaDH4gVwyKNuNYOiEOjpAD_ZN-JFQ55.js",
+        "url": "/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js",
         "deps": [
-          "acme.core"
+          "acme.core.boot"
         ],
         "hash": {
-          "$bytes": "015ccf8ec0ce68ad656296831f8815c3228db8d60e8843a3a400ff64df89150e79"
+          "$bytes": "017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27"
         },
         "hostApi": "^3.1",
         "version": "1.4.3"
       },
-      "entry_cbor": "a76269646b61636d652e6368617274736373696782506a3803d5f059902a1c6dafbc9ba472925840552a92f6e43b88e7885893eba120fb7803a16275ea32b4805bdc8e56fe233944c49790c5f649dacd886b582dc33432647d8c869a638b605593aa735d78bdff066375726c783d2f73706172726f772f6d6f64732f41567a506a73444f614b316c597061444834675677794b4e754e594f69454f6a7041445f5a4e2d4a465135352e6a736464657073816961636d652e636f726564686173685821015ccf8ec0ce68ad656296831f8815c3228db8d60e8843a3a400ff64df89150e7967686f7374417069645e332e316776657273696f6e65312e342e33"
+      "entry_cbor": "a76269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba472925840762c8db7c4e33447d9895ca30390412deebb72b6f59e8f83c234357cd185d501723d8744d4ea56e6c012926aad5e0f6d76ca3d0a0e0b799fa1fd6c4ded1d2c046375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef2767686f7374417069645e332e316776657273696f6e65312e342e33"
+    },
+    {
+      "name": "module/utf8-namespace",
+      "description": "Id 'café.menu' (NFC) under namespace 'café.' (NFC): the UTF-8 bytes match.",
+      "spec": "9.4, 9.5",
+      "type": "module",
+      "file_utf8": "// café.menu@1.0.0 (test fixture)\nexport default function register(host) {\n  return { id: 'café.menu' };\n}\n",
+      "file_hash": "01275aa1591ca993d9ec10b61bf3dade270844b131f7ce6e89532d26e0f9560a89",
+      "signer_seed": "0909090909090909090909090909090909090909090909090909090909090909",
+      "domain": "sparrow-module-v1",
+      "unsigned": {
+        "id": "café.menu",
+        "url": "/sparrow/mods/ASdaoVkcqZPZ7BC2G_Pa3icIRLEx985uiVMtJuD5VgqJ.js",
+        "deps": [],
+        "hash": {
+          "$bytes": "01275aa1591ca993d9ec10b61bf3dade270844b131f7ce6e89532d26e0f9560a89"
+        },
+        "hostApi": "^3.1",
+        "version": "1.0.0"
+      },
+      "signed_value": [
+        "sparrow-module-v1",
+        {
+          "id": "café.menu",
+          "url": "/sparrow/mods/ASdaoVkcqZPZ7BC2G_Pa3icIRLEx985uiVMtJuD5VgqJ.js",
+          "deps": [],
+          "hash": {
+            "$bytes": "01275aa1591ca993d9ec10b61bf3dade270844b131f7ce6e89532d26e0f9560a89"
+          },
+          "hostApi": "^3.1",
+          "version": "1.0.0"
+        }
+      ],
+      "signed_bytes": "827173706172726f772d6d6f64756c652d7631a66269646a636166c3a92e6d656e756375726c783d2f73706172726f772f6d6f64732f415364616f566b63715a505a37424332475f506133696349524c45783938357569564d744a7544355667714a2e6a736464657073806468617368582101275aa1591ca993d9ec10b61bf3dade270844b131f7ce6e89532d26e0f9560a8967686f7374417069645e332e316776657273696f6e65312e302e30",
+      "signature": "ac5cb312ba2800d5461245acdb3000e0bdd0945e617344741baecfe136fc174d051cc2ae3102cdbd34b2e785d60d83853eaaeced844973604f09c4398f327e08",
+      "entry": {
+        "id": "café.menu",
+        "sig": [
+          {
+            "$bytes": "dbc298251c51321b7266e78d1c151c2b"
+          },
+          {
+            "$bytes": "ac5cb312ba2800d5461245acdb3000e0bdd0945e617344741baecfe136fc174d051cc2ae3102cdbd34b2e785d60d83853eaaeced844973604f09c4398f327e08"
+          }
+        ],
+        "url": "/sparrow/mods/ASdaoVkcqZPZ7BC2G_Pa3icIRLEx985uiVMtJuD5VgqJ.js",
+        "deps": [],
+        "hash": {
+          "$bytes": "01275aa1591ca993d9ec10b61bf3dade270844b131f7ce6e89532d26e0f9560a89"
+        },
+        "hostApi": "^3.1",
+        "version": "1.0.0"
+      },
+      "entry_cbor": "a76269646a636166c3a92e6d656e75637369678250dbc298251c51321b7266e78d1c151c2b5840ac5cb312ba2800d5461245acdb3000e0bdd0945e617344741baecfe136fc174d051cc2ae3102cdbd34b2e785d60d83853eaaeced844973604f09c4398f327e086375726c783d2f73706172726f772f6d6f64732f415364616f566b63715a505a37424332475f506133696349524c45783938357569564d744a7544355667714a2e6a736464657073806468617368582101275aa1591ca993d9ec10b61bf3dade270844b131f7ce6e89532d26e0f9560a8967686f7374417069645e332e316776657273696f6e65312e302e30"
+    },
+    {
+      "name": "module/utf8-nfd",
+      "description": "Id 'café.menu' in NFD (e + U+0301) looks the same as the namespace 'café.' (NFC) but its bytes differ, so it is not covered (no normalization).",
+      "spec": "9.4, 9.5",
+      "type": "module",
+      "file_utf8": "// café.menu@1.0.0 (test fixture)\nexport default function register(host) {\n  return { id: 'café.menu' };\n}\n",
+      "file_hash": "0161285d626f037879626d5efbebec6284d5ed707dbdf0be2f580c5be1216f9e00",
+      "signer_seed": "0909090909090909090909090909090909090909090909090909090909090909",
+      "domain": "sparrow-module-v1",
+      "unsigned": {
+        "id": "café.menu",
+        "url": "/sparrow/mods/AWEoXWJvA3h5Ym1e--vsYoTV7XB9vfC-L1gMW-Ehb54A.js",
+        "deps": [],
+        "hash": {
+          "$bytes": "0161285d626f037879626d5efbebec6284d5ed707dbdf0be2f580c5be1216f9e00"
+        },
+        "hostApi": "^3.1",
+        "version": "1.0.0"
+      },
+      "signed_value": [
+        "sparrow-module-v1",
+        {
+          "id": "café.menu",
+          "url": "/sparrow/mods/AWEoXWJvA3h5Ym1e--vsYoTV7XB9vfC-L1gMW-Ehb54A.js",
+          "deps": [],
+          "hash": {
+            "$bytes": "0161285d626f037879626d5efbebec6284d5ed707dbdf0be2f580c5be1216f9e00"
+          },
+          "hostApi": "^3.1",
+          "version": "1.0.0"
+        }
+      ],
+      "signed_bytes": "827173706172726f772d6d6f64756c652d7631a66269646b63616665cc812e6d656e756375726c783d2f73706172726f772f6d6f64732f4157456f58574a7641336835596d31652d2d7673596f5456375842397666432d4c31674d572d4568623534412e6a73646465707380646861736858210161285d626f037879626d5efbebec6284d5ed707dbdf0be2f580c5be1216f9e0067686f7374417069645e332e316776657273696f6e65312e302e30",
+      "signature": "04ed074b4437cff9d81f278ba1abf23ce20fce397c33f606aea91af150d7b954699fa50763b7237af3f885a04984ccc46b4d34139215e574eb15fb51a67a4509",
+      "entry": {
+        "id": "café.menu",
+        "sig": [
+          {
+            "$bytes": "dbc298251c51321b7266e78d1c151c2b"
+          },
+          {
+            "$bytes": "04ed074b4437cff9d81f278ba1abf23ce20fce397c33f606aea91af150d7b954699fa50763b7237af3f885a04984ccc46b4d34139215e574eb15fb51a67a4509"
+          }
+        ],
+        "url": "/sparrow/mods/AWEoXWJvA3h5Ym1e--vsYoTV7XB9vfC-L1gMW-Ehb54A.js",
+        "deps": [],
+        "hash": {
+          "$bytes": "0161285d626f037879626d5efbebec6284d5ed707dbdf0be2f580c5be1216f9e00"
+        },
+        "hostApi": "^3.1",
+        "version": "1.0.0"
+      },
+      "entry_cbor": "a76269646b63616665cc812e6d656e75637369678250dbc298251c51321b7266e78d1c151c2b584004ed074b4437cff9d81f278ba1abf23ce20fce397c33f606aea91af150d7b954699fa50763b7237af3f885a04984ccc46b4d34139215e574eb15fb51a67a45096375726c783d2f73706172726f772f6d6f64732f4157456f58574a7641336835596d31652d2d7673596f5456375842397666432d4c31674d572d4568623534412e6a73646465707380646861736858210161285d626f037879626d5efbebec6284d5ed707dbdf0be2f580c5be1216f9e0067686f7374417069645e332e316776657273696f6e65312e302e30"
     },
     {
       "name": "file-hash/charts-css",
@@ -965,103 +1427,259 @@
     },
     {
       "name": "verify/acme-charts",
-      "description": "Accept or reject module/acme-charts against the shared verification context. Module signed by the certified publisher key 'acme'; has assets and load.",
+      "description": "Accept or reject module/acme-charts. Module 'acme.charts.ui' of part acme.charts, signed by the certified publisher key 'acme'; has assets and load.",
       "spec": "9.5",
       "type": "verify",
       "context": "verification_context",
       "module": "module/acme-charts",
+      "revocation": "revocation/list-3",
       "expected_valid": true,
       "expected_reason": "ok"
     },
     {
       "name": "verify/acme-core",
-      "description": "Accept or reject module/acme-core against the shared verification context. Module signed directly by the root key.",
+      "description": "Accept or reject module/acme-core. Module signed directly by the root key.",
       "spec": "9.5",
       "type": "verify",
       "context": "verification_context",
       "module": "module/acme-core",
+      "revocation": "revocation/list-3",
       "expected_valid": true,
       "expected_reason": "ok"
     },
     {
       "name": "verify/wrong-domain",
-      "description": "Accept or reject module/wrong-domain against the shared verification context. Signed by 'acme' over 'sparrow-cert-v1' instead of 'sparrow-module-v1'.",
+      "description": "Accept or reject module/wrong-domain. Signed by 'acme' over ['sparrow-cert-v1', entry] instead of ['sparrow-module-v1', entry].",
       "spec": "9.5",
       "type": "verify",
       "context": "verification_context",
       "module": "module/wrong-domain",
+      "revocation": "revocation/list-3",
       "expected_valid": false,
       "expected_reason": "bad_module_signature"
     },
     {
       "name": "verify/namespace-not-covered",
-      "description": "Accept or reject module/namespace-not-covered against the shared verification context. Signed by 'acme', whose namespace 'acme.' does not cover 'acmecorp.widgets'.",
+      "description": "Accept or reject module/namespace-not-covered. Signed by 'acme', whose namespace 'acme.' does not cover 'acmecorp.widgets'.",
       "spec": "9.5",
       "type": "verify",
       "context": "verification_context",
       "module": "module/namespace-not-covered",
+      "revocation": "revocation/list-3",
       "expected_valid": false,
       "expected_reason": "namespace_not_covered"
     },
     {
       "name": "verify/namespace-no-dot",
-      "description": "Accept or reject module/namespace-no-dot against the shared verification context. Signed by 'delta', whose certificate namespace 'delta' lacks the trailing dot. 'delta.maps' starts with 'delta', but the certificate is invalid.",
+      "description": "Accept or reject module/namespace-no-dot. Signed by 'delta', whose certificate namespace 'delta' lacks the trailing dot. 'delta.maps' starts with 'delta', but the certificate is invalid.",
       "spec": "9.5",
       "type": "verify",
       "context": "verification_context",
       "module": "module/namespace-no-dot",
+      "revocation": "revocation/list-3",
       "expected_valid": false,
       "expected_reason": "namespace_missing_trailing_dot"
     },
     {
       "name": "verify/revoked-key",
-      "description": "Accept or reject module/revoked-key against the shared verification context. Signed by 'beta', which the revocation list revokes.",
+      "description": "Accept or reject module/revoked-key. Signed by 'beta', which revocation/list-3 revokes.",
       "spec": "9.5",
       "type": "verify",
       "context": "verification_context",
       "module": "module/revoked-key",
+      "revocation": "revocation/list-3",
       "expected_valid": false,
       "expected_reason": "key_revoked"
     },
     {
       "name": "verify/expired-cert",
-      "description": "Accept or reject module/expired-cert against the shared verification context. Signed by 'gamma', whose certificate expired before the verification time.",
+      "description": "Accept or reject module/expired-cert. Signed by 'gamma', whose certificate expired before the verification time.",
       "spec": "9.5",
       "type": "verify",
       "context": "verification_context",
       "module": "module/expired-cert",
+      "revocation": "revocation/list-3",
+      "expected_valid": false,
+      "expected_reason": "certificate_expired"
+    },
+    {
+      "name": "verify/expiry-boundary",
+      "description": "Accept or reject module/expiry-boundary. Signed by 'epsilon', whose certificate expires exactly at the verification time (strictly-before rule).",
+      "spec": "9.5",
+      "type": "verify",
+      "context": "verification_context",
+      "module": "module/expiry-boundary",
+      "revocation": "revocation/list-3",
       "expected_valid": false,
       "expected_reason": "certificate_expired"
     },
     {
       "name": "verify/cert-wrong-domain",
-      "description": "Accept or reject module/cert-wrong-domain against the shared verification context. Signed by 'omega', whose certificate signature used the wrong domain string.",
+      "description": "Accept or reject module/cert-wrong-domain. Signed by 'omega', whose certificate signature used the wrong domain string.",
       "spec": "9.5",
       "type": "verify",
       "context": "verification_context",
       "module": "module/cert-wrong-domain",
+      "revocation": "revocation/list-3",
       "expected_valid": false,
       "expected_reason": "bad_certificate_signature"
     },
     {
       "name": "verify/uncertified-key",
-      "description": "Accept or reject module/uncertified-key against the shared verification context. Signed by a key that is neither a root key nor certified.",
+      "description": "Accept or reject module/uncertified-key. Signed by a key that is neither a root key nor certified.",
       "spec": "9.5",
       "type": "verify",
       "context": "verification_context",
       "module": "module/uncertified-key",
+      "revocation": "revocation/list-3",
       "expected_valid": false,
       "expected_reason": "unknown_key"
     },
     {
       "name": "verify/tampered",
-      "description": "Accept or reject module/tampered against the shared verification context. Signed for version 1.4.2, then 'version' changed to 1.4.3 after signing.",
+      "description": "Accept or reject module/tampered. Signed for version 1.4.2, then 'version' changed to 1.4.3 after signing.",
       "spec": "9.5",
       "type": "verify",
       "context": "verification_context",
       "module": "module/tampered",
+      "revocation": "revocation/list-3",
       "expected_valid": false,
       "expected_reason": "bad_module_signature"
+    },
+    {
+      "name": "verify/utf8-namespace",
+      "description": "Accept or reject module/utf8-namespace. Id 'café.menu' (NFC) under namespace 'café.' (NFC): the UTF-8 bytes match.",
+      "spec": "9.5",
+      "type": "verify",
+      "context": "verification_context",
+      "module": "module/utf8-namespace",
+      "revocation": "revocation/list-3",
+      "expected_valid": true,
+      "expected_reason": "ok"
+    },
+    {
+      "name": "verify/utf8-nfd",
+      "description": "Accept or reject module/utf8-nfd. Id 'café.menu' in NFD (e + U+0301) looks the same as the namespace 'café.' (NFC) but its bytes differ, so it is not covered (no normalization).",
+      "spec": "9.5",
+      "type": "verify",
+      "context": "verification_context",
+      "module": "module/utf8-nfd",
+      "revocation": "revocation/list-3",
+      "expected_valid": false,
+      "expected_reason": "namespace_not_covered"
+    },
+    {
+      "name": "verify/root-not-revocable",
+      "description": "module/acme-core (root-signed) with revocation/lists-root in effect: root keys cannot be revoked, so the module is accepted.",
+      "spec": "9.5",
+      "type": "verify",
+      "context": "verification_context",
+      "module": "module/acme-core",
+      "revocation": "revocation/lists-root",
+      "expected_valid": true,
+      "expected_reason": "ok"
+    },
+    {
+      "name": "verify/forged-revocation-ignored",
+      "description": "module/acme-charts with revocation/forged in effect: that list is not signed by a root key, so it does not count and 'acme' is not revoked.",
+      "spec": "9.5",
+      "type": "verify",
+      "context": "verification_context",
+      "module": "module/acme-charts",
+      "revocation": "revocation/forged",
+      "expected_valid": true,
+      "expected_reason": "ok"
+    },
+    {
+      "name": "module-scope/acme.charts/acme.charts.ui",
+      "description": "Starts with the part name and a dot.",
+      "spec": "9.4, 10.8",
+      "type": "module_scope",
+      "part_name": "acme.charts",
+      "module_id": "acme.charts.ui",
+      "expected_valid": true
+    },
+    {
+      "name": "module-scope/acme.charts/acme.charts.ui.extra",
+      "description": "Deeper ids are fine.",
+      "spec": "9.4, 10.8",
+      "type": "module_scope",
+      "part_name": "acme.charts",
+      "module_id": "acme.charts.ui.extra",
+      "expected_valid": true
+    },
+    {
+      "name": "module-scope/acme.charts/acme.charts",
+      "description": "Equal to the part name, with no dot after it. Rejected under a literal reading of 9.4 (see SPEC-ISSUES).",
+      "spec": "9.4, 10.8",
+      "type": "module_scope",
+      "part_name": "acme.charts",
+      "module_id": "acme.charts",
+      "expected_valid": false
+    },
+    {
+      "name": "module-scope/acme.charts/acme.chartsx.ui",
+      "description": "Shares a string prefix but not the part name followed by a dot.",
+      "spec": "9.4, 10.8",
+      "type": "module_scope",
+      "part_name": "acme.charts",
+      "module_id": "acme.chartsx.ui",
+      "expected_valid": false
+    },
+    {
+      "name": "module-scope/acme.charts/acme.notes.ui",
+      "description": "Another part's name: a part cannot ship modules under another part's name.",
+      "spec": "9.4, 10.8",
+      "type": "module_scope",
+      "part_name": "acme.charts",
+      "module_id": "acme.notes.ui",
+      "expected_valid": false
+    },
+    {
+      "name": "module-scope/hub-b_acme.charts/acme.charts.ui",
+      "description": "Imported part: the '<hub-id>/' prefix a hub added is ignored.",
+      "spec": "9.4, 10.8",
+      "type": "module_scope",
+      "part_name": "hub-b/acme.charts",
+      "module_id": "acme.charts.ui",
+      "expected_valid": true
+    },
+    {
+      "name": "module-scope/hub-b_acme.charts/hub-b/acme.charts.ui",
+      "description": "Module ids do not carry the hub prefix (assumption, see README).",
+      "spec": "9.4, 10.8",
+      "type": "module_scope",
+      "part_name": "hub-b/acme.charts",
+      "module_id": "hub-b/acme.charts.ui",
+      "expected_valid": false
+    },
+    {
+      "name": "module-scope/sparrow.web/sparrow.web.core",
+      "description": "Part 1 may ship modules named after it.",
+      "spec": "9.4, 10.8",
+      "type": "module_scope",
+      "part_name": "sparrow.web",
+      "module_id": "sparrow.web.core",
+      "expected_valid": true
+    },
+    {
+      "name": "module-scope/part-web-keys",
+      "description": "A part's own annotations may carry only web.modules; a client ignores any other web.* key in a part (section 9.4). Non-web keys are untouched.",
+      "spec": "9.4",
+      "type": "part_web_keys",
+      "part_annotations": {
+        "doc": "A part's annotations.",
+        "web.apply": "hot",
+        "web.title": "Hijacked",
+        "web.modules": []
+      },
+      "honoured_web_keys": [
+        "web.modules"
+      ],
+      "ignored_web_keys": [
+        "web.apply",
+        "web.title"
+      ]
     }
   ]
 }
