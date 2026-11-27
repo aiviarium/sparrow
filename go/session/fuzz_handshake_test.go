@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
-	"github.com/aiviarium/sparrow-rpc/go/internal/fuzzseed"
-	"github.com/aiviarium/sparrow-rpc/go/schema"
-	"github.com/aiviarium/sparrow-rpc/go/transport/mem"
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/cbor"
+	"github.com/aiviarium/sparrow/go/internal/fuzzseed"
+	"github.com/aiviarium/sparrow/go/schema"
+	"github.com/aiviarium/sparrow/go/transport/mem"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 // hangWatch panics with every goroutine's stack if an iteration runs for

@@ -1,4 +1,4 @@
-module github.com/aiviarium/sparrow-rpc/go
+module github.com/aiviarium/sparrow/go
 
 go 1.24
 

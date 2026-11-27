@@ -6,10 +6,10 @@ import (
 	"errors"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/schema"
-	"github.com/aiviarium/sparrow-rpc/go/status"
-	"github.com/aiviarium/sparrow-rpc/go/value"
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/schema"
+	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/value"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 // setLocal installs this side's schema state and records the flags of every

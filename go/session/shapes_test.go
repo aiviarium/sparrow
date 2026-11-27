@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/status"
-	"github.com/aiviarium/sparrow-rpc/go/value"
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/value"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 func forBindings(t *testing.T, f func(t *testing.T, b binding)) {

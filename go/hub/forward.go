@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/names"
-	"github.com/aiviarium/sparrow-rpc/go/schema"
-	"github.com/aiviarium/sparrow-rpc/go/session"
-	"github.com/aiviarium/sparrow-rpc/go/status"
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/names"
+	"github.com/aiviarium/sparrow/go/schema"
+	"github.com/aiviarium/sparrow/go/session"
+	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 // callContext is a context the hub issued for a call it forwarded to a

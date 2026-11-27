@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
-	"github.com/aiviarium/sparrow-rpc/go/internal/vectors"
-	"github.com/aiviarium/sparrow-rpc/go/schema"
-	"github.com/aiviarium/sparrow-rpc/go/value"
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/cbor"
+	"github.com/aiviarium/sparrow/go/internal/vectors"
+	"github.com/aiviarium/sparrow/go/schema"
+	"github.com/aiviarium/sparrow/go/value"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 // openPanelFacet is a fixture facet with the section 7.7 OpenPanel struct.

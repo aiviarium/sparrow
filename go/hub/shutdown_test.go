@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/admin"
-	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
-	"github.com/aiviarium/sparrow-rpc/go/session"
-	"github.com/aiviarium/sparrow-rpc/go/status"
-	"github.com/aiviarium/sparrow-rpc/go/transport"
-	"github.com/aiviarium/sparrow-rpc/go/transport/mem"
+	"github.com/aiviarium/sparrow/go/admin"
+	"github.com/aiviarium/sparrow/go/internal/testutil"
+	"github.com/aiviarium/sparrow/go/session"
+	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/transport"
+	"github.com/aiviarium/sparrow/go/transport/mem"
 )
 
 // readyGate holds the client's second shared-lane message (Ready) back from

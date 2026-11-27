@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
+	"github.com/aiviarium/sparrow/go/cbor"
 )
 
 // PeekCall reads the kind of an encoded message and, for a call message

@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/admin"
-	nd "github.com/aiviarium/sparrow-rpc/go/node"
-	"github.com/aiviarium/sparrow-rpc/go/session"
-	"github.com/aiviarium/sparrow-rpc/go/status"
+	"github.com/aiviarium/sparrow/go/admin"
+	nd "github.com/aiviarium/sparrow/go/node"
+	"github.com/aiviarium/sparrow/go/session"
+	"github.com/aiviarium/sparrow/go/status"
 )
 
 // exerciseEcho makes every call shape of the echo node through the hub.

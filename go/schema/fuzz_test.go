@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/internal/fuzzseed"
+	"github.com/aiviarium/sparrow/go/internal/fuzzseed"
 )
 
 // fuzzBases are valid schemas a delta is applied to: the test schema and

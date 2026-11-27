@@ -39,11 +39,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/admin"
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
-	"github.com/aiviarium/sparrow-rpc/go/hub"
-	"github.com/aiviarium/sparrow-rpc/go/node"
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/admin"
+	"github.com/aiviarium/sparrow/go/cbor"
+	"github.com/aiviarium/sparrow/go/hub"
+	"github.com/aiviarium/sparrow/go/node"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 type opts struct {

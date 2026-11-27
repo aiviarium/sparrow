@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
+	"github.com/aiviarium/sparrow/go/cbor"
 )
 
 // Dir returns the test-vectors directory: $SPARROW_VECTORS, or the

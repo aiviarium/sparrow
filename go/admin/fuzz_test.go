@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/internal/fuzzseed"
+	"github.com/aiviarium/sparrow/go/internal/fuzzseed"
 )
 
 // fuzzEnv knows the secrets named "s0".."s9" (values by name, "s0" and

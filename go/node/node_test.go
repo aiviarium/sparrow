@@ -8,14 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
-	"github.com/aiviarium/sparrow-rpc/go/schema"
-	"github.com/aiviarium/sparrow-rpc/go/session"
-	"github.com/aiviarium/sparrow-rpc/go/status"
-	"github.com/aiviarium/sparrow-rpc/go/transport/mem"
-	"github.com/aiviarium/sparrow-rpc/go/transport/websocket"
-	"github.com/aiviarium/sparrow-rpc/go/value"
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/cbor"
+	"github.com/aiviarium/sparrow/go/schema"
+	"github.com/aiviarium/sparrow/go/session"
+	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/transport/mem"
+	"github.com/aiviarium/sparrow/go/transport/websocket"
+	"github.com/aiviarium/sparrow/go/value"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 func tctx(t *testing.T) context.Context {

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
-	"github.com/aiviarium/sparrow-rpc/go/schema"
+	"github.com/aiviarium/sparrow/go/cbor"
+	"github.com/aiviarium/sparrow/go/schema"
 )
 
 func unhex(s string) []byte {

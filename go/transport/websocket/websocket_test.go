@@ -11,9 +11,9 @@ import (
 
 	ws "github.com/coder/websocket"
 
-	"github.com/aiviarium/sparrow-rpc/go/status"
-	"github.com/aiviarium/sparrow-rpc/go/transport"
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/transport"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 func serve(t *testing.T, o *AcceptOptions) (string, chan *Conn) {

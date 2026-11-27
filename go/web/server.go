@@ -23,8 +23,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/schema"
-	"github.com/aiviarium/sparrow-rpc/go/websign"
+	"github.com/aiviarium/sparrow/go/schema"
+	"github.com/aiviarium/sparrow/go/websign"
 )
 
 // Paths of the Web Profile resources.

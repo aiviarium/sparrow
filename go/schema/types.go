@@ -7,7 +7,7 @@
 package schema
 
 import (
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
+	"github.com/aiviarium/sparrow/go/cbor"
 )
 
 // Format is the schema document format this package implements.

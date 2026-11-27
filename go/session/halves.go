@@ -1,6 +1,6 @@
 package session
 
-import "github.com/aiviarium/sparrow-rpc/go/wire"
+import "github.com/aiviarium/sparrow/go/wire"
 
 // halves tracks the two halves of a call (section 7.1). The caller's half
 // is finished by the Request unless the method has flag 0x8 (then by End or

@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
-	"github.com/aiviarium/sparrow-rpc/go/internal/fuzzseed"
+	"github.com/aiviarium/sparrow/go/cbor"
+	"github.com/aiviarium/sparrow/go/internal/fuzzseed"
 )
 
 // checkFields exercises the accessors of a decoded message: none may panic,

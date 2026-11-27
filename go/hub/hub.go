@@ -23,17 +23,17 @@ import (
 
 	"github.com/quic-go/quic-go"
 
-	"github.com/aiviarium/sparrow-rpc/go/admin"
-	"github.com/aiviarium/sparrow-rpc/go/adminiface"
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
-	"github.com/aiviarium/sparrow-rpc/go/names"
-	"github.com/aiviarium/sparrow-rpc/go/schema"
-	"github.com/aiviarium/sparrow-rpc/go/session"
-	"github.com/aiviarium/sparrow-rpc/go/status"
-	"github.com/aiviarium/sparrow-rpc/go/transport"
-	"github.com/aiviarium/sparrow-rpc/go/transport/websocket"
-	"github.com/aiviarium/sparrow-rpc/go/transport/webtransport"
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/admin"
+	"github.com/aiviarium/sparrow/go/adminiface"
+	"github.com/aiviarium/sparrow/go/cbor"
+	"github.com/aiviarium/sparrow/go/names"
+	"github.com/aiviarium/sparrow/go/schema"
+	"github.com/aiviarium/sparrow/go/session"
+	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/transport"
+	"github.com/aiviarium/sparrow/go/transport/websocket"
+	"github.com/aiviarium/sparrow/go/transport/webtransport"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 // Timing defaults. Every one can be changed in Options; the protocol

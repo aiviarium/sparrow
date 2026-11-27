@@ -7,7 +7,7 @@ import (
 
 	fx "github.com/fxamacker/cbor/v2"
 
-	"github.com/aiviarium/sparrow-rpc/go/internal/fuzzseed"
+	"github.com/aiviarium/sparrow/go/internal/fuzzseed"
 )
 
 // seedVectors adds every hex string of the test vectors.

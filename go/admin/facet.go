@@ -3,11 +3,11 @@ package admin
 import (
 	"context"
 
-	"github.com/aiviarium/sparrow-rpc/go/adminiface"
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
-	"github.com/aiviarium/sparrow-rpc/go/session"
-	"github.com/aiviarium/sparrow-rpc/go/status"
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/adminiface"
+	"github.com/aiviarium/sparrow/go/cbor"
+	"github.com/aiviarium/sparrow/go/session"
+	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 // Handler returns the handler of the sparrow.hub.admin facet. The caller

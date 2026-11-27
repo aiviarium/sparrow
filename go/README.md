@@ -1,6 +1,6 @@
 # Sparrow RPC: Go reference implementation
 
-Module `github.com/aiviarium/sparrow-rpc/go`, Go 1.24, following core spec revision 381
+Module `github.com/aiviarium/sparrow/go`, Go 1.24, following core spec revision 381
 (`../spec/core.md`) and hub-admin revision 41 (`../spec/hub-admin.md`). Phase 1 is the encoding,
 wire format, schema model and web-profile signing (below); phase 2 the sessions, transports and the
 node library (`session/README.md`); phase 3 the hub, `sparrow.hub.admin` and the `sparrow-hub`
@@ -28,6 +28,25 @@ program (section "Hub" below); phase 4 the Web Profile server (section "Web Prof
 | `internal/fuzzseed` | Fuzz corpus seeds from the test vectors. |
 
 The vectors and this library use the same error vocabulary (`reserved_facet_id`, `invalid_notification`, ...).
+
+## Using it from another module
+
+```sh
+go get github.com/aiviarium/sparrow/go@latest     # or @<commit>
+```
+
+```go
+import "github.com/aiviarium/sparrow/go/session"
+```
+
+The module lives in the `go/` directory of `github.com/aiviarium/sparrow`, so its release tags are named `go/vX.Y.Z`. While that repository is
+private, tell Go not to use the public proxy and checksum database for it, and give git credentials
+for GitHub (a token in `~/.netrc`, or `git config --global url."git@github.com:".insteadOf
+"https://github.com/"` with an SSH key):
+
+```sh
+go env -w GOPRIVATE='github.com/aiviarium/*'
+```
 
 ## Testing
 

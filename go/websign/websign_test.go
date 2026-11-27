@@ -5,7 +5,7 @@ import (
 	"crypto/ed25519"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
+	"github.com/aiviarium/sparrow/go/cbor"
 )
 
 func key(seed byte) ed25519.PrivateKey {

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
+	"github.com/aiviarium/sparrow/go/cbor"
 )
 
 // base returns a valid facet exercising every kind of definition.

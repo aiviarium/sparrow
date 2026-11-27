@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
-	"github.com/aiviarium/sparrow-rpc/go/internal/fuzzseed"
+	"github.com/aiviarium/sparrow/go/cbor"
+	"github.com/aiviarium/sparrow/go/internal/fuzzseed"
 )
 
 func unhex(s string) []byte {

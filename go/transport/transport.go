@@ -21,7 +21,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aiviarium/sparrow-rpc/go/status"
+	"github.com/aiviarium/sparrow/go/status"
 )
 
 // Stream is one ordered, bidirectional message stream: the shared lane or

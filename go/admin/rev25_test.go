@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
-	"github.com/aiviarium/sparrow-rpc/go/status"
+	"github.com/aiviarium/sparrow/go/internal/testutil"
+	"github.com/aiviarium/sparrow/go/status"
 )
 
 // TestNoOpCommitIsCanonicalByteEquality: a commit is a no-op only when its

@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/aiviarium/sparrow-rpc/go/transport/pipe"
+	"github.com/aiviarium/sparrow/go/transport/pipe"
 	"io"
 	"net"
 	"net/http"
@@ -16,14 +16,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
-	"github.com/aiviarium/sparrow-rpc/go/schema"
-	"github.com/aiviarium/sparrow-rpc/go/status"
-	"github.com/aiviarium/sparrow-rpc/go/transport"
-	"github.com/aiviarium/sparrow-rpc/go/transport/mem"
-	wsb "github.com/aiviarium/sparrow-rpc/go/transport/websocket"
-	wtb "github.com/aiviarium/sparrow-rpc/go/transport/webtransport"
-	"github.com/aiviarium/sparrow-rpc/go/value"
+	"github.com/aiviarium/sparrow/go/cbor"
+	"github.com/aiviarium/sparrow/go/schema"
+	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/transport"
+	"github.com/aiviarium/sparrow/go/transport/mem"
+	wsb "github.com/aiviarium/sparrow/go/transport/websocket"
+	wtb "github.com/aiviarium/sparrow/go/transport/webtransport"
+	"github.com/aiviarium/sparrow/go/value"
 )
 
 // Test facet "test" (ID 16), service 0 "T".

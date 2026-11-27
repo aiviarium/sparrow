@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/admin"
-	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
-	"github.com/aiviarium/sparrow-rpc/go/session"
-	"github.com/aiviarium/sparrow-rpc/go/status"
+	"github.com/aiviarium/sparrow/go/admin"
+	"github.com/aiviarium/sparrow/go/internal/testutil"
+	"github.com/aiviarium/sparrow/go/session"
+	"github.com/aiviarium/sparrow/go/status"
 )
 
 // TestNeverSeenNodeHasNoFacets: a configured node that has never connected

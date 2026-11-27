@@ -6,8 +6,8 @@ import (
 	"io"
 	"sync"
 
-	"github.com/aiviarium/sparrow-rpc/go/status"
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 // ForwardRequest returns the RawRequest that forwards an incoming call to

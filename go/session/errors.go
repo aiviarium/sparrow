@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
-	"github.com/aiviarium/sparrow-rpc/go/status"
+	"github.com/aiviarium/sparrow/go/cbor"
+	"github.com/aiviarium/sparrow/go/status"
 )
 
 // Error is a call or session failure with a status code. Handlers return

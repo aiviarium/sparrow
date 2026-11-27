@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aiviarium/sparrow-rpc/go/names"
+	"github.com/aiviarium/sparrow/go/names"
 )
 
 // ErrUnsupported is returned by the ValidateEnv extension hook for an

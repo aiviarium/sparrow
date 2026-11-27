@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/internal/fuzzseed"
-	"github.com/aiviarium/sparrow-rpc/go/schema"
+	"github.com/aiviarium/sparrow/go/internal/fuzzseed"
+	"github.com/aiviarium/sparrow/go/schema"
 )
 
 // FuzzDecodeWithFacet decodes arbitrary values against the types of an

@@ -15,15 +15,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/admin"
-	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
-	nd "github.com/aiviarium/sparrow-rpc/go/node"
-	"github.com/aiviarium/sparrow-rpc/go/session"
-	"github.com/aiviarium/sparrow-rpc/go/status"
-	"github.com/aiviarium/sparrow-rpc/go/transport"
-	"github.com/aiviarium/sparrow-rpc/go/transport/websocket"
-	"github.com/aiviarium/sparrow-rpc/go/transport/webtransport"
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/admin"
+	"github.com/aiviarium/sparrow/go/internal/testutil"
+	nd "github.com/aiviarium/sparrow/go/node"
+	"github.com/aiviarium/sparrow/go/session"
+	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/transport"
+	"github.com/aiviarium/sparrow/go/transport/websocket"
+	"github.com/aiviarium/sparrow/go/transport/webtransport"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 // listeningNode is a node the hub dials: it serves WebTransport (https) or

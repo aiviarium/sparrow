@@ -3,7 +3,7 @@ package wire
 import (
 	"fmt"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
+	"github.com/aiviarium/sparrow/go/cbor"
 )
 
 // Params keys (section 5.4).

@@ -8,9 +8,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/internal/vectors"
-	"github.com/aiviarium/sparrow-rpc/go/names"
-	"github.com/aiviarium/sparrow-rpc/go/websign"
+	"github.com/aiviarium/sparrow/go/internal/vectors"
+	"github.com/aiviarium/sparrow/go/names"
+	"github.com/aiviarium/sparrow/go/websign"
 )
 
 // checkSigned checks the parts every signed vector shares and returns the

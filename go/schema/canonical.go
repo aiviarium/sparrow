@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
+	"github.com/aiviarium/sparrow/go/cbor"
 )
 
 // Error is a schema error. Code is a stable identifier (the vocabulary of

@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/names"
+	"github.com/aiviarium/sparrow/go/names"
 )
 
 // MaxTicketLifetime is the longest a ticket may be presented after issue

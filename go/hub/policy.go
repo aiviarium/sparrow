@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/adminiface"
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
-	"github.com/aiviarium/sparrow-rpc/go/names"
-	"github.com/aiviarium/sparrow-rpc/go/schema"
+	"github.com/aiviarium/sparrow/go/adminiface"
+	"github.com/aiviarium/sparrow/go/cbor"
+	"github.com/aiviarium/sparrow/go/names"
+	"github.com/aiviarium/sparrow/go/schema"
 )
 
 // Actor is one acting principal (Hub Profile 10.4) with the groups its

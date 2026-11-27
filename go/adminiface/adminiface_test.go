@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/schema"
+	"github.com/aiviarium/sparrow/go/schema"
 )
 
 func TestInterfaceAndFacet(t *testing.T) {

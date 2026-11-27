@@ -7,9 +7,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/internal/vectors"
-	"github.com/aiviarium/sparrow-rpc/go/schema"
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/internal/vectors"
+	"github.com/aiviarium/sparrow/go/schema"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 // facetCode converts the vectors' error vocabulary to a schema.Code; the two

@@ -10,7 +10,7 @@ package adminiface
 import (
 	"sync"
 
-	"github.com/aiviarium/sparrow-rpc/go/schema"
+	"github.com/aiviarium/sparrow/go/schema"
 )
 
 // Name is the interface's and the facet's name; Version their version.

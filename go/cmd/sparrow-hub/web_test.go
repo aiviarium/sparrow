@@ -13,15 +13,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
-	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
-	"github.com/aiviarium/sparrow-rpc/go/internal/vectors"
-	"github.com/aiviarium/sparrow-rpc/go/node"
-	"github.com/aiviarium/sparrow-rpc/go/session"
-	"github.com/aiviarium/sparrow-rpc/go/status"
-	"github.com/aiviarium/sparrow-rpc/go/web"
-	"github.com/aiviarium/sparrow-rpc/go/websign"
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/cbor"
+	"github.com/aiviarium/sparrow/go/internal/testutil"
+	"github.com/aiviarium/sparrow/go/internal/vectors"
+	"github.com/aiviarium/sparrow/go/node"
+	"github.com/aiviarium/sparrow/go/session"
+	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/web"
+	"github.com/aiviarium/sparrow/go/websign"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 // webKeys are the TEST-ONLY keys of the signing vectors.

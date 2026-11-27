@@ -15,8 +15,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/aiviarium/sparrow-rpc/go/adminiface"
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
+	"github.com/aiviarium/sparrow/go/adminiface"
+	"github.com/aiviarium/sparrow/go/cbor"
 )
 
 // Config is the desired-state document (section 3). A nil map is an absent

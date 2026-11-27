@@ -7,7 +7,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 func TestFraming(t *testing.T) {

@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/admin"
-	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
-	nd "github.com/aiviarium/sparrow-rpc/go/node"
-	"github.com/aiviarium/sparrow-rpc/go/session"
-	"github.com/aiviarium/sparrow-rpc/go/status"
+	"github.com/aiviarium/sparrow/go/admin"
+	"github.com/aiviarium/sparrow/go/internal/testutil"
+	nd "github.com/aiviarium/sparrow/go/node"
+	"github.com/aiviarium/sparrow/go/session"
+	"github.com/aiviarium/sparrow/go/status"
 )
 
 func peerDialIn(cred string) *admin.NodeConfig {

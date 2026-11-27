@@ -34,8 +34,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
-	"github.com/aiviarium/sparrow-rpc/go/schema"
+	"github.com/aiviarium/sparrow/go/cbor"
+	"github.com/aiviarium/sparrow/go/schema"
 )
 
 // Struct is a struct value: field tag -> value. Absent fields are left out.

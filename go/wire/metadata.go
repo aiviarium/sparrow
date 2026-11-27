@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
+	"github.com/aiviarium/sparrow/go/cbor"
 )
 
 // Key is a metadata or trailers key: a symbol, that is a sigil (uint) or a

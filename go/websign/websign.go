@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
+	"github.com/aiviarium/sparrow/go/cbor"
 )
 
 // Signature domains.

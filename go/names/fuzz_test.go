@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/internal/fuzzseed"
+	"github.com/aiviarium/sparrow/go/internal/fuzzseed"
 )
 
 // The grammars as regular expressions: the model the checks must match.

@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aiviarium/sparrow-rpc/go/admin"
-	"github.com/aiviarium/sparrow-rpc/go/hub"
-	"github.com/aiviarium/sparrow-rpc/go/internal/netsim"
-	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
-	nd "github.com/aiviarium/sparrow-rpc/go/node"
-	"github.com/aiviarium/sparrow-rpc/go/session"
-	"github.com/aiviarium/sparrow-rpc/go/status"
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/admin"
+	"github.com/aiviarium/sparrow/go/hub"
+	"github.com/aiviarium/sparrow/go/internal/netsim"
+	"github.com/aiviarium/sparrow/go/internal/testutil"
+	nd "github.com/aiviarium/sparrow/go/node"
+	"github.com/aiviarium/sparrow/go/session"
+	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 var lossy = netsim.Faults{Drop: 0.03, Duplicate: 0.02, Reorder: 0.03, Latency: time.Millisecond, Jitter: time.Millisecond}

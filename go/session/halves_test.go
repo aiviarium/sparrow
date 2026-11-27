@@ -3,8 +3,8 @@ package session
 import (
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/schema"
-	"github.com/aiviarium/sparrow-rpc/go/wire"
+	"github.com/aiviarium/sparrow/go/schema"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 func TestHalves(t *testing.T) {

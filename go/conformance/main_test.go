@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/internal/vectors"
+	"github.com/aiviarium/sparrow/go/internal/vectors"
 )
 
 var (

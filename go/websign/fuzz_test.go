@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aiviarium/sparrow-rpc/go/internal/fuzzseed"
+	"github.com/aiviarium/sparrow/go/internal/fuzzseed"
 )
 
 // FuzzDecode decodes certificates, revocation lists and module entries:

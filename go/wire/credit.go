@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/aiviarium/sparrow-rpc/go/cbor"
+	"github.com/aiviarium/sparrow/go/cbor"
 )
 
 // CountedBytes returns how many bytes a message counts against its call's
