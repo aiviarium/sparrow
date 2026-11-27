@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -284,4 +287,72 @@ func TestRestartPersistence(t *testing.T) {
 	}, "acme kept its retired ID")
 	_ = io.EOF
 	_ = schema.Format
+}
+
+// flipPolicy allows everything except, while deny is set, alice on
+// sparrow.hub.admin.
+type flipPolicy struct{ deny atomic.Bool }
+
+func (p *flipPolicy) Visible(a Actor, f FacetRef) bool { return true }
+func (p *flipPolicy) Allowed(a Actor, f FacetRef, m *schema.Method) bool {
+	return !(p.deny.Load() && a.Principal == "user:alice" && f.Name == adminiface.Name)
+}
+
+// TestRecheckSparesUnaryOwnCalls: a decision change ends running calls that
+// are no longer allowed (10.4), but not a unary call to the hub's own facet
+// that was authorized when it arrived: it may be the call whose effect
+// changed the decision (a commit revoking its own grant, already applied),
+// and ending it would report that change as permission_denied.
+func TestRecheckSparesUnaryOwnCalls(t *testing.T) {
+	pol := &flipPolicy{}
+	f := newFixture(t, func(o *Options) { o.Policy = pol })
+	alice := f.client("websocket", aliceToken)
+	waitFacet(t, alice, adminiface.Name)
+	ac, err := admin.NewClient(alice.Session(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := tctx(t)
+	stop := make(chan struct{})
+	flipped := make(chan struct{})
+	go func() {
+		defer close(flipped)
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+			time.Sleep(50 * time.Microsecond)
+			pol.deny.Store(true)
+			f.h.recheckCalls()
+			pol.deny.Store(false)
+		}
+	}()
+	var wg sync.WaitGroup
+	errs := make(chan error, 1)
+	for w := 0; w < 8; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < 50; i++ {
+				_, err := ac.Get(ctx)
+				if err != nil && strings.Contains(err.Error(), "permission withdrawn") {
+					select {
+					case errs <- err:
+					default:
+					}
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+	close(stop)
+	<-flipped
+	select {
+	case err := <-errs:
+		t.Fatalf("a unary admin call was ended by a recheck: %v", err)
+	default:
+	}
 }

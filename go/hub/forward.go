@@ -358,6 +358,14 @@ func (h *Hub) recheckCalls() {
 	pol := h.policy
 	var bad []*activeCall
 	for a := range h.calls {
+		if a.out == nil && a.method != nil && !a.method.InputEnds() && !a.method.OutputEnds() {
+			// A unary call to the hub's own facet was authorized when it
+			// arrived and has no stream to stop: it may be the very call
+			// whose effect changed the decision (a commit revoking its own
+			// grant), already applied, and ending it would report a change
+			// that took effect as permission_denied.
+			continue
+		}
 		lf, _ := h.facetLocked(a.facet)
 		ok := lf != nil
 		for _, act := range a.actors {
