@@ -436,9 +436,12 @@ func TestManagerRevisions(t *testing.T) {
 	if s := m.Get(); s.Revision != 4 || !s.Config.Equal(doc("a", "b")) {
 		t.Fatalf("after rollback %+v", s)
 	}
-	if rev, d := a.last(); rev != 4 || !d.Equal(doc("a", "b")) {
-		t.Fatalf("applied %d", rev)
-	}
+	// The rollback at the deadline runs on the clock's goroutine and
+	// applies the document after publishing its events.
+	testutil.Eventually(t, 5*time.Second, func() bool {
+		rev, d := a.last()
+		return rev == 4 && d.Equal(doc("a", "b"))
+	}, "the rollback target was not applied")
 	if err := m.Confirm(3); code(err) != status.NotFound {
 		t.Fatalf("confirm after the deadline: %v", err)
 	}
