@@ -31,9 +31,19 @@ type viewer struct {
 	node  *node // a node or peer session
 	link  *link
 
-	mu   sync.Mutex // serializes schema updates of this session
-	smu  sync.Mutex
-	sess *session.Session
+	mu     sync.Mutex // serializes schema updates of this session
+	smu    sync.Mutex
+	sess   *session.Session
+	expiry []session.Timer // the AuthStatus warning and the end (5.5)
+}
+
+func (v *viewer) stopExpiry() {
+	v.smu.Lock()
+	defer v.smu.Unlock()
+	for _, t := range v.expiry {
+		t.Stop()
+	}
+	v.expiry = nil
 }
 
 func kindFor(n *node) viewKind {
@@ -61,6 +71,14 @@ func (v *viewer) visibility() Actor {
 	if v.node != nil {
 		return Actor{Principal: names.NodePrincipal(v.node.id)}
 	}
+	return v.clientActor()
+}
+
+// clientActor returns a client session's actor (AuthRefresh may update
+// its groups and expiry).
+func (v *viewer) clientActor() Actor {
+	v.smu.Lock()
+	defer v.smu.Unlock()
 	return v.actor
 }
 

@@ -112,7 +112,7 @@ func (sh *sessHandler) ServeCall(ctx context.Context, c *session.ServerCall) {
 func (h *Hub) actingPrincipals(v *viewer, c *session.ServerCall) ([]Actor, *callContext, error) {
 	switch v.kind {
 	case viewClient:
-		return []Actor{v.actor}, nil, nil
+		return []Actor{v.clientActor()}, nil, nil
 	case viewNode:
 		self := Actor{Principal: names.NodePrincipal(v.node.id)}
 		raw, ok := c.CallContext()

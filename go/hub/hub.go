@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -62,9 +63,14 @@ type Options struct {
 	Bootstrap []Credential
 	// Tokens are further bearer credentials for clients.
 	Tokens []Credential
-	// Authenticate, if set, handles every Hello whose scheme is not "link"
-	// and not a static token (for example a Web Profile ticket).
+	// Authenticate, if set, handles every Hello (and AuthRefresh) whose
+	// scheme is not "link" and not a static token, for example a Web
+	// Profile ticket. An Actor with Expires set ends the session at that
+	// time unless AuthRefresh extends it (5.5).
 	Authenticate func(ctx context.Context, h *wire.Hello) (Actor, error)
+	// ExpiryWarning is how long before a session's authentication expires
+	// the hub sends AuthStatus (5.5: at least 60 s); default 60 s.
+	ExpiryWarning time.Duration
 	// Policy replaces the built-in grant policy (ref.policy). Call
 	// Hub.PolicyChanged when its decisions change.
 	Policy Policy
@@ -151,6 +157,9 @@ func New(o Options) (*Hub, error) {
 	}
 	if o.RelayAckTimeout <= 0 {
 		o.RelayAckTimeout = DefaultRelayAckTimeout
+	}
+	if o.ExpiryWarning <= 0 {
+		o.ExpiryWarning = 60 * time.Second
 	}
 	if o.PeerRelayAckTimeout <= 0 {
 		o.PeerRelayAckTimeout = DefaultPeerRelayAckTimeout
@@ -301,7 +310,9 @@ func (h *Hub) ServeConn(ctx context.Context, conn transport.Conn) {
 				return names.NodePrincipal(n.id), nil
 			}
 			v.kind = viewClient
+			v.smu.Lock()
 			v.actor = a
+			v.smu.Unlock()
 			return a.Principal, nil
 		},
 		ClientSchemaLimit: func(principal string) int {
@@ -327,6 +338,9 @@ func (h *Hub) ServeConn(ctx context.Context, conn transport.Conn) {
 			}
 			return h.nodeSchemaUpdate(v, u)
 		},
+		OnAuthRefresh: func(ctx context.Context, s *session.Session, a *wire.Auth) (*wire.AuthStatus, error) {
+			return h.authRefresh(ctx, v, s, a)
+		},
 	}
 	h.sessionConfig(&cfg)
 	s, err := session.NewServer(ctx, conn, cfg)
@@ -340,10 +354,110 @@ func (h *Hub) ServeConn(ctx context.Context, conn transport.Conn) {
 		l := &link{n: dialIn, sess: s, v: v, kind: linkDialIn, cred: dialCred, credName: dialIn.credentialName()}
 		h.attach(dialIn, l)
 	} else {
+		h.armExpiry(v, s)
 		go v.refresh(0)
 	}
 	<-s.Done()
+	v.stopExpiry()
 	h.removeViewer(v)
+}
+
+// authRefresh handles AuthRefresh (5.5): the new credential must be for the
+// same principal and login session as the original one, and then extends
+// the session's expiry; anything else closes the session with
+// GoAway(unauthenticated).
+func (h *Hub) authRefresh(ctx context.Context, v *viewer, s *session.Session, a *wire.Auth) (*wire.AuthStatus, error) {
+	if v.kind != viewClient {
+		return nil, &session.Error{Code: status.Unauthenticated, Message: "a node link does not refresh its credential"}
+	}
+	hello := wire.Hello{}
+	if old := s.Hello(); old != nil {
+		hello = *old
+	}
+	hello.Auth = a
+	na, n, _, err := h.authenticate(ctx, &hello)
+	if err != nil {
+		return nil, err
+	}
+	v.smu.Lock()
+	old := v.actor
+	v.smu.Unlock()
+	if n != nil || na.Principal != old.Principal || na.LoginSession != old.LoginSession {
+		return nil, &session.Error{Code: status.Unauthenticated, Message: "AuthRefresh must present a credential for the same principal and login session"}
+	}
+	v.smu.Lock()
+	groupsChanged := strings.Join(v.actor.Groups, "\x00") != strings.Join(na.Groups, "\x00")
+	v.actor.Expires = na.Expires
+	v.actor.Groups = na.Groups
+	v.smu.Unlock()
+	h.armExpiry(v, s)
+	if groupsChanged {
+		go func() { // permissions changed (5.5)
+			v.refresh(0)
+			h.recheckCalls()
+		}()
+	}
+	st := &wire.AuthStatus{Status: uint64(status.OK)}
+	if !na.Expires.IsZero() {
+		t := cbor.Unix(na.Expires.Unix())
+		st.ExpiresAt = &t
+	}
+	return st, nil
+}
+
+// armExpiry schedules the AuthStatus warning and the end of a client
+// session whose authentication expires (5.5).
+func (h *Hub) armExpiry(v *viewer, s *session.Session) {
+	v.smu.Lock()
+	defer v.smu.Unlock()
+	for _, t := range v.expiry {
+		t.Stop()
+	}
+	v.expiry = nil
+	exp := v.actor.Expires
+	if exp.IsZero() {
+		return
+	}
+	left := exp.Sub(h.clock.Now())
+	if left <= 0 {
+		go s.GoAway(status.Unauthenticated, "the login session has ended", nil)
+		return
+	}
+	at := cbor.Unix(exp.Unix())
+	warn := left - h.o.ExpiryWarning
+	if warn < 0 {
+		warn = 0
+	}
+	v.expiry = append(v.expiry,
+		h.clock.AfterFunc(warn, func() {
+			_ = s.SendAuthStatus(&wire.AuthStatus{Status: uint64(status.OK), ExpiresAt: &at})
+		}),
+		h.clock.AfterFunc(left, func() {
+			s.GoAway(status.Unauthenticated, "the login session has ended", nil)
+		}))
+}
+
+// EndLoginSession closes every client session of a login session with
+// GoAway(unauthenticated), for a host that revokes a sid at logout (9.2).
+func (h *Hub) EndLoginSession(sid string) int {
+	if sid == "" {
+		return 0
+	}
+	h.mu.Lock()
+	var ss []*session.Session
+	for v := range h.viewers {
+		v.smu.Lock()
+		match := v.kind == viewClient && v.actor.LoginSession == sid
+		v.smu.Unlock()
+		if s := v.session(); match && s != nil {
+			ss = append(ss, s)
+		}
+	}
+	h.mu.Unlock()
+	for _, s := range ss {
+		s.GoAway(status.Unauthenticated, "logged out", nil)
+	}
+	return len(ss)
 }
 
 // authenticate maps Hello.auth to a client actor or a dial-in node.

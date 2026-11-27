@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aiviarium/sparrow-rpc/go/adminiface"
 	"github.com/aiviarium/sparrow-rpc/go/cbor"
@@ -16,6 +17,12 @@ import (
 type Actor struct {
 	Principal string
 	Groups    []string
+	// LoginSession identifies the login session the credential belongs to
+	// (the Web Profile's sid); AuthRefresh must present the same one (5.5).
+	LoginSession string
+	// Expires is when the session's authentication ends (the Web
+	// Profile's sexp, 5.5); zero for credentials that do not expire.
+	Expires time.Time
 }
 
 // FacetRef describes a facet the hub lists, for policy decisions.
