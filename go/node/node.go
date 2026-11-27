@@ -301,6 +301,14 @@ type DialOptions struct {
 	WebSocketURL string
 	// FallbackAfter defaults to 3 s.
 	FallbackAfter time.Duration
+	// Backoff is RunDial's first wait before reconnecting, doubling up to
+	// BackoffMax, with jitter; defaults 500 ms and 30 s (5.6).
+	Backoff, BackoffMax time.Duration
+	// AttemptTimeout bounds each of RunDial's attempts, up to the end of
+	// the handshake; default 10 s. A hub that went away in the middle of
+	// a handshake otherwise holds the attempt until the transport's idle
+	// timeout.
+	AttemptTimeout time.Duration
 	// TLSConfig and CertHashes configure WebTransport TLS (CertHashes pins
 	// the certificate, for development).
 	TLSConfig  *tls.Config
@@ -347,15 +355,40 @@ func dialAny(ctx context.Context, url string, o DialOptions) (transport.Conn, er
 	return nil, fmt.Errorf("node: unsupported URL scheme in %q", url)
 }
 
+// Reconnection defaults of RunDial (5.6).
+const (
+	DefaultBackoff        = 500 * time.Millisecond
+	DefaultBackoffMax     = 30 * time.Second
+	DefaultAttemptTimeout = 10 * time.Second
+)
+
 // RunDial keeps the node connected to url until ctx ends: after the session
 // ends it reconnects with exponential backoff and jitter, from about
-// 500 ms up to about 30 s (5.6). It returns ctx's error.
+// 500 ms up to about 30 s (5.6; DialOptions.Backoff). It returns ctx's
+// error.
 func (n *Node) RunDial(ctx context.Context, url string, o DialOptions) error {
-	backoff := 500 * time.Millisecond
+	first, max := o.Backoff, o.BackoffMax
+	if first <= 0 {
+		first = DefaultBackoff
+	}
+	if max <= 0 {
+		max = DefaultBackoffMax
+	}
+	if max < first {
+		max = first
+	}
+	attempt := o.AttemptTimeout
+	if attempt <= 0 {
+		attempt = DefaultAttemptTimeout
+	}
+	backoff := first
 	for {
-		err := n.Dial(ctx, url, o)
+		// The attempt's context bounds the dial and the handshake only.
+		actx, cancel := context.WithTimeout(ctx, attempt)
+		err := n.Dial(actx, url, o)
+		cancel()
 		if err == nil {
-			backoff = 500 * time.Millisecond
+			backoff = first
 			_ = n.Wait(ctx)
 			if s := n.Session(); s != nil {
 				if ctx.Err() != nil {
@@ -376,8 +409,8 @@ func (n *Node) RunDial(ctx context.Context, url string, o DialOptions) error {
 			return ctx.Err()
 		case <-time.After(backoff/2 + jitter):
 		}
-		if backoff *= 2; backoff > 30*time.Second {
-			backoff = 30 * time.Second
+		if backoff *= 2; backoff > max {
+			backoff = max
 		}
 	}
 }

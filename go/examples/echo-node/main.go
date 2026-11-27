@@ -16,6 +16,10 @@
 //     sparrow.hub.admin. -key-file keeps the key (made if missing), so the
 //     pin survives restarts.
 //
+// -backoff and -backoff-max set the redial backoff (default 500 ms up to
+// 30 s), -attempt-timeout bounds one attempt (10 s), -shutdown-wait how long SIGTERM waits for the transport after
+// GoAway (5 s), and -linger the session linger; tests make them short.
+//
 // Logs go to standard error. With -web-modules it ships client modules
 // (Web Profile 9.4) in its facet.
 //
@@ -81,6 +85,11 @@ func main() {
 	listenWSS := flag.String("listen-wss", "", "serve WebSocket over TLS on this TCP address, for a hub that dials the node")
 	keyFile := flag.String("key-file", "", "with -listen: PEM file holding the node's ECDSA key, made if missing")
 	webModules := flag.String("web-modules", "", "file holding a CBOR list of signed web-module entries, published as the facet's web.modules annotation (Web Profile 9.4)")
+	backoff := flag.Duration("backoff", node.DefaultBackoff, "with -hub: first wait before dialing in again, doubling up to -backoff-max")
+	backoffMax := flag.Duration("backoff-max", node.DefaultBackoffMax, "with -hub: longest wait before dialing in again")
+	attemptTimeout := flag.Duration("attempt-timeout", node.DefaultAttemptTimeout, "with -hub: how long one attempt to dial in may take, up to the end of the handshake")
+	shutdownWait := flag.Duration("shutdown-wait", 5*time.Second, "on SIGTERM: how long to wait for the transport to close after GoAway")
+	linger := flag.Duration("linger", 0, "session linger after the peer ends the connection (0: the session default)")
 	flag.Parse()
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	fail := func(msg string, err error) {
@@ -99,6 +108,9 @@ func main() {
 	}
 
 	opts := node.Options{ID: *id, Logger: log}
+	if *linger > 0 {
+		opts.Session = func(c *session.Config) { c.Linger, c.GoAwayWait = *linger, *linger }
+	}
 	if *hubURL != "" && *credential != "" {
 		opts.Auth = &wire.Auth{Scheme: "link", Credentials: cbor.AppendText(nil, *credential)}
 	}
@@ -122,7 +134,7 @@ func main() {
 	var err error
 	switch {
 	case *hubURL != "":
-		var do node.DialOptions
+		do := node.DialOptions{Backoff: *backoff, BackoffMax: *backoffMax, AttemptTimeout: *attemptTimeout}
 		if *hubPin != "" {
 			pin, perr := hex.DecodeString(*hubPin)
 			if perr != nil || len(pin) != sha256.Size {
@@ -134,9 +146,9 @@ func main() {
 		}
 		err = n.RunDial(ctx, *hubURL, do)
 	default:
-		err = serveListening(ctx, n, log, *listen, *listenWSS, *keyFile, *credential)
+		err = serveListening(ctx, n, log, *listen, *listenWSS, *keyFile, *credential, *shutdownWait)
 	}
-	sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	sctx, cancel := context.WithTimeout(context.Background(), *shutdownWait)
 	n.Shutdown(sctx)
 	cancel()
 	if err != nil && !errors.Is(err, context.Canceled) {
@@ -188,7 +200,7 @@ func loadKey(path string) (*ecdsa.PrivateKey, error) {
 
 // serveListening serves sessions from a hub that dials the node (10.2):
 // the node is the Sparrow server and its facets travel in Welcome.
-func serveListening(ctx context.Context, n *node.Node, log *slog.Logger, wtAddr, wssAddr, keyFile, cred string) error {
+func serveListening(ctx context.Context, n *node.Node, log *slog.Logger, wtAddr, wssAddr, keyFile, cred string, shutdownWait time.Duration) error {
 	key, err := loadKey(keyFile)
 	if err != nil {
 		return err
@@ -266,7 +278,7 @@ func serveListening(ctx context.Context, n *node.Node, log *slog.Logger, wtAddr,
 	case <-ctx.Done():
 		// GoAway to the hub before the listeners close (main waits for
 		// the transport too).
-		sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		sctx, cancel := context.WithTimeout(context.Background(), shutdownWait)
 		n.Shutdown(sctx)
 		cancel()
 		return ctx.Err()
