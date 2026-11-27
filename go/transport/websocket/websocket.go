@@ -173,8 +173,12 @@ func (k *Conn) Close(code status.Code, reason string) error {
 	var cerr error
 	k.closeOnce.Do(func() {
 		k.setErr(&transport.CloseError{Code: code, Reason: reason})
-		k.cancel()
+		// The handshake first: cancelling the context a Reader is blocked
+		// in makes the library drop the TCP connection at once, and a peer
+		// that has not yet read what was written last (a GoAway) can lose
+		// it to the reset.
 		cerr = k.c.Close(ws.StatusCode(wsCode), reason)
+		k.cancel()
 		close(k.done)
 	})
 	return cerr
