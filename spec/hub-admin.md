@@ -1,6 +1,6 @@
 # Sparrow Hub Administration (sparrow.hub.admin v1)
 
-> Companion to the core specification (`core.md`, section 10.9). Snapshot of the live draft, revision 36, exported for this repository. The live document is the source of truth.
+> Companion to the core specification (`core.md`, section 10.9). Snapshot of the live draft, revision 38, exported for this repository. The live document is the source of truth.
 
 A hub that implements this interface can be configured entirely at run time by a controlling application, such as an orchestrator that runs the hub in a container. The controller pushes one desired-state document; the hub validates it, applies it as a whole, and rolls it back by itself unless the controller confirms it in time. A bootstrap administrator can always reach the interface, so no document can lock the hub out of administration.
 
@@ -32,7 +32,7 @@ The hub's configuration is one document with a **revision** number.
 When a commit passes validation, the hub switches to the new document at once and then **reconciles** in the background. `commit` returns after the switch, not after reconciliation; progress is visible in `watch`. The hub registers nodes and never runs them (Hub Profile, section 10.10).
 
 - A node added to the document is dialed, or accepted when it dials in, as its `link` says.
-- A node that a revision removes or disables, or whose `link` or `peer` it changes, has its session ended at once, as the Hub Profile, section 10.2, describes: a dialed node is dialed anew under the new configuration, and a dial-in node must dial in again. Until a new session is ready the node is offline, and calls wait or fail as in section 10.7 of the Hub Profile. A node is therefore never served under a configuration that was replaced.
+- A node that a revision removes or disables, or whose `link` or `peer` it changes, has its session ended at once, as the Hub Profile, section 10.2, describes: if the node is still configured and enabled, a dialed node is dialed anew under the new configuration and a dial-in node must dial in again. Until a new session is ready the node is offline, and calls wait or fail as in section 10.7 of the Hub Profile. A node is therefore never served under a configuration that was replaced.
 
 ### 2.3 Confirmation and rollback
 
@@ -90,7 +90,7 @@ Defaults are preferences, not checked against live facets: where the named facet
 `watch` streams the hub's state:
 
 1. The first event is a full `Snapshot`, followed by one `NodeEvent` for each configured node with its current state.
-2. Then every `RevisionEvent` and `NodeEvent`, in the order they happen. A `NodeEvent`'s `revision` is the latest revision whose configuration of that node the reported state reflects, so a controller can tell whether a node is up under the configuration it just committed. After each applied revision R the hub sends a `NodeEvent` for every configured node; a node whose configuration R did not change is reported with R.
+2. Then every `RevisionEvent` and `NodeEvent`, in the order they happen. A `NodeEvent`'s `revision` is the revision applied when it was sent; since every change to a node's configuration ends its session at once, a `connected` event with revision R shows the node is up under R. After each applied revision R the hub sends a `NodeEvent` for every configured node, and a node that R disables is reported `disabled` until it is enabled again.
 3. A node that R removes gets one `NodeEvent` with state `removed` and is not reported again. An `offline` event's `message` gives the last connection failure, such as a pin mismatch or a refused facet.
 4. A hub MAY end a watch that falls too far behind with `Error(resource_exhausted)`; the controller starts a new one, which begins with a snapshot again.
 
