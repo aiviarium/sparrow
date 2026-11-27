@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aiviarium/sparrow-rpc/go/admin"
+	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
 	nd "github.com/aiviarium/sparrow-rpc/go/node"
 	"github.com/aiviarium/sparrow-rpc/go/session"
 	"github.com/aiviarium/sparrow-rpc/go/status"
@@ -49,9 +50,12 @@ func runningCall(t *testing.T, cli *nd.Node, facet string, started <-chan struct
 
 // TestReconfigurationEndsSessionAtOnce: a changed link ends the node's
 // session at once, without the grace period of 5.6: the running call ends
-// with Error(unavailable), the node gets GoAway(unauthenticated), and the
-// hub dials the node anew under the new configuration (10.2).
+// with Error(unavailable), the node gets GoAway(going_away) since the hub
+// dialed it (core rev381; GoAway(unauthenticated) goes to a node that
+// dialed in), and the hub dials the node anew under the new configuration
+// (10.2).
 func TestReconfigurationEndsSessionAtOnce(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	started, release := make(chan struct{}, 4), make(chan struct{})
 	defer close(release)
@@ -85,7 +89,7 @@ func TestReconfigurationEndsSessionAtOnce(t *testing.T) {
 	if d := time.Since(start); d > 3*time.Second {
 		t.Fatalf("the session ended after %v: a grace period was given", d)
 	}
-	if g := first.GoAwayReceived(); g == nil || status.Code(g.Status) != status.Unauthenticated {
+	if g := first.GoAwayReceived(); g == nil || status.Code(g.Status) != status.GoingAway {
 		t.Fatalf("old session got %v", g)
 	}
 	waitNode(t, f.h, "remote", true)
@@ -100,6 +104,7 @@ func TestReconfigurationEndsSessionAtOnce(t *testing.T) {
 // credential is refused with unauthenticated while it is disabled, it is
 // reported disabled, and enabling it again lets it dial in.
 func TestDisableDialInNode(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	started, release := make(chan struct{}, 4), make(chan struct{})
 	defer close(release)
@@ -141,6 +146,9 @@ func TestDisableDialInNode(t *testing.T) {
 		t.Fatal(err)
 	}
 	waitNode(t, f.h, "acme", true)
+	// Enabled again, its facets are listed again (relayed in the
+	// background after the commit).
+	waitFacet(t, cli, "acme")
 	if v, err := cli.Call(tctx(t), "acme", "ping", nil); err != nil || v != "pong" {
 		t.Fatalf("%v %v", v, err)
 	}
@@ -150,6 +158,7 @@ func TestDisableDialInNode(t *testing.T) {
 // with Error(unimplemented) as soon as the node is removed or disabled
 // (10.7), not at the connect timeout.
 func TestWaitingCallsForRemovedNode(t *testing.T) {
+	t.Parallel()
 	for _, remove := range []bool{true, false} {
 		f := newFixture(t, func(o *Options) { o.ConnectTimeout = 20 * time.Second })
 		f.secret("acme-1", "cred-one")
@@ -170,7 +179,7 @@ func TestWaitingCallsForRemovedNode(t *testing.T) {
 			_, err := cli.Call(tctx(t), "acme", "ping", nil)
 			done <- err
 		}()
-		time.Sleep(300 * time.Millisecond)
+		waitWaiting(t, f.h, "acme", 1)
 		start := time.Now()
 		next := &admin.Config{Nodes: map[string]*admin.NodeConfig{}, Extensions: grants}
 		if !remove {
@@ -195,6 +204,7 @@ func TestWaitingCallsForRemovedNode(t *testing.T) {
 // facets; added again it has none until it connects, and gets new facet
 // IDs (10.3, 10.7).
 func TestRemovedNodeDiscardsFacets(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	f.secret("acme-1", "cred-one")
 	cfg := &admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": dialInConfig("acme-1")}, Extensions: policy(grant("user:alice", "acme", "use"))}
@@ -211,10 +221,10 @@ func TestRemovedNodeDiscardsFacets(t *testing.T) {
 	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{}})
 	waitNoFacet(t, cli, "acme")
 	f.commit(cfg)
-	time.Sleep(200 * time.Millisecond)
-	if cli.Session().PeerFacet("acme") != nil || len(f.h.Stats().Nodes["acme"].Listed) != 0 {
+	if len(f.h.Stats().Nodes["acme"].Listed) != 0 {
 		t.Fatal("the re-added node lists its old facets")
 	}
+	testutil.Never(t, 50*time.Millisecond, func() bool { return cli.Session().PeerFacet("acme") != nil }, "the re-added node's old facets reached the client")
 	if _, err := dialInNode(t, f, "websocket", "acme", "cred-one", rec.facet("acme")); err != nil {
 		t.Fatal(err)
 	}
@@ -227,6 +237,7 @@ func TestRemovedNodeDiscardsFacets(t *testing.T) {
 // maxConcurrentCalls, the hub answers further calls with
 // Error(resource_exhausted) at once and does not queue them (10.2).
 func TestNodeAtConcurrencyLimit(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	started, release := make(chan struct{}, 4), make(chan struct{})
 	defer close(release)
@@ -258,6 +269,7 @@ func TestNodeAtConcurrencyLimit(t *testing.T) {
 // that are not a compatible successor is refused, and its old session is
 // kept and keeps serving (10.2).
 func TestRefusedFacetsKeepOldSession(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	f.secret("acme-1", "cred-one")
 	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": dialInConfig("acme-1")}, Extensions: policy(grant("user:alice", "acme", "use"))})

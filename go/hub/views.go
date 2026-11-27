@@ -287,6 +287,21 @@ func (h *Hub) defaultsLocked(fs []listedFacet) cbor.Raw {
 // the pending update (nil if nothing changed or the session is gone).
 // ackTimeout 0 uses the session default.
 func (v *viewer) refresh(ackTimeout time.Duration) *session.PendingUpdate {
+	if v.session() == nil && v.hsDone != nil {
+		// A session still in its handshake may already have its Welcome,
+		// composed before the change: a relayed change counts only once
+		// it has acknowledged it too (10.3), so wait for the handshake.
+		wait := ackTimeout
+		if wait <= 0 {
+			wait = session.DefaultSchemaAckTimeout
+		}
+		t := time.NewTimer(wait)
+		select {
+		case <-v.hsDone:
+		case <-t.C:
+		}
+		t.Stop()
+	}
 	v.mu.Lock()
 	defer v.mu.Unlock()
 	s := v.session()
@@ -310,7 +325,10 @@ func (v *viewer) refresh(ackTimeout time.Duration) *session.PendingUpdate {
 	}
 	ch, _ := cur.Hash()
 	if bytes.Equal(wh, ch) {
-		return nil
+		// Nothing new to send, but an update another refresh sent may
+		// still be unacknowledged: it may carry the very change being
+		// relayed, which counts only once acknowledged (10.3).
+		return s.Unacked(ackTimeout)
 	}
 	u, err := s.UpdateSchema(want, session.SchemaUpdateOptions{AckTimeout: ackTimeout})
 	if err != nil {

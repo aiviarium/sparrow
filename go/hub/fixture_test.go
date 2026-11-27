@@ -105,8 +105,35 @@ func baseOptions(t *testing.T, dir string) Options {
 		},
 		Logger:         testLogger(t),
 		ConnectTimeout: 3 * time.Second,
+		// Redial quickly: a test waits for the hub to reach a node that
+		// came back, not for a production backoff.
+		RedialBackoff:    5 * time.Millisecond,
+		RedialBackoffMax: 50 * time.Millisecond,
+		WaitingRedial:    5 * time.Millisecond,
+		// A node that is not listening is noticed by the QUIC handshake
+		// timeout (5 s); attempts on localhost take milliseconds.
+		DialTimeout: 500 * time.Millisecond,
 	}
 }
+
+// testLinger replaces the session's DefaultLinger (1 s) and GoAwayWait
+// (2 s) in tests: the messages that precede the end of a connection on
+// localhost arrive well within it.
+const testLinger = 200 * time.Millisecond
+
+// fastSession shortens the wall-clock waits of a session that the tests do
+// not assert on; a test's own Session hook runs after it.
+func fastSession(next func(*session.Config)) func(*session.Config) {
+	return func(c *session.Config) {
+		c.Linger, c.GoAwayWait = testLinger, testLinger
+		if next != nil {
+			next(c)
+		}
+	}
+}
+
+// echoTimingArgs make an echo-node process redial and shut down quickly.
+var echoTimingArgs = []string{"-backoff", "5ms", "-backoff-max", "50ms", "-attempt-timeout", "2s", "-linger", testLinger.String()}
 
 func newFixture(t *testing.T, tune func(*Options)) *fixture {
 	dir := t.TempDir()
@@ -125,6 +152,7 @@ func startFixtureOn(t *testing.T, dir, wsAddr string, tune func(*Options)) *fixt
 	if tune != nil {
 		tune(&o)
 	}
+	o.Session = fastSession(o.Session)
 	h, err := New(o)
 	if err != nil {
 		t.Fatal(err)
@@ -224,6 +252,7 @@ func (f *fixture) client(binding, token string, tune ...func(*nd.Options)) *nd.N
 	for _, fn := range tune {
 		fn(&o)
 	}
+	o.Session = fastSession(o.Session)
 	n := nd.New(o)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -333,7 +362,7 @@ func (f *fixture) runEcho(e *echoNode) {
 	if url == "" {
 		url = f.wsURL
 	}
-	args := append([]string{"-id", e.id, "-hub", url, "-credential", e.cred}, e.args...)
+	args := append(append([]string{"-id", e.id, "-hub", url, "-credential", e.cred}, echoTimingArgs...), e.args...)
 	e.p = testutil.StartProc(f.t, "echo-node "+e.id, echoBin, args...)
 }
 
@@ -380,7 +409,7 @@ func (f *fixture) dialedEcho(id string, extra ...string) *admin.NodeConfig {
 
 func (f *fixture) listenEcho(e *echoNode, addr string) {
 	f.t.Helper()
-	args := append([]string{"-id", e.id, "-listen", addr, "-credential", e.cred, "-key-file", e.keyFile}, e.args...)
+	args := append(append([]string{"-id", e.id, "-listen", addr, "-credential", e.cred, "-key-file", e.keyFile}, echoTimingArgs...), e.args...)
 	var line string
 	// A restart on the same port may find it still in use for a moment.
 	for i := 0; ; i++ {
@@ -393,7 +422,7 @@ func (f *fixture) listenEcho(e *echoNode, addr string) {
 			f.t.Fatalf("echo-node %s does not listen: %v\n%s", e.id, err, e.p.Log())
 		}
 		_ = e.p.Stop()
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(20 * time.Millisecond) // retry pacing while the port is released
 	}
 	var a struct{ WebTransport, Pin string }
 	if err := json.Unmarshal([]byte(line), &a); err != nil {
@@ -461,3 +490,58 @@ func mustCode(t *testing.T, err error, want any) {
 }
 
 var _ = io.EOF
+
+// waitWaiting waits until at least n calls wait for node id to connect
+// (10.7). Their connect-timeout timers are armed by then.
+func waitWaiting(t *testing.T, h *Hub, id string, n int32) {
+	t.Helper()
+	testutil.Eventually(t, 10*time.Second, func() bool {
+		h.mu.Lock()
+		nd := h.nodes[id]
+		h.mu.Unlock()
+		return nd != nil && nd.waiting.Load() >= n
+	}, "fewer than %d calls wait for node %s", n, id)
+}
+
+// dialAttempts is the number of attempts the dial loop of node id has made
+// (0 without a dial loop).
+func dialAttempts(h *Hub, id string) int64 {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if n := h.nodes[id]; n != nil && n.dl != nil {
+		return n.dl.attempts.Load()
+	}
+	return 0
+}
+
+// expectConnectTimeout calls an offline node on a hub that runs on the
+// fake clock clk and checks that the call fails with unavailable when, and
+// not before, the connect timeout passes (10.7).
+func expectConnectTimeout(t *testing.T, f *fixture, clk *testutil.FakeClock, cli *nd.Node, nodeID, facet, method string, in any) {
+	t.Helper()
+	before := int32(0)
+	f.h.mu.Lock()
+	if n := f.h.nodes[nodeID]; n != nil {
+		before = n.waiting.Load()
+	}
+	f.h.mu.Unlock()
+	done := make(chan error, 1)
+	go func() {
+		_, err := cli.Call(tctx(t), facet, method, in)
+		done <- err
+	}()
+	waitWaiting(t, f.h, nodeID, before+1)
+	clk.Advance(f.h.o.ConnectTimeout - time.Millisecond)
+	select {
+	case err := <-done:
+		t.Fatalf("the call ended before the connect timeout: %v", err)
+	case <-time.After(20 * time.Millisecond):
+	}
+	clk.Advance(time.Millisecond)
+	select {
+	case err := <-done:
+		mustCode(t, err, status.Unavailable)
+	case <-time.After(10 * time.Second):
+		t.Fatal("the call did not fail at the connect timeout")
+	}
+}

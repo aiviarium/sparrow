@@ -28,6 +28,7 @@ func webMap(kv ...any) []byte {
 // at the top level of every schema, moduleRejected reported (9.4), and a
 // node's facet that ships modules outside its scope refused.
 func TestWebFacet(t *testing.T) {
+	t.Parallel()
 	var mu sync.Mutex
 	var got [][4]string
 	f := newFixture(t, func(o *Options) {
@@ -83,6 +84,7 @@ func TestWebFacet(t *testing.T) {
 // TestWebExtensionNeedsWeb: without the Web Profile, ref.web is not
 // supported.
 func TestWebExtensionNeedsWeb(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	c, _ := f.adminClient("websocket")
 	snap, _ := c.Get(tctx(t))

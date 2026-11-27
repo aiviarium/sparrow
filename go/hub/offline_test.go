@@ -16,6 +16,7 @@ import (
 // lists no facets (10.7); once an outside system starts it and it dials in,
 // its facets appear.
 func TestNeverSeenNodeHasNoFacets(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	c, _ := f.adminClient("websocket")
 	ctx := tctx(t)
@@ -26,7 +27,7 @@ func TestNeverSeenNodeHasNoFacets(t *testing.T) {
 		t.Fatal(err)
 	}
 	cli := f.client("webtransport", aliceToken)
-	time.Sleep(200 * time.Millisecond)
+	// The client's schema was composed after the commit applied.
 	if cli.Session().PeerFacet("echo") != nil || len(f.h.Stats().Nodes["echo"].Listed) != 0 {
 		t.Fatal("a node never seen lists facets")
 	}
@@ -43,7 +44,9 @@ func TestNeverSeenNodeHasNoFacets(t *testing.T) {
 // dial-in node by dialing in again, the dialed node because the hub keeps
 // redialing it.
 func TestOfflineEchoProcesses(t *testing.T) {
-	f := newFixture(t, nil)
+	t.Parallel()
+	clk := testutil.NewFakeClock()
+	f := newFixture(t, func(o *Options) { o.Clock = clk })
 	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{
 		"echo":        f.echo("echo"),
 		"echo-dialed": f.dialedEcho("echo-dialed"),
@@ -71,29 +74,26 @@ func TestOfflineEchoProcesses(t *testing.T) {
 				}
 				done <- err
 			}()
-			time.Sleep(500 * time.Millisecond)
+			waitWaiting(t, f.h, c.id, 1)
 			f.restartEcho(c.id, false)
 			if err := <-done; err != nil {
 				t.Fatal(err)
 			}
-			if st := f.h.Admin().NodeStates()[c.id]; st.State != admin.Connected {
-				t.Fatalf("state %v", st.State)
-			}
+			// The node is reported connected once its session is routed,
+			// just after the waiting call was woken.
+			testutil.Eventually(t, 10*time.Second, func() bool { return f.h.Admin().NodeStates()[c.id].State == admin.Connected },
+				"state %v", f.h.Admin().NodeStates()[c.id].State)
 		})
 	}
-	// A call to a node that stays away fails with unavailable after the
-	// connect timeout (3 s here).
+	// A call to a node that stays away fails with unavailable at the
+	// connect timeout.
 	f.stopEcho("echo", false)
 	waitNode(t, f.h, "echo", false)
-	start := time.Now()
-	_, err := cli.Call(tctx(t), "echo", "echo", "nobody")
-	mustCode(t, err, status.Unavailable)
-	if d := time.Since(start); d < 2500*time.Millisecond || d > 10*time.Second {
-		t.Fatalf("failed after %v, want about the 3 s connect timeout", d)
-	}
+	expectConnectTimeout(t, f, clk, cli, "echo", "echo", "echo", "nobody")
 }
 
 func TestOfflineDialInNode(t *testing.T) {
+	t.Parallel()
 	f := acmeHub(t)
 	n, err := dialInNode(t, f, "websocket", "acme", "cred-one", acmeFacet("acme", "1.0.0", false, false))
 	if err != nil {
@@ -117,7 +117,7 @@ func TestOfflineDialInNode(t *testing.T) {
 		}
 		done <- err
 	}()
-	time.Sleep(500 * time.Millisecond)
+	waitWaiting(t, f.h, "acme", 1)
 	if _, err := dialInNode(t, f, "websocket", "acme", "cred-one", acmeFacet("acme", "1.0.0", false, false)); err != nil {
 		t.Fatal(err)
 	}
@@ -130,6 +130,7 @@ func TestOfflineDialInNode(t *testing.T) {
 // with the reason; once it listens, the hub's redialing (with backoff)
 // reaches it without any call or commit.
 func TestDialedNodeRedials(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	nc := f.dialedEcho("late")
 	f.stopEcho("late", false)

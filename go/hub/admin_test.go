@@ -3,6 +3,7 @@ package hub
 import (
 	"context"
 	"io"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -43,7 +44,9 @@ func waitNodeEvent(t *testing.T, w *admin.Watcher, node string, st admin.NodeSta
 }
 
 func TestAdminOverTheWire(t *testing.T) {
-	f := newFixture(t, nil)
+	t.Parallel()
+	clk := testutil.NewFakeClock() // confirmation deadlines
+	f := newFixture(t, func(o *Options) { o.Clock = clk })
 	c, _ := f.adminClient("webtransport")
 	ctx := tctx(t)
 	w, err := c.Watch(ctx)
@@ -85,6 +88,11 @@ func TestAdminOverTheWire(t *testing.T) {
 	}
 	f.startEchoes()
 	waitNodeEvent(t, w, "echo2", admin.Connected, 2)
+	clk.Advance(1499 * time.Millisecond)
+	if snap, _ := c.Get(ctx); snap.Revision != 2 || snap.State != admin.Pending {
+		t.Fatalf("rolled back before the deadline: %+v", snap)
+	}
+	clk.Advance(time.Millisecond)
 	var sawRolled bool
 	for {
 		e := nextEv(t, w)
@@ -155,6 +163,7 @@ func TestAdminOverTheWire(t *testing.T) {
 // document that revokes every grant, including its own, and the bootstrap
 // administrator still reaches the facet.
 func TestBootstrapAdminAlwaysAllowed(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{}, Extensions: policy(grant("user:alice", adminiface.Name, "manage"))})
 	alice := f.client("websocket", aliceToken)
@@ -194,6 +203,7 @@ func TestBootstrapAdminAlwaysAllowed(t *testing.T) {
 // with its cached schema and gets Unchanged, and a commit pending at the
 // restart is rolled back.
 func TestRestartPersistence(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	f := startFixture(t, dir, nil)
 	f.secret("acme-1", "cred-one")
@@ -258,7 +268,11 @@ func TestRestartPersistence(t *testing.T) {
 	}
 	// Calls to acme wait for it; it reconnects and serves them.
 	go func() {
-		time.Sleep(300 * time.Millisecond)
+		testutil.WaitFor(10*time.Second, func() bool {
+			g.h.mu.Lock()
+			defer g.h.mu.Unlock()
+			return g.h.nodes["acme"].waiting.Load() > 0
+		})
 		_, _ = dialInNode(t, g, "websocket", "acme", "cred-one", acmeFacet("acme", "1.0.0", true, false))
 	}()
 	if v, err := n.Call(tctx(t), "acme", "hello", "again"); err != nil || v != "hello again" {
@@ -296,6 +310,7 @@ func (p *flipPolicy) Allowed(a Actor, f FacetRef, m *schema.Method) bool {
 // changed the decision (a commit revoking its own grant, already applied),
 // and ending it would report that change as permission_denied.
 func TestRecheckSparesUnaryOwnCalls(t *testing.T) {
+	t.Parallel()
 	pol := &flipPolicy{}
 	f := newFixture(t, func(o *Options) { o.Policy = pol })
 	alice := f.client("websocket", aliceToken)
@@ -315,7 +330,7 @@ func TestRecheckSparesUnaryOwnCalls(t *testing.T) {
 				return
 			default:
 			}
-			time.Sleep(50 * time.Microsecond)
+			runtime.Gosched()
 			pol.deny.Store(true)
 			f.h.recheckCalls()
 			pol.deny.Store(false)

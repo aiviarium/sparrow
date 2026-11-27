@@ -63,6 +63,7 @@ func dialInNode(t *testing.T, f *fixture, binding, id, cred string, facets ...*n
 func dialInConfig(cred string) *admin.NodeConfig { return &admin.NodeConfig{Link: admin.DialIn(cred)} }
 
 func TestDialInPayloadUnchanged(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	f.secret("acme-1", "cred-one")
 	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": dialInConfig("acme-1")},
@@ -124,6 +125,7 @@ func TestDialInPayloadUnchanged(t *testing.T) {
 }
 
 func TestDialInCredentials(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	f.secret("acme-1", "cred-one")
 	rev := f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": dialInConfig("acme-1")},
@@ -173,6 +175,7 @@ func TestDialInCredentials(t *testing.T) {
 }
 
 func TestOneLinkDirection(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	f.secret("acme-1", "cred-one")
 	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": dialInConfig("acme-1")}})
@@ -205,6 +208,7 @@ func TestOneLinkDirection(t *testing.T) {
 }
 
 func TestNamingRules(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	f.secret("acme-1", "cred-one")
 	c, _ := f.adminClient("websocket")

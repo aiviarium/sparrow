@@ -111,9 +111,12 @@ func dialConfig(url string, pin []byte, cred string) *admin.NodeConfig {
 }
 
 func TestHubDialsNode(t *testing.T) {
+	t.Parallel()
 	for _, b := range transports {
 		t.Run(b, func(t *testing.T) {
-			f := newFixture(t, nil)
+			t.Parallel()
+			clk := testutil.NewFakeClock()
+			f := newFixture(t, func(o *Options) { o.Clock = clk })
 			n := nd.New(nd.Options{ID: "remote", Logger: testLogger(t)})
 			rec := &recorder{}
 			if _, err := n.Add(tctx(t), rec.facet("remote")); err != nil {
@@ -138,31 +141,28 @@ func TestHubDialsNode(t *testing.T) {
 
 			// A wrong pin is refused on every connection: after a commit
 			// with another pin, no session reaches the node.
+			testutil.Eventually(t, 10*time.Second, func() bool { return ln.sessions.Load() == 1 }, "the node counted no session")
 			before := ln.sessions.Load()
 			bad := append([]byte{}, ln.pin...)
 			bad[0] ^= 0xff
 			f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"remote": dialConfig(ln.url, bad, "to-remote")},
 				Extensions: policy(grant("user:alice", "remote", "use"))})
 			waitNode(t, f.h, "remote", false)
-			time.Sleep(500 * time.Millisecond)
-			if ln.sessions.Load() != before {
-				t.Fatal("a session was established despite the wrong pin")
-			}
 			testutil.Eventually(t, 10*time.Second, func() bool {
 				st := f.h.Admin().NodeStates()["remote"]
 				return st.State == admin.Offline && st.Message != nil && strings.Contains(*st.Message, "pin")
 			}, "node state %+v", f.h.Admin().NodeStates()["remote"])
+			// Several attempts, each refused at the pin.
+			testutil.Eventually(t, 10*time.Second, func() bool { return dialAttempts(f.h, "remote") >= 3 }, "the hub does not redial")
+			if ln.sessions.Load() != before {
+				t.Fatal("a session was established despite the wrong pin")
+			}
 			// Calls wait for the connect timeout and then fail with
 			// unavailable; the facet stays listed (10.7).
 			if cli.Session().PeerFacet("remote") == nil {
 				t.Fatal("facet no longer listed")
 			}
-			start := time.Now()
-			_, err := cli.Call(tctx(t), "remote", "ping", nil)
-			mustCode(t, err, status.Unavailable)
-			if d := time.Since(start); d < 2*time.Second {
-				t.Fatalf("failed after %v, before the connect timeout", d)
-			}
+			expectConnectTimeout(t, f, clk, cli, "remote", "remote", "ping", nil)
 		})
 	}
 }

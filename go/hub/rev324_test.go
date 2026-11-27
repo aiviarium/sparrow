@@ -2,6 +2,7 @@ package hub
 
 import (
 	"context"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/aiviarium/sparrow-rpc/go/cbor"
 	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
 	nd "github.com/aiviarium/sparrow-rpc/go/node"
+	"github.com/aiviarium/sparrow-rpc/go/schema"
 	"github.com/aiviarium/sparrow-rpc/go/session"
 	"github.com/aiviarium/sparrow-rpc/go/status"
 	"github.com/aiviarium/sparrow-rpc/go/wire"
@@ -21,6 +23,7 @@ import (
 // document for is refused like an incompatible update; once the document
 // is configured (ref.interfaces), the claim is verified and accepted.
 func TestUnknownInterfaceRefused(t *testing.T) {
+	t.Parallel()
 	r := renderer()
 	h := unitHub(t, &admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": {Link: admin.DialIn("x")}}})
 	err := h.publish(t, "acme", schemaOf(implFacet(16, "acme.png", r)))
@@ -38,12 +41,14 @@ func TestUnknownInterfaceRefused(t *testing.T) {
 
 // TestRelayAckLimits: a downstream session that does not ack a relayed
 // update in time is closed with GoAway(schema_mismatch): RelayAckTimeout
-// for a node's update and for the change a superseding session brings,
-// PeerRelayAckTimeout for an update from a peer hub (10.3).
+// (5 s) for a node's update and for the change a superseding session
+// brings, PeerRelayAckTimeout (2 s) for an update from a peer hub (10.3).
+// The hub's sessions run on a fake clock, so the limits are the defaults.
 func TestRelayAckLimits(t *testing.T) {
+	t.Parallel()
+	sclk := testutil.NewFakeClock()
 	f := newFixture(t, func(o *Options) {
-		o.RelayAckTimeout = 600 * time.Millisecond
-		o.PeerRelayAckTimeout = 150 * time.Millisecond
+		o.Session = func(c *session.Config) { c.Clock = sclk }
 	})
 	f.secret("acme-1", "cred-one")
 	f.secret("peer-1", "peer-cred")
@@ -57,62 +62,115 @@ func TestRelayAckLimits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stall := func() *session.Session {
-		var stalling atomic.Bool
+	// stall connects a client that never acks the update putting the
+	// facet named facet (in the given version); stalled is signalled when
+	// that update arrives, its ack timer armed by then.
+	stall := func(facet, version string) (*session.Session, chan struct{}) {
+		stalled, release := make(chan struct{}, 1), make(chan struct{})
 		c := f.client("websocket", aliceToken, func(o *nd.Options) {
 			o.Session = func(c *session.Config) {
 				c.OnPeerSchemaUpdate = func(ctx context.Context, s *session.Session, u *session.PeerSchemaUpdate) error {
-					if stalling.Load() {
-						time.Sleep(3 * time.Second)
+					for _, op := range u.Delta {
+						if op.Op == schema.OpPut && op.Facet.Name == facet && op.Facet.Version == version {
+							stalled <- struct{}{}
+							select {
+							case <-release:
+							case <-s.Done():
+							}
+						}
 					}
 					return nil
 				}
 			}
 		})
+		t.Cleanup(func() { close(release) })
 		waitFacet(t, c, "acme")
 		waitFacet(t, c, "hub-b/remote")
-		// Let updates still on their way (a node that connected while
-		// this client did) arrive before the client starts stalling.
-		time.Sleep(500 * time.Millisecond)
-		stalling.Store(true)
-		return c.Session()
+		return c.Session(), stalled
 	}
-	closedWithin := func(s *session.Session, start time.Time, min, max time.Duration) {
+	// closedAt makes a change and checks that the stalled session is
+	// closed at limit, and that the change takes effect (done reports it)
+	// only then.
+	closedAt := func(s *session.Session, stalled chan struct{}, limit time.Duration, change func() error, done func() bool) {
 		t.Helper()
+		changed := make(chan error, 1)
+		go func() { changed <- change() }()
+		select {
+		case <-stalled:
+		case <-time.After(10 * time.Second):
+			t.Fatal("the update was not relayed")
+		}
+		// The relay's limit is armed (by the update itself, or, when another
+		// refresh sent that update first, by the relay joining it).
+		testutil.Eventually(t, 10*time.Second, func() bool { return sclk.HasTimer(limit) }, "no %v ack timer", limit)
+		sclk.Advance(limit - time.Millisecond)
 		select {
 		case <-s.Done():
-		case <-time.After(5 * time.Second):
+			t.Fatalf("closed before %v: %v", limit, s.Err())
+		case <-time.After(20 * time.Millisecond):
+		}
+		if done() {
+			t.Fatal("the change took effect before the stalled session was closed")
+		}
+		sclk.Advance(time.Millisecond)
+		select {
+		case <-s.Done():
+		case <-time.After(10 * time.Second):
 			t.Fatal("the stalled session was not closed")
 		}
-		d := time.Since(start)
 		if g := s.GoAwayReceived(); g == nil || status.Code(g.Status) != status.SchemaMismatch {
 			t.Fatalf("closed with %+v (%v)", g, s.Err())
 		}
-		if d < min || d > max {
-			t.Fatalf("closed after %v, want between %v and %v", d, min, max)
+		select {
+		case err := <-changed:
+			if err != nil {
+				t.Fatal(err)
+			}
+		case <-time.After(10 * time.Second):
+			t.Fatal("the change did not return")
 		}
+		testutil.Eventually(t, 10*time.Second, done, "the change did not take effect")
 	}
-	// A node's update: 600 ms.
-	c1 := stall()
-	start := time.Now()
-	if _, err := n.Add(tctx(t), acmeFacet("acme.extra", "1.0.0", true, false)); err != nil {
-		t.Fatal(err)
+	// acked reports whether a change made by fn has returned: a node's
+	// update returns once the hub has acked it.
+	acked := func(fn func() error) (func() error, func() bool) {
+		var ok atomic.Bool
+		return func() error {
+			err := fn()
+			ok.Store(err == nil)
+			return err
+		}, ok.Load
 	}
-	closedWithin(c1, start, 500*time.Millisecond, 2500*time.Millisecond)
-	// An update relayed from a peer hub: 150 ms.
-	c2 := stall()
-	start = time.Now()
-	if _, err := peer.Add(tctx(t), acmeFacet("remote2", "1.0.0", true, false)); err != nil {
-		t.Fatal(err)
-	}
-	closedWithin(c2, start, 100*time.Millisecond, 500*time.Millisecond)
-	// A superseding session of acme that brings a change: 600 ms again.
-	c3 := stall()
-	start = time.Now()
-	if _, err := dialInNode(t, f, "websocket", "acme", "cred-one", acmeFacet("acme", "1.1.0", true, false)); err != nil {
-		t.Fatal(err)
-	}
-	closedWithin(c3, start, 500*time.Millisecond, 3*time.Second)
+	// A node's update: 5 s.
+	c1, st1 := stall("acme.extra", "1.0.0")
+	change, done := acked(func() error {
+		_, err := n.Add(tctx(t), acmeFacet("acme.extra", "1.0.0", true, false))
+		return err
+	})
+	closedAt(c1, st1, DefaultRelayAckTimeout, change, done)
+	// An update relayed from a peer hub: 2 s.
+	c2, st2 := stall("hub-b/remote2", "1.0.0")
+	change, done = acked(func() error {
+		_, err := peer.Add(tctx(t), acmeFacet("remote2", "1.0.0", true, false))
+		return err
+	})
+	closedAt(c2, st2, DefaultPeerRelayAckTimeout, change, done)
+	// A superseding session of acme that brings a change: 5 s again.
+	c3, st3 := stall("acme", "1.1.0")
+	// The new session takes calls only once every session acked or was
+	// closed (10.2).
+	f.h.mu.Lock()
+	old := f.h.nodes["acme"].link
+	f.h.mu.Unlock()
+	closedAt(c3, st3, DefaultRelayAckTimeout, func() error {
+		_, err := dialInNode(t, f, "websocket", "acme", "cred-one", acmeFacet("acme", "1.1.0", true, false))
+		return err
+	}, func() bool {
+		f.h.mu.Lock()
+		defer f.h.mu.Unlock()
+		l := f.h.nodes["acme"].link
+		return l != nil && l != old
+	})
 }
 
 // fakePeer is a peer hub that dials in and exports one facet.
@@ -137,6 +195,7 @@ func fakePeer(t *testing.T, f *fixture, id, cred string, calls *atomic.Int32) *n
 // (here: hub-c's carol calls node proxy, which calls hub-b/echo with its
 // context).
 func TestPeerPrincipalRules(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	f.secret("b-1", "b-cred")
 	f.secret("c-1", "c-cred")
@@ -186,14 +245,24 @@ func TestPeerPrincipalRules(t *testing.T) {
 // TestNotificationToOfflineNodeDropped (10.7): a notification to a node
 // that is offline is dropped, never delivered when it connects.
 func TestNotificationToOfflineNodeDropped(t *testing.T) {
-	var got atomic.Int32
+	t.Parallel()
+	var mu sync.Mutex
+	var got []any
 	mk := func() *nd.Facet {
 		b := nd.NewFacet("acme", "1.0.0")
 		b.Service("A").Notification("poke", nd.String, func(ctx context.Context, c *session.ServerCall) error {
-			got.Add(1)
+			v, _ := c.Input()
+			mu.Lock()
+			got = append(got, v)
+			mu.Unlock()
 			return nil
 		})
 		return b.MustBuild()
+	}
+	received := func() []any {
+		mu.Lock()
+		defer mu.Unlock()
+		return append([]any{}, got...)
 	}
 	f := newFixture(t, nil)
 	f.secret("acme-1", "cred-one")
@@ -209,19 +278,19 @@ func TestNotificationToOfflineNodeDropped(t *testing.T) {
 	if err := cli.Notify(tctx(t), "acme", "poke", "while offline"); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(100 * time.Millisecond)
+	testutil.Eventually(t, 5*time.Second, func() bool { return f.h.Stats().NotificationsDropped == 1 }, "the notification was not dropped")
 	if _, err := dialInNode(t, f, "websocket", "acme", "cred-one", mk()); err != nil {
 		t.Fatal(err)
 	}
 	waitNode(t, f.h, "acme", true)
-	time.Sleep(300 * time.Millisecond)
-	if got.Load() != 0 {
-		t.Fatal("a notification sent while the node was offline was delivered")
-	}
 	if err := cli.Notify(tctx(t), "acme", "poke", "online"); err != nil {
 		t.Fatal(err)
 	}
-	testutil.Eventually(t, 5*time.Second, func() bool { return got.Load() == 1 }, "notification not delivered while online")
+	testutil.Eventually(t, 5*time.Second, func() bool { return len(received()) > 0 }, "notification not delivered while online")
+	testutil.Never(t, 50*time.Millisecond, func() bool { return len(received()) > 1 }, "more than one notification delivered: %v", received())
+	if r := received(); r[0] != "online" {
+		t.Fatalf("a notification sent while the node was offline was delivered: %v", r)
+	}
 }
 
 func mustEncode(t *testing.T, f interface{ Encode() ([]byte, error) }) []byte {
@@ -237,6 +306,7 @@ func mustEncode(t *testing.T, f interface{ Encode() ([]byte, error) }) []byte {
 // revision the hub sends a NodeEvent for every configured node, changed or
 // not, naming that revision.
 func TestWatchReportsEveryNode(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	f.secret("a-1", "a-cred")
 	f.secret("b-1", "b-cred")

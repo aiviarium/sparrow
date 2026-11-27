@@ -369,9 +369,10 @@ func (h *Hub) relayTimeout(n *node) time.Duration {
 	return h.o.RelayAckTimeout
 }
 
-// waitLink returns the node's routed session, waiting up to timeout for
-// an offline node to connect (10.7). A dialed node is redialed at once, and
-// then at least every waitingRedial while calls wait, rather than after its
+// waitLink returns the node's routed session, waiting up to timeout (on
+// the hub's clock) for an offline node to connect (10.7). A dialed node is
+// dialed at once unless an attempt is already under way, and then at least
+// every Options.WaitingRedial while calls wait, rather than after its
 // backoff.
 func (h *Hub) waitLink(ctx context.Context, n *node, timeout time.Duration) (*link, error) {
 	h.mu.Lock()
@@ -380,15 +381,18 @@ func (h *Hub) waitLink(ctx context.Context, n *node, timeout time.Duration) (*li
 	if l != nil {
 		return l, nil
 	}
+	// The timer is armed before the call counts as waiting, so that a
+	// test seeing it wait can advance a fake clock past it.
+	expired := make(chan struct{})
+	t := h.clock.AfterFunc(timeout, func() { close(expired) })
+	defer t.Stop()
 	n.waiting.Add(1)
 	defer n.waiting.Add(-1)
 	n.kickDial()
-	t := time.NewTimer(timeout)
-	defer t.Stop()
 	for {
 		select {
 		case <-ready:
-		case <-t.C:
+		case <-expired:
 			return nil, &session.Error{Code: status.Unavailable, Message: fmt.Sprintf("node %s is not connected", n.id)}
 		case <-gone:
 			return nil, &session.Error{Code: status.Unimplemented, Message: fmt.Sprintf("node %s was removed or disabled", n.id)}
@@ -612,12 +616,13 @@ func (n *node) unmarkGone() {
 	}
 }
 
-// kickDial makes the dial loop of an offline dialed node try again now.
+// kickDial makes the dial loop of an offline dialed node try again now,
+// unless an attempt is already under way (10.7).
 func (n *node) kickDial() {
 	n.h.mu.Lock()
 	d := n.dl
 	n.h.mu.Unlock()
-	if d != nil {
+	if d != nil && !d.attempting.Load() {
 		select {
 		case d.kick <- struct{}{}:
 		default:
@@ -639,10 +644,8 @@ func (n *node) stopDial() *dialer {
 }
 
 // stopLink stops the dial loop and ends the node's session at once,
-// without the grace period of 5.6 (10.2): the calls running on it end
-// with Error(unavailable) toward their callers, then GoAway
-// (unauthenticated) and the transport closes. Until a new session is
-// ready the node is offline.
+// without the grace period of 5.6 (10.2); see endLinkNow. Until a new
+// session is ready the node is offline.
 func (n *node) stopLink(why string) {
 	h := n.h
 	dl := n.stopDial()
@@ -657,16 +660,21 @@ func (n *node) stopLink(why string) {
 		h.endLinkNow(l, why)
 	}
 	if dl != nil {
-		dl.wait(10 * time.Second)
+		dl.wait(h.o.DialTimeout + h.o.ShutdownSessionWait)
 	}
 }
 
-// endLinkNow ends a node session at once (10.2).
+// endLinkNow ends a node session at once (10.2): every call running on it
+// ends with Error(unavailable) toward its caller (and Cancel toward the
+// node), every call the node made through the hub ends too (Cancel
+// downstream, Error toward the node), then the node gets
+// GoAway(unauthenticated) if it dialed in or GoAway(going_away) if the hub
+// dialed it, and the transport closes.
 func (h *Hub) endLinkNow(l *link, why string) {
 	h.mu.Lock()
 	var calls []*activeCall
 	for a := range h.calls {
-		if a.link == l {
+		if a.link == l || a.v == l.v {
 			calls = append(calls, a)
 		}
 	}
@@ -674,7 +682,16 @@ func (h *Hub) endLinkNow(l *link, why string) {
 	for _, a := range calls {
 		a.end(status.Unavailable, why)
 	}
-	l.sess.Close(status.Unauthenticated, why)
+	l.sess.Close(endLinkCode(l.kind), why)
+}
+
+// endLinkCode is the GoAway status of a node session the configuration
+// ended (10.2).
+func endLinkCode(k linkKind) status.Code {
+	if k == linkDial {
+		return status.GoingAway
+	}
+	return status.Unauthenticated
 }
 
 // redial starts a dial loop for the current configuration of a dialed
@@ -701,8 +718,11 @@ type dialer struct {
 	cancel context.CancelFunc
 	done   chan struct{}
 	kick   chan struct{} // a waiting call asks for an attempt now (10.7)
-	mu     sync.Mutex
-	sess   *session.Session
+	// attempting is set while an attempt (and the session it made) runs.
+	attempting atomic.Bool
+	attempts   atomic.Int64 // attempts made, for tests
+	mu         sync.Mutex
+	sess       *session.Session
 }
 
 // stop ends the dial loop; whoever stops it ends its session.
@@ -723,17 +743,16 @@ func (s *dialer) setSession(sess *session.Session) {
 	s.mu.Unlock()
 }
 
-// waitingRedial is the longest wait between redial attempts while calls
-// wait for the node.
-const waitingRedial = 250 * time.Millisecond
-
 // backoff is the wait before redial attempt n, exponential with jitter as
-// a client reconnects (5.6, 10.7): about 500 ms doubling up to about 30 s.
-// A call waiting for the node cuts it short.
-func backoff(attempt int) time.Duration {
-	d := 500 * time.Millisecond << min(attempt, 6)
-	if d > 30*time.Second {
-		d = 30 * time.Second
+// a client reconnects (5.6, 10.7): from about first (500 ms) doubling up
+// to about max (30 s). A call waiting for the node cuts it short.
+func backoff(attempt int, first, max time.Duration) time.Duration {
+	d := first
+	for i := 0; i < attempt && d < max; i++ {
+		d *= 2
+	}
+	if d > max {
+		d = max
 	}
 	return d/2 + time.Duration(rand.Int64N(int64(d/2)+1))
 }
@@ -749,7 +768,15 @@ func (s *dialer) run(d *admin.Dial) {
 		if s.ctx.Err() != nil {
 			return
 		}
+		s.attempting.Store(true)
+		s.attempts.Add(1)
+		// A kick that arrived before this attempt is answered by it.
+		select {
+		case <-s.kick:
+		default:
+		}
 		err := s.dialOnce(d)
+		s.attempting.Store(false)
 		if s.ctx.Err() != nil {
 			return
 		}
@@ -761,9 +788,9 @@ func (s *dialer) run(d *admin.Dial) {
 			attempt = 0
 		}
 		n.setState(admin.Offline, msg)
-		wait := backoff(attempt)
-		if n.waiting.Load() > 0 && wait > waitingRedial {
-			wait = waitingRedial
+		wait := backoff(attempt, h.o.RedialBackoff, h.o.RedialBackoffMax)
+		if n.waiting.Load() > 0 && wait > h.o.WaitingRedial {
+			wait = h.o.WaitingRedial
 		}
 		t := time.NewTimer(wait)
 		select {
@@ -784,8 +811,8 @@ func (s *dialer) dialOnce(d *admin.Dial) error {
 	if !ok {
 		return fmt.Errorf("secret %q is missing", d.Credential)
 	}
-	dctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
-	conn, err := dialPinned(dctx, d.URL, d.Pin)
+	dctx, cancel := context.WithTimeout(s.ctx, h.o.DialTimeout)
+	conn, err := dialPinned(dctx, d.URL, d.Pin, h.o.DialLinger)
 	cancel()
 	if err != nil {
 		return err
@@ -820,12 +847,12 @@ func (s *dialer) dialOnce(d *admin.Dial) error {
 		if !h.closing() {
 			// Reconfigured or removed: ended at once (10.2); stopLink has
 			// normally done so already.
-			sess.Close(status.Unauthenticated, "node link stopped by the hub")
+			sess.Close(endLinkCode(linkDial), "node link stopped by the hub")
 		}
 		// At shutdown Close has sent GoAway and waits for the session.
 		select {
 		case <-sess.Done():
-		case <-time.After(6 * time.Second):
+		case <-time.After(h.o.ShutdownSessionWait):
 			sess.Close(status.GoingAway, "node link stopped by the hub")
 		}
 	}
@@ -852,11 +879,11 @@ func pinVerifier(pin []byte) func(cs tls.ConnectionState) error {
 }
 
 // dialPinned connects to a node and verifies its SPKI pin.
-func dialPinned(ctx context.Context, url string, pin []byte) (transport.Conn, error) {
+func dialPinned(ctx context.Context, url string, pin []byte, linger time.Duration) (transport.Conn, error) {
 	tc := &tls.Config{InsecureSkipVerify: true, VerifyConnection: pinVerifier(pin), NextProtos: nil}
 	switch {
 	case strings.HasPrefix(url, "https://"):
-		return webtransport.Dial(ctx, url, &webtransport.DialOptions{TLSConfig: tc})
+		return webtransport.Dial(ctx, url, &webtransport.DialOptions{TLSConfig: tc, Linger: linger})
 	case strings.HasPrefix(url, "wss://"):
 		hc := &http.Client{Transport: &http.Transport{TLSClientConfig: tc, ForceAttemptHTTP2: false}}
 		return websocket.Dial(ctx, url, &websocket.DialOptions{HTTPClient: hc})

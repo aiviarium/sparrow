@@ -25,8 +25,10 @@ func peerDial(f *fixture, cred string) *admin.NodeConfig {
 // never sees what hub-a imported, and a call can cross at most one peer
 // link.
 func TestFederation(t *testing.T) {
+	t.Parallel()
 	b := newFixture(t, nil)
-	a := newFixture(t, nil)
+	clk := testutil.NewFakeClock() // hub-a's: its connect timeout below
+	a := newFixture(t, func(o *Options) { o.Clock = clk })
 	c := newFixture(t, nil)
 
 	// hub-b: node echo, exported to hub-a, usable by hub-a's alice.
@@ -87,8 +89,9 @@ func TestFederation(t *testing.T) {
 	p := newProxyNodeOn(t, a)
 	carolish := c.client("websocket", aliceToken) // hub-c's alice
 	waitFacet(t, carolish, "hub-a/proxy")
-	// No re-export: hub-c never lists hub-a's import of hub-b.
-	time.Sleep(200 * time.Millisecond)
+	// No re-export: hub-c never lists hub-a's import of hub-b. hub-a
+	// imported it before proxy dialed in, so the schema that brought
+	// hub-a/proxy would have carried it.
 	for i := range carolish.Session().PeerSchema().Schema().Facets {
 		if n := carolish.Session().PeerSchema().Schema().Facets[i].Name; n != "hub-a/proxy" {
 			t.Fatalf("hub-c lists %q", n)
@@ -133,12 +136,7 @@ func TestFederation(t *testing.T) {
 	if alice.Session().PeerFacet("hub-b/echo") == nil {
 		t.Fatalf("imported facet not listed while the peer is offline: %+v %+v", a.h.Stats().Nodes["hub-b"], alice.Session().PeerSchema().Schema().Facets)
 	}
-	start := time.Now()
-	_, err = alice.Call(ctx, "hub-b/echo", "echo", "x")
-	mustCode(t, err, status.Unavailable)
-	if time.Since(start) < 2*time.Second {
-		t.Fatal("did not wait for the connect timeout")
-	}
+	expectConnectTimeout(t, a, clk, alice, "hub-b", "hub-b/echo", "echo", "x")
 	_ = context.Background
 	_ = session.Code
 	_ = nd.New

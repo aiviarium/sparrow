@@ -13,6 +13,7 @@ import (
 )
 
 func TestGrantPolicy(t *testing.T) {
+	t.Parallel()
 	gs, err := ParseGrants(EncodeGrants([]Grant{
 		grant("user:alice", "acme", "view"),
 		grant("group:eng", "acme", "use"),
@@ -66,6 +67,7 @@ func TestGrantPolicy(t *testing.T) {
 }
 
 func TestFacetTablePersistence(t *testing.T) {
+	t.Parallel()
 	store, _ := admin.OpenStore(t.TempDir())
 	tab, err := newTable(store)
 	if err != nil {
@@ -170,6 +172,7 @@ func facetNames(s *schema.Schema) []string {
 }
 
 func TestComposition(t *testing.T) {
+	t.Parallel()
 	r := renderer()
 	rb, _ := r.Encode()
 	ifaces := cbor.AppendArrayHead(nil, 1)
@@ -291,8 +294,9 @@ func TestComposition(t *testing.T) {
 }
 
 func TestContextValidity(t *testing.T) {
+	t.Parallel()
 	clk := testutil.NewFakeClock()
-	h := &Hub{clock: clk}
+	h := &Hub{clock: clk, o: Options{ContextGrace: DefaultContextGrace}}
 	cc := &callContext{open: true, deadline: clk.Now().Add(10 * time.Second)}
 	if !h.contextValidLocked(cc) {
 		t.Fatal("open context invalid")

@@ -84,6 +84,7 @@ func workHub(t *testing.T, tune func(*Options)) *fixture {
 }
 
 func TestForwardedMetadata(t *testing.T) {
+	t.Parallel()
 	f := workHub(t, nil)
 	w := newWorker(t, f, "websocket", nil)
 	for _, b := range transports {
@@ -125,6 +126,7 @@ func TestForwardedMetadata(t *testing.T) {
 }
 
 func TestMessageTooLarge(t *testing.T) {
+	t.Parallel()
 	f := workHub(t, nil)
 	// The node accepts at most 16 KiB messages.
 	newWorker(t, f, "websocket", func(o *nd.Options) { o.Params.Set(wire.ParamMaxMessageSize, 16384) })
@@ -152,6 +154,7 @@ func TestMessageTooLarge(t *testing.T) {
 }
 
 func TestLinkDrops(t *testing.T) {
+	t.Parallel()
 	f := workHub(t, nil)
 	w := newWorker(t, f, "webtransport", nil)
 	cli := f.client("websocket", aliceToken)
@@ -183,6 +186,7 @@ func TestLinkDrops(t *testing.T) {
 }
 
 func TestNodeSchemaLimit(t *testing.T) {
+	t.Parallel()
 	f := workHub(t, nil)
 	// A node schema far above 64 KiB is fine between a hub and its nodes
 	// (10.2).
@@ -205,6 +209,7 @@ func TestNodeSchemaLimit(t *testing.T) {
 }
 
 func TestContextGraceCancelsNested(t *testing.T) {
+	t.Parallel()
 	clk := testutil.NewFakeClock()
 	f := newFixture(t, func(o *Options) { o.Clock = clk })
 	f.secret("work-1", "work-cred")
@@ -238,11 +243,19 @@ func TestContextGraceCancelsNested(t *testing.T) {
 	if _, err := cli.Call(tctx(t), "proxy", "fire", nil); err != nil {
 		t.Fatal(err)
 	}
-	select {
-	case err := <-nested:
-		t.Fatalf("nested call ended within the grace period: %v", err)
-	case <-time.After(100 * time.Millisecond):
-	}
+	// The parent's context enters its grace period once the hub has
+	// relayed the parent's end.
+	testutil.Eventually(t, 5*time.Second, func() bool {
+		f.h.mu.Lock()
+		defer f.h.mu.Unlock()
+		for _, cc := range f.h.contexts {
+			if !cc.open && len(cc.nested) == 1 {
+				return true
+			}
+		}
+		return false
+	}, "the parent call's context did not end")
+	testutil.Never(t, 50*time.Millisecond, func() bool { return len(nested) > 0 }, "nested call ended within the grace period")
 	clk.Advance(2100 * time.Millisecond)
 	select {
 	case err := <-nested:

@@ -38,10 +38,7 @@ type readyGateStream struct {
 func (s *readyGateStream) ReadMessage() ([]byte, error) {
 	b, err := s.Stream.ReadMessage()
 	if err == nil && s.n.Add(1) == 2 {
-		deadline := time.Now().Add(5 * time.Second)
-		for !s.g.release() && time.Now().Before(deadline) {
-			time.Sleep(time.Millisecond)
-		}
+		testutil.WaitFor(5*time.Second, s.g.release)
 	}
 	return b, err
 }
@@ -50,6 +47,7 @@ func (s *readyGateStream) ReadMessage() ([]byte, error) {
 // when the hub starts shutting down still gets GoAway(going_away) and its
 // session ends; Close waits for it like for any other session (5.6).
 func TestCloseDuringHandshake(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	cc, sc := mem.Pipe(mem.Options{})
 	go f.h.ServeConn(context.Background(), &readyGate{Conn: sc, release: f.h.closing})
@@ -77,6 +75,7 @@ func TestCloseDuringHandshake(t *testing.T) {
 // (the WebTransport binding finishes the shared lane and waits for the
 // peer's finish after GoAway, 4.5 and 5.6).
 func TestCloseWaitsForTransports(t *testing.T) {
+	t.Parallel()
 	for _, b := range []string{"webtransport", "websocket"} {
 		t.Run(b, func(t *testing.T) {
 			f := newFixture(t, nil)
@@ -94,6 +93,7 @@ func TestCloseWaitsForTransports(t *testing.T) {
 // login session even while the hub has not yet processed its Ready (the
 // client already considers it open).
 func TestEndLoginSessionDuringHandshake(t *testing.T) {
+	t.Parallel()
 	clk := testutil.NewFakeClock()
 	f := newFixture(t, func(o *Options) {
 		o.Clock = clk

@@ -193,6 +193,7 @@ type hscenarioRun struct {
 }
 
 func TestScenariosThroughHub(t *testing.T) {
+	t.Parallel()
 	files, _ := filepath.Glob(filepath.Join(vectors.Dir(), "scenarios", "*.json"))
 	if len(files) == 0 {
 		t.Skip("no scenarios")
@@ -200,13 +201,17 @@ func TestScenariosThroughHub(t *testing.T) {
 	sort.Strings(files)
 	for _, b := range transports {
 		t.Run(b, func(t *testing.T) {
+			t.Parallel()
 			for _, file := range files {
 				raw, _ := os.ReadFile(file)
 				var sc hscenario
 				if err := json.Unmarshal(raw, &sc); err != nil {
 					t.Fatal(err)
 				}
-				t.Run(sc.Name, func(t *testing.T) { runHubScenario(t, b, &sc) })
+				t.Run(sc.Name, func(t *testing.T) {
+					t.Parallel()
+					runHubScenario(t, b, &sc)
+				})
 			}
 		})
 	}
@@ -262,6 +267,9 @@ func runHubScenario(t *testing.T, binding string, sc *hscenario) {
 		t.Fatalf("the hub schema is not the scenario host schema:\n%x\n%x", a, b)
 	}
 	probe.Close()
+	// The probe's hub session is gone before the scenario's starts, so
+	// hubSession finds the scenario's.
+	testutil.Eventually(t, 10*time.Second, func() bool { return len(f.h.Sessions()["user:scenario"]) == 0 }, "the probe session is still open")
 	r.connect()
 	if !strings.HasPrefix(sc.Given.Session, "none") {
 		r.handshake(host)
@@ -368,6 +376,12 @@ func (r *hscenarioRun) hubSession() *session.Session {
 			return false
 		}
 		out = ss[len(ss)-1]
+		for _, s := range ss {
+			// A session that ended (an earlier attempt) is not the one.
+			if s.Err() == nil {
+				out = s
+			}
+		}
 		return true
 	}, "no hub session for the scenario client")
 	return out
@@ -385,7 +399,6 @@ func (r *hscenarioRun) handshake(host *schema.Schema) {
 		// Ready processed: a call would be dispatched.
 		return s.Welcome() != nil
 	}, "not ready")
-	time.Sleep(20 * time.Millisecond)
 }
 
 func (r *hscenarioRun) send(lane string, b []byte) {
@@ -598,10 +611,8 @@ func (r *hscenarioRun) expect(i int, st *hstep) {
 	case "dispatched":
 		testutil.Eventually(t, 5*time.Second, func() bool { return r.host.dispatched.Load() > 0 }, "step %d: call %d not dispatched", st.Step, st.CallID)
 	case "not_dispatched":
-		time.Sleep(50 * time.Millisecond)
-		if n := r.host.dispatched.Load(); n > 0 && st.CallID <= 2 {
-			t.Fatalf("step %d: %d calls reached the node", st.Step, n)
-		}
+		testutil.Never(t, 50*time.Millisecond, func() bool { return r.host.dispatched.Load() > 0 && st.CallID <= 2 },
+			"step %d: %d calls reached the node", st.Step, r.host.dispatched.Load())
 	case "call_ended":
 		if len(r.f.h.Sessions()["user:scenario"]) == 0 {
 			return // the session is gone (rejected optimistic start)

@@ -83,6 +83,7 @@ func (f *fixture) commitAuth(grants ...Grant) uint64 {
 }
 
 func TestAuthorizationGrants(t *testing.T) {
+	t.Parallel()
 	f := authHub(t, nil, grant("group:eng", "echo", "view"), grant("user:bob", "echo", "use"))
 	waitNode(t, f.h, "echo", true)
 	alice := f.client("websocket", aliceToken)
@@ -124,6 +125,7 @@ func TestAuthorizationGrants(t *testing.T) {
 }
 
 func TestContextActingPrincipals(t *testing.T) {
+	t.Parallel()
 	clk := testutil.NewFakeClock()
 	f := authHub(t, func(o *Options) { o.Clock = clk },
 		grant("user:alice", "proxy", "use"), grant("user:bob", "proxy", "use"),
@@ -160,6 +162,14 @@ func TestContextActingPrincipals(t *testing.T) {
 	if v, err := p.callWithContext(ctx, saved); err != nil || v != "x" {
 		t.Fatalf("within the grace period: %v %v", v, err)
 	}
+	// The hub ends the context once it has relayed the call's end, which
+	// may be just after alice has the response.
+	testutil.Eventually(t, 5*time.Second, func() bool {
+		f.h.mu.Lock()
+		defer f.h.mu.Unlock()
+		cc := f.h.contexts[string(saved)]
+		return cc != nil && !cc.open
+	}, "the context was not ended with its call")
 	clk.Advance(2100 * time.Millisecond)
 	testutil.Eventually(t, 5*time.Second, func() bool {
 		_, err := p.callWithContext(ctx, saved)
@@ -175,6 +185,7 @@ func TestContextActingPrincipals(t *testing.T) {
 }
 
 func TestPolicyChangeEndsCalls(t *testing.T) {
+	t.Parallel()
 	f := authHub(t, nil, grant("user:alice", "proxy", "use"))
 	p := newProxyNode(t, f)
 	_ = p

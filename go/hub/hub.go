@@ -34,10 +34,39 @@ import (
 	"github.com/aiviarium/sparrow-rpc/go/wire"
 )
 
-// Relay acknowledgement limits (10.3).
+// Timing defaults. Every one can be changed in Options; the protocol
+// values come from the core spec, the rest are this hub's choices
+// (spec/reference-server.md).
 const (
+	// Relay acknowledgement limits (10.3).
 	DefaultRelayAckTimeout     = 5 * time.Second
 	DefaultPeerRelayAckTimeout = 2 * time.Second
+	// DefaultConnectTimeout is how long a call waits for a node that is
+	// not connected (10.7: RECOMMENDED 10 s).
+	DefaultConnectTimeout = 10 * time.Second
+	// DefaultContextGrace is how long a call context stays valid after its
+	// call ends (10.6).
+	DefaultContextGrace = 2 * time.Second
+	// DefaultExpiryWarning is how long before a session's authentication
+	// expires the hub sends AuthStatus (5.5: at least 60 s).
+	DefaultExpiryWarning = 60 * time.Second
+	// DefaultDialTimeout bounds one attempt to dial a node.
+	DefaultDialTimeout = 10 * time.Second
+	// DefaultRedialBackoff and DefaultRedialBackoffMax bound the wait
+	// before redialing a dialed node, doubling with jitter as a client
+	// reconnects (5.6).
+	DefaultRedialBackoff    = 500 * time.Millisecond
+	DefaultRedialBackoffMax = 30 * time.Second
+	// DefaultWaitingRedial is the longest wait between redial attempts
+	// while calls wait for a dialed node (10.7).
+	DefaultWaitingRedial = 250 * time.Millisecond
+	// DefaultShutdownSessionWait is how long a dialed node's session gets
+	// to end after the hub's GoAway at shutdown before it is closed.
+	DefaultShutdownSessionWait = 6 * time.Second
+	// DefaultTransportLinger is how long the hub waits, after a session
+	// ended, for its transport to finish closing (the WebTransport binding
+	// lingers so that a final GoAway is delivered).
+	DefaultTransportLinger = webtransport.DefaultLinger + time.Second
 )
 
 // Credential maps a bearer token to a principal and its groups.
@@ -67,7 +96,8 @@ type Options struct {
 	// time unless AuthRefresh extends it (5.5).
 	Authenticate func(ctx context.Context, h *wire.Hello) (Actor, error)
 	// ExpiryWarning is how long before a session's authentication expires
-	// the hub sends AuthStatus (5.5: at least 60 s); default 60 s.
+	// the hub sends AuthStatus (5.5: at least 60 s); default 60 s. Expiry
+	// runs on Clock.
 	ExpiryWarning time.Duration
 	// Policy replaces the built-in grant policy (ref.policy). Call
 	// Hub.PolicyChanged when its decisions change.
@@ -83,13 +113,15 @@ type Options struct {
 	// client sends (9.4), after it is logged.
 	OnModuleRejected func(principal, id, version, reason string)
 	// ConnectTimeout bounds how long a call waits for a node that is not
-	// connected (10.7); default 10 s.
+	// connected (10.7); default 10 s. It runs on Clock.
 	ConnectTimeout time.Duration
 	// AdminFacetID fixes the facet ID of sparrow.hub.admin (0 allocates
 	// one from the facet-ID table, normally 16).
 	AdminFacetID uint64
-	// Clock drives confirmation deadlines and call-context expiry; nil is
-	// the wall clock.
+	// Clock drives confirmation deadlines, call-context expiry, the
+	// connect timeout and authentication expiry; nil is the wall clock.
+	// Sessions have their own clock (session.Config.Clock, set it with
+	// Session).
 	Clock session.Clock
 	// Session adjusts the configuration of every session the hub runs.
 	Session func(*session.Config)
@@ -101,6 +133,28 @@ type Options struct {
 	// PeerRelayAckTimeout is the same for an update relayed from a peer
 	// hub (10.3); default 2 s.
 	PeerRelayAckTimeout time.Duration
+	// ContextGrace is how long a call context stays valid after its call
+	// ends (10.6); default 2 s. It runs on Clock.
+	ContextGrace time.Duration
+	// DialTimeout bounds one attempt to dial a node; default 10 s.
+	DialTimeout time.Duration
+	// RedialBackoff is the first wait before redialing a dialed node after
+	// a failed attempt or the end of its session, doubling up to
+	// RedialBackoffMax, with jitter; defaults 500 ms and 30 s.
+	RedialBackoff, RedialBackoffMax time.Duration
+	// WaitingRedial is the longest wait between redial attempts while
+	// calls wait for a dialed node; default 250 ms.
+	WaitingRedial time.Duration
+	// ShutdownSessionWait is how long a dialed node's session gets to end
+	// after GoAway when the hub shuts down or stops its link; default 6 s.
+	ShutdownSessionWait time.Duration
+	// TransportLinger is how long the hub waits, once a session has
+	// ended, for its transport to finish closing; default 3 s (the
+	// WebTransport linger plus 1 s).
+	TransportLinger time.Duration
+	// DialLinger is the WebTransport linger of connections to nodes the
+	// hub dials (webtransport.DefaultLinger, 2 s).
+	DialLinger time.Duration
 }
 
 // Hub is a running hub.
@@ -125,6 +179,7 @@ type Hub struct {
 	contexts   map[string]*callContext
 	adminID    uint64
 	rejections int
+	dropped    int // notifications to offline nodes (10.7)
 	closed     bool
 	conns      map[transport.Conn]struct{} // connections ServeConn runs
 	wg         sync.WaitGroup
@@ -151,17 +206,28 @@ func New(o Options) (*Hub, error) {
 	if o.SchemaVersion == "" {
 		o.SchemaVersion = "1"
 	}
-	if o.ConnectTimeout <= 0 {
-		o.ConnectTimeout = 10 * time.Second
+	for _, d := range []struct {
+		v   *time.Duration
+		def time.Duration
+	}{
+		{&o.ConnectTimeout, DefaultConnectTimeout},
+		{&o.RelayAckTimeout, DefaultRelayAckTimeout},
+		{&o.PeerRelayAckTimeout, DefaultPeerRelayAckTimeout},
+		{&o.ExpiryWarning, DefaultExpiryWarning},
+		{&o.ContextGrace, DefaultContextGrace},
+		{&o.DialTimeout, DefaultDialTimeout},
+		{&o.RedialBackoff, DefaultRedialBackoff},
+		{&o.RedialBackoffMax, DefaultRedialBackoffMax},
+		{&o.WaitingRedial, DefaultWaitingRedial},
+		{&o.ShutdownSessionWait, DefaultShutdownSessionWait},
+		{&o.TransportLinger, DefaultTransportLinger},
+	} {
+		if *d.v <= 0 {
+			*d.v = d.def
+		}
 	}
-	if o.RelayAckTimeout <= 0 {
-		o.RelayAckTimeout = DefaultRelayAckTimeout
-	}
-	if o.ExpiryWarning <= 0 {
-		o.ExpiryWarning = 60 * time.Second
-	}
-	if o.PeerRelayAckTimeout <= 0 {
-		o.PeerRelayAckTimeout = DefaultPeerRelayAckTimeout
+	if o.RedialBackoffMax < o.RedialBackoff {
+		o.RedialBackoffMax = o.RedialBackoff
 	}
 	h := &Hub{o: o, log: o.Logger, clock: o.Clock, nodes: map[string]*node{}, viewers: map[*viewer]struct{}{}, conns: map[transport.Conn]struct{}{},
 		ifaces: map[string]*schema.Interface{}, calls: map[*activeCall]struct{}{},
@@ -290,7 +356,7 @@ func (h *Hub) Close(timeout time.Duration) {
 	if connWait < 0 {
 		connWait = 0
 	}
-	connWait += webtransport.DefaultLinger + time.Second
+	connWait += h.o.TransportLinger
 	connDeadline := time.After(connWait)
 	for _, c := range conns {
 		select {
@@ -299,7 +365,7 @@ func (h *Hub) Close(timeout time.Duration) {
 		}
 	}
 	for _, d := range dls {
-		d.wait(time.Until(deadline) + 6*time.Second) // a dialed session gets 5 s after its GoAway
+		d.wait(time.Until(deadline) + h.o.ShutdownSessionWait) // a dialed session gets its time after its GoAway
 	}
 	h.stop()
 	h.wg.Wait()
@@ -336,7 +402,7 @@ func (h *Hub) ServeConn(ctx context.Context, conn transport.Conn) {
 	h.mu.Unlock()
 	defer func() {
 		// Until the transport has closed (Close waits for it).
-		t := time.NewTimer(webtransport.DefaultLinger + time.Second)
+		t := time.NewTimer(h.o.TransportLinger)
 		select {
 		case <-conn.Done():
 		case <-t.C:

@@ -8,6 +8,7 @@ import (
 	"github.com/aiviarium/sparrow-rpc/go/admin"
 	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
 	nd "github.com/aiviarium/sparrow-rpc/go/node"
+	"github.com/aiviarium/sparrow-rpc/go/schema"
 	"github.com/aiviarium/sparrow-rpc/go/session"
 	"github.com/aiviarium/sparrow-rpc/go/status"
 )
@@ -40,17 +41,25 @@ func acmeHub(t *testing.T) *fixture {
 }
 
 func TestSchemaUpdateRelayedWithAckGating(t *testing.T) {
+	t.Parallel()
 	f := acmeHub(t)
 	n, err := dialInNode(t, f, "webtransport", "acme", "cred-one", acmeFacet("acme", "1.0.0", false, false))
 	if err != nil {
 		t.Fatal(err)
 	}
 	waitNode(t, f.h, "acme", true)
-	// A client that takes its time to acknowledge schema updates.
+	// A client that holds back its acknowledgement of the update that
+	// adds acme.extra until the test releases it.
+	held, release := make(chan struct{}, 1), make(chan struct{})
 	slow := f.client("websocket", aliceToken, func(o *nd.Options) {
 		o.Session = func(c *session.Config) {
 			c.OnPeerSchemaUpdate = func(ctx context.Context, s *session.Session, u *session.PeerSchemaUpdate) error {
-				time.Sleep(400 * time.Millisecond)
+				for _, op := range u.Delta {
+					if op.Op == schema.OpPut && op.Facet.Name == "acme.extra" {
+						held <- struct{}{}
+						<-release
+					}
+				}
 				return nil
 			}
 		}
@@ -58,14 +67,19 @@ func TestSchemaUpdateRelayedWithAckGating(t *testing.T) {
 	fast := f.client("webtransport", aliceToken)
 	waitFacet(t, slow, "acme")
 	waitFacet(t, fast, "acme")
-	start := time.Now()
-	if _, err := n.Add(tctx(t), acmeFacet("acme.extra", "1.0.0", true, false)); err != nil {
+	added := make(chan error, 1)
+	go func() {
+		_, err := n.Add(tctx(t), acmeFacet("acme.extra", "1.0.0", true, false))
+		added <- err
+	}()
+	<-held
+	// The fast client has the facet, but the hub acknowledges the node
+	// only after every client has acknowledged.
+	waitFacet(t, fast, "acme.extra")
+	testutil.Never(t, 50*time.Millisecond, func() bool { return len(added) > 0 }, "the node was acked before the slow client acked")
+	close(release)
+	if err := <-added; err != nil {
 		t.Fatal(err)
-	}
-	// The hub acknowledged the node only after every client had
-	// acknowledged: when Add returns, both clients already list the facet.
-	if d := time.Since(start); d < 350*time.Millisecond {
-		t.Fatalf("the node was acked after %v, before the slow client acked", d)
 	}
 	for _, c := range []*nd.Node{slow, fast} {
 		if c.Session().PeerFacet("acme.extra") == nil {
@@ -85,6 +99,7 @@ func TestSchemaUpdateRelayedWithAckGating(t *testing.T) {
 }
 
 func TestSupersede(t *testing.T) {
+	t.Parallel()
 	f := acmeHub(t)
 	n1, err := dialInNode(t, f, "webtransport", "acme", "cred-one", acmeFacet("acme", "1.0.0", false, false))
 	if err != nil {

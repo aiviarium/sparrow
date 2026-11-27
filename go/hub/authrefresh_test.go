@@ -37,6 +37,7 @@ func ticketAuth(ctx context.Context, h *wire.Hello) (Actor, error) {
 // AuthRefresh for the same principal and login session extends it, and one
 // for another principal or login session closes the session.
 func TestAuthRefresh(t *testing.T) {
+	t.Parallel()
 	clk := testutil.NewFakeClock()
 	f := newFixture(t, func(o *Options) {
 		o.Clock = clk
@@ -80,7 +81,8 @@ func TestAuthRefresh(t *testing.T) {
 	// Expiry: a warning 60 s before, the end at sexp.
 	n := dial()
 	s := n.Session()
-	time.Sleep(50 * time.Millisecond)
+	// The hub has armed the warning and the end.
+	testutil.Eventually(t, 5*time.Second, func() bool { return clk.Pending() >= 2 }, "expiry not armed")
 	clk.Advance(4*time.Minute + time.Second)
 	wantStatus(exp)
 	clk.Advance(time.Minute)
@@ -96,10 +98,7 @@ func TestAuthRefresh(t *testing.T) {
 	}
 	wantStatus(later)
 	clk.Advance(10 * time.Minute) // past the first expiry
-	time.Sleep(100 * time.Millisecond)
-	if s.Err() != nil {
-		t.Fatalf("closed after a refresh: %v", s.Err())
-	}
+	testutil.Never(t, 50*time.Millisecond, func() bool { return s.Err() != nil }, "closed after a refresh: %v", s.Err())
 	// Another login session, or another principal: GoAway(unauthenticated).
 	if err := s.RefreshAuth(*testTicket("user:alice", "sid-2", later)); err != nil {
 		t.Fatal(err)

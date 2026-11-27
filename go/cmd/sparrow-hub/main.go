@@ -90,6 +90,12 @@ type Config struct {
 	// ConnectTimeoutMs bounds how long a call waits for a node that is not
 	// connected (core 10.7; default 10000).
 	ConnectTimeoutMs uint64 `json:"connectTimeoutMs"`
+	// RedialBackoffMs and RedialBackoffMaxMs bound the wait before the hub
+	// redials a dialed node (defaults 500 and 30000), DialTimeoutMs one
+	// attempt (default 10000).
+	RedialBackoffMs    uint64 `json:"redialBackoffMs"`
+	RedialBackoffMaxMs uint64 `json:"redialBackoffMaxMs"`
+	DialTimeoutMs      uint64 `json:"dialTimeoutMs"`
 	// AllowedOrigins are the Origins accepted besides the hub's own (and
 	// requests without one); ["*"] allows every origin.
 	AllowedOrigins []string `json:"allowedOrigins"`
@@ -338,7 +344,9 @@ func Run(ctx context.Context, c *Config, log *slog.Logger, ready func(Addrs)) er
 			ln.Close()
 		}
 	}
-	o := hub.Options{Store: store, SchemaName: c.SchemaName, Web: c.Web.Enabled, Logger: log, ConnectTimeout: time.Duration(c.ConnectTimeoutMs) * time.Millisecond}
+	ms := func(v uint64) time.Duration { return time.Duration(v) * time.Millisecond }
+	o := hub.Options{Store: store, SchemaName: c.SchemaName, Web: c.Web.Enabled, Logger: log, ConnectTimeout: ms(c.ConnectTimeoutMs),
+		RedialBackoff: ms(c.RedialBackoffMs), RedialBackoffMax: ms(c.RedialBackoffMaxMs), DialTimeout: ms(c.DialTimeoutMs)}
 	for _, b := range c.Bootstrap {
 		o.Bootstrap = append(o.Bootstrap, hub.Credential{Principal: b.Principal, Token: b.Credential})
 	}

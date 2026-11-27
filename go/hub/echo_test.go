@@ -122,6 +122,7 @@ func asErr(err error, e **session.Error) bool {
 // in over WebSocket, dialing in over WebTransport with the hub's key pinned,
 // and dialed by the hub over WebTransport at its URL and SPKI pin.
 func TestEchoAllShapes(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, nil)
 	ids := []string{"echo", "echo-wt", "echo-dialed"}
 	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{

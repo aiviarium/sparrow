@@ -16,10 +16,6 @@ import (
 	"github.com/aiviarium/sparrow-rpc/go/wire"
 )
 
-// ContextGrace is how long a call context stays valid after its call ends
-// (10.6).
-const ContextGrace = 2 * time.Second
-
 // callContext is a context the hub issued for a call it forwarded to a
 // node (10.6).
 type callContext struct {
@@ -160,7 +156,7 @@ func (h *Hub) contextValidLocked(cc *callContext) bool {
 	if !cc.deadline.IsZero() && !now.Before(cc.deadline) {
 		return false
 	}
-	return cc.open || now.Before(cc.endedAt.Add(ContextGrace))
+	return cc.open || now.Before(cc.endedAt.Add(h.o.ContextGrace))
 }
 
 // forwardActor is the principal a forwarded call acts for (the principal
@@ -318,13 +314,14 @@ func (h *Hub) forward(ctx context.Context, start time.Time, v *viewer, c *sessio
 }
 
 // endContext starts the grace period of a context (10.6): it stays valid
-// for 2 s, then every call still open that carries it is ended.
+// for Options.ContextGrace (2 s), then every call still open that carries
+// it is ended.
 func (h *Hub) endContext(cc *callContext) {
 	h.mu.Lock()
 	cc.open = false
 	cc.endedAt = h.clock.Now()
 	h.mu.Unlock()
-	h.clock.AfterFunc(ContextGrace, func() {
+	h.clock.AfterFunc(h.o.ContextGrace, func() {
 		h.mu.Lock()
 		delete(h.contexts, cc.key)
 		nested := make([]*activeCall, 0, len(cc.nested))
@@ -343,9 +340,12 @@ func (h *Hub) endContext(cc *callContext) {
 func (h *Hub) forwardNotification(v *viewer, c *session.ServerCall, actors []Actor, n *node, lf *listedFacet) {
 	h.mu.Lock()
 	l := n.link
+	if l == nil {
+		h.dropped++ // best-effort: dropped while the node is not connected
+	}
 	h.mu.Unlock()
 	if l == nil {
-		return // best-effort: dropped while the node is not connected
+		return
 	}
 	local, ok := l.localID(lf.ref.ID)
 	if !ok {
@@ -406,8 +406,11 @@ type Stats struct {
 	ActiveCalls int
 	// ModulesRejected counts moduleRejected notifications (9.4).
 	ModulesRejected int
-	Contexts        int
-	Nodes           map[string]NodeStat
+	// NotificationsDropped counts notifications to nodes that were not
+	// connected (10.7).
+	NotificationsDropped int
+	Contexts             int
+	Nodes                map[string]NodeStat
 }
 
 // NodeStat describes one node.
@@ -421,7 +424,7 @@ type NodeStat struct {
 func (h *Hub) Stats() Stats {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	st := Stats{Sessions: len(h.viewers), ActiveCalls: len(h.calls), Contexts: len(h.contexts), ModulesRejected: h.rejections, Nodes: map[string]NodeStat{}}
+	st := Stats{Sessions: len(h.viewers), ActiveCalls: len(h.calls), Contexts: len(h.contexts), ModulesRejected: h.rejections, NotificationsDropped: h.dropped, Nodes: map[string]NodeStat{}}
 	for id, n := range h.nodes {
 		st.Nodes[id] = NodeStat{State: n.state.String(), Connected: n.link != nil, Listed: append([]uint64{}, n.listed...)}
 	}
