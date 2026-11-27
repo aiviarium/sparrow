@@ -89,7 +89,7 @@ type Session struct {
 	inLeased int
 
 	sharedReading atomic.Bool // the shared-lane reader is running
-	pool     pool
+	pool          pool
 
 	local         *schema.State
 	localAcked    uint64
