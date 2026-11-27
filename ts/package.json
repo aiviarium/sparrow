@@ -1,0 +1,37 @@
+{
+  "name": "@aiviarium/sparrow-rpc",
+  "version": "0.1.0",
+  "description": "Sparrow RPC for TypeScript: CBOR, wire format, schemas, schema-driven values, sessions, and the pipe, WebSocket and in-memory bindings.",
+  "license": "MIT OR Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "pretest": "npm run build",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/ws": "^8.18.2",
+    "cbor2": "^2.4.2",
+    "typescript": "~5.9",
+    "vitest": "^3.2.7",
+    "ws": "^8.23.1"
+  }
+}
