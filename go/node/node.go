@@ -404,18 +404,24 @@ func (n *Node) Session() *session.Session {
 // Wait blocks until the current session ends and returns why (nil for a
 // clean GoAway(ok) or going_away).
 func (n *Node) Wait(ctx context.Context) error {
-	s := n.Session()
-	if s == nil {
+	var err error
+	if s := n.Session(); s == nil {
+		// The session already ended (and was forgotten): the same rule
+		// applies to how it ended.
 		n.mu.Lock()
-		defer n.mu.Unlock()
-		return n.connErr
+		err = n.connErr
+		n.mu.Unlock()
+		if err == nil {
+			return nil
+		}
+	} else {
+		select {
+		case <-s.Done():
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+		err = s.Err()
 	}
-	select {
-	case <-s.Done():
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-	err := s.Err()
 	switch session.Code(err) {
 	case status.OK, status.GoingAway:
 		return nil
