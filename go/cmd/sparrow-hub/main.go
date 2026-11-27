@@ -10,7 +10,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
@@ -30,8 +33,13 @@ import (
 	"time"
 
 	"github.com/aiviarium/sparrow-rpc/go/admin"
+	"github.com/aiviarium/sparrow-rpc/go/cbor"
 	"github.com/aiviarium/sparrow-rpc/go/hub"
+	"github.com/aiviarium/sparrow-rpc/go/session"
+	"github.com/aiviarium/sparrow-rpc/go/status"
 	"github.com/aiviarium/sparrow-rpc/go/transport/webtransport"
+	"github.com/aiviarium/sparrow-rpc/go/web"
+	"github.com/aiviarium/sparrow-rpc/go/wire"
 )
 
 // Config is the static configuration file.
@@ -71,8 +79,10 @@ type Config struct {
 		Principal string   `json:"principal"`
 		Groups    []string `json:"groups"`
 	} `json:"tokens"`
-	// Web publishes facet 1 sparrow.web.
-	Web bool `json:"web"`
+	// Web turns on the Web Profile: facet 1 sparrow.web, POST
+	// /sparrow/connect, /sparrow/schema/{hash} and /sparrow/mods/{hash}.{ext}
+	// on both listeners. `true` or an object (WebConfig).
+	Web WebConfig `json:"web"`
 	// StartTimeoutMs bounds how long calls wait for a node (default 10000).
 	StartTimeoutMs uint64 `json:"startTimeoutMs"`
 	// AllowedOrigins are the Origins accepted besides the hub's own (and
@@ -84,6 +94,51 @@ type Config struct {
 	Log string `json:"log"`
 }
 
+// WebConfig configures the Web Profile (core spec section 9).
+type WebConfig struct {
+	Enabled bool `json:"-"`
+	// Audience names this edge instance in tickets (default: the
+	// WebTransport endpoint, else the WebSocket one).
+	Audience string `json:"audience"`
+	// TicketKeyFile holds the hex Ed25519 seed that signs tickets; without
+	// it a new key is made at every start (tickets then do not survive a
+	// restart, which their 60 s lifetime makes harmless).
+	TicketKeyFile string `json:"ticketKeyFile"`
+	// TicketLifetimeMs is how long a ticket may be presented (default
+	// 45000, at most 60000).
+	TicketLifetimeMs uint64 `json:"ticketLifetimeMs"`
+	// SessionLifetimeMs is the login session of a static token (default
+	// 8 h).
+	SessionLifetimeMs uint64 `json:"sessionLifetimeMs"`
+	// ModulesDir is a directory of module and asset files, found by the
+	// hash of their contents; the facets' web.modules entries sign them.
+	ModulesDir string `json:"modulesDir"`
+	// RootKeys (hex Ed25519 public keys) of the client build: ref.web
+	// certificates and revocation lists must be signed by one of them.
+	RootKeys []string `json:"rootKeys"`
+	// MinHostAPI is the lowest client hostApi served (426 below it).
+	MinHostAPI string `json:"minHostApi"`
+}
+
+// UnmarshalJSON accepts true, false or an object.
+func (w *WebConfig) UnmarshalJSON(b []byte) error {
+	var on bool
+	if err := json.Unmarshal(b, &on); err == nil {
+		*w = WebConfig{Enabled: on}
+		return nil
+	}
+	type plain WebConfig
+	var p plain
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&p); err != nil {
+		return fmt.Errorf("web: %v", err)
+	}
+	*w = WebConfig(p)
+	w.Enabled = true
+	return nil
+}
+
 // Addrs are the endpoints the hub listens on, written to -addr-file.
 type Addrs struct {
 	WebTransport string `json:"webtransport,omitempty"`
@@ -93,6 +148,9 @@ type Addrs struct {
 	// that dials this one), both hex.
 	CertHash string `json:"certHash"`
 	Pin      string `json:"pin"`
+	// Web is the base URL of the Web Profile endpoints on the TCP
+	// listener (POST <web>/sparrow/connect), when web is on.
+	Web string `json:"web,omitempty"`
 }
 
 func main() {
@@ -213,53 +271,117 @@ func Run(ctx context.Context, c *Config, log *slog.Logger, ready func(Addrs)) er
 	if err != nil {
 		return err
 	}
-	o := hub.Options{Store: store, SchemaName: c.SchemaName, Web: c.Web, Logger: log, StartTimeout: time.Duration(c.StartTimeoutMs) * time.Millisecond}
+	// Listen first: the Web Profile needs the endpoints before serving.
+	var pc net.PacketConn
+	var ln net.Listener
+	if c.WebTransport != "" {
+		if pc, err = net.ListenPacket("udp", c.WebTransport); err != nil {
+			return err
+		}
+		addrs.WebTransport = "https://" + hostPort(pc.LocalAddr(), c.Hosts) + "/sparrow/wt"
+	}
+	if c.WebSocket != "" {
+		if ln, err = net.Listen("tcp", c.WebSocket); err != nil {
+			if pc != nil {
+				pc.Close()
+			}
+			return err
+		}
+		scheme, httpScheme := "wss://", "https://"
+		if c.WebSocketPlain {
+			scheme, httpScheme = "ws://", "http://"
+		}
+		addrs.WebSocket = scheme + hostPort(ln.Addr(), c.Hosts) + "/sparrow/ws"
+		if c.Web.Enabled {
+			addrs.Web = httpScheme + hostPort(ln.Addr(), c.Hosts)
+		}
+	}
+	closeListeners := func() {
+		if pc != nil {
+			pc.Close()
+		}
+		if ln != nil {
+			ln.Close()
+		}
+	}
+	o := hub.Options{Store: store, SchemaName: c.SchemaName, Web: c.Web.Enabled, Logger: log, StartTimeout: time.Duration(c.StartTimeoutMs) * time.Millisecond}
 	for _, b := range c.Bootstrap {
 		o.Bootstrap = append(o.Bootstrap, hub.Credential{Principal: b.Principal, Token: b.Credential})
 	}
 	for _, t := range c.Tokens {
 		o.Tokens = append(o.Tokens, hub.Credential{Token: t.Token, Principal: t.Principal, Groups: t.Groups})
 	}
+	var tickets *web.Tickets
+	if c.Web.Enabled {
+		if tickets, err = newTickets(&c.Web, addrs); err != nil {
+			closeListeners()
+			return err
+		}
+		for _, k := range c.Web.RootKeys {
+			b, err := hex.DecodeString(k)
+			if err != nil || len(b) != 32 {
+				closeListeners()
+				return fmt.Errorf("web.rootKeys: %q is not a hex Ed25519 public key", k)
+			}
+			o.WebRoots = append(o.WebRoots, b)
+		}
+		o.Authenticate = ticketAuthenticator(tickets)
+	}
 	h, err := hub.New(o)
 	if err != nil {
+		closeListeners()
 		return err
+	}
+	var webSrv *web.Server
+	if c.Web.Enabled {
+		so := web.ServerOptions{Tickets: tickets, Host: h, Logger: log, AllowedOrigins: c.AllowedOrigins, MinHostAPI: c.Web.MinHostAPI,
+			Endpoints: web.Endpoints{WebTransport: addrs.WebTransport, WebSocket: addrs.WebSocket}}
+		st := &web.StaticTokens{SessionLifetime: time.Duration(c.Web.SessionLifetimeMs) * time.Millisecond}
+		for _, t := range c.Tokens {
+			st.Tokens = append(st.Tokens, web.StaticToken{Token: t.Token, Principal: t.Principal, Groups: t.Groups})
+		}
+		so.Auth = st
+		if c.SelfSigned && len(cert.Certificate) > 0 {
+			sum := sha256.Sum256(cert.Certificate[0])
+			so.CertHashes = [][]byte{sum[:]}
+		}
+		if c.Web.ModulesDir != "" {
+			so.Modules = &web.ModuleDir{Dir: c.Web.ModulesDir}
+		}
+		if webSrv, err = web.NewServer(so); err != nil {
+			h.Close(time.Second)
+			closeListeners()
+			return err
+		}
 	}
 	checkOrigin := originChecker(c.AllowedOrigins)
 	tlsConf := &tls.Config{Certificates: []tls.Certificate{cert}}
 	errc := make(chan error, 2)
 	var closers []func()
-	if c.WebTransport != "" {
+	if pc != nil {
 		srv := webtransport.NewServer(webtransport.ServerOptions{TLSConfig: tlsConf, CheckOrigin: checkOrigin})
 		mux := http.NewServeMux()
 		mux.Handle("/sparrow/wt", h.WebTransportHandler(srv))
-		srv.WT.H3.Handler = mux
-		pc, err := net.ListenPacket("udp", c.WebTransport)
-		if err != nil {
-			h.Close(time.Second)
-			return err
+		if webSrv != nil {
+			webSrv.Mount(mux)
 		}
-		addrs.WebTransport = "https://" + hostPort(pc.LocalAddr(), c.Hosts) + "/sparrow/wt"
+		srv.WT.H3.Handler = mux
 		go func() { errc <- srv.Serve(pc) }()
 		closers = append(closers, func() { _ = srv.Close() })
 	}
-	if c.WebSocket != "" {
-		ln, err := net.Listen("tcp", c.WebSocket)
-		if err != nil {
-			h.Close(time.Second)
-			return err
-		}
+	if ln != nil {
 		mux := http.NewServeMux()
 		mux.Handle("/sparrow/ws", h.WebSocketHandler(checkOrigin))
+		if webSrv != nil {
+			webSrv.Mount(mux)
+		}
 		hs := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
-		scheme := "wss://"
 		if c.WebSocketPlain {
-			scheme = "ws://"
 			go func() { errc <- hs.Serve(ln) }()
 		} else {
 			hs.TLSConfig = tlsConf.Clone()
 			go func() { errc <- hs.ServeTLS(ln, "", "") }()
 		}
-		addrs.WebSocket = scheme + hostPort(ln.Addr(), c.Hosts) + "/sparrow/ws"
 		closers = append(closers, func() {
 			sctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
@@ -298,6 +420,59 @@ func hostPort(a net.Addr, hosts []string) string {
 		}
 	}
 	return net.JoinHostPort(host, port)
+}
+
+// newTickets makes the ticket issuer: the key from TicketKeyFile or a new
+// one, this edge instance as the audience.
+func newTickets(w *WebConfig, a Addrs) (*web.Tickets, error) {
+	var key ed25519.PrivateKey
+	if w.TicketKeyFile != "" {
+		b, err := os.ReadFile(w.TicketKeyFile)
+		if err != nil {
+			return nil, err
+		}
+		seed, err := hex.DecodeString(strings.TrimSpace(string(b)))
+		if err != nil || len(seed) != ed25519.SeedSize {
+			return nil, errors.New("web.ticketKeyFile must hold a hex Ed25519 seed (32 bytes)")
+		}
+		key = ed25519.NewKeyFromSeed(seed)
+	} else {
+		_, k, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+		key = k
+	}
+	aud := w.Audience
+	if aud == "" {
+		aud = a.WebTransport
+		if aud == "" {
+			aud = a.WebSocket
+		}
+	}
+	if w.TicketLifetimeMs > 60000 {
+		return nil, errors.New("web.ticketLifetimeMs is at most 60000 (9.2)")
+	}
+	return &web.Tickets{Key: key, Audience: aud, Lifetime: time.Duration(w.TicketLifetimeMs) * time.Millisecond}, nil
+}
+
+// ticketAuthenticator accepts a Web Profile ticket in Hello and AuthRefresh
+// as ["bearer", ticket] (9.2), once.
+func ticketAuthenticator(t *web.Tickets) func(context.Context, *wire.Hello) (hub.Actor, error) {
+	return func(ctx context.Context, h *wire.Hello) (hub.Actor, error) {
+		if h.Auth == nil || h.Auth.Scheme != "bearer" {
+			return hub.Actor{}, &session.Error{Code: status.Unauthenticated, Message: "a ticket is presented as [\"bearer\", ticket]"}
+		}
+		tok, err := cbor.NewDecoder(h.Auth.Credentials).Text()
+		if err != nil {
+			return hub.Actor{}, &session.Error{Code: status.Unauthenticated, Message: "a ticket is a text string"}
+		}
+		c, err := t.Verify(tok)
+		if err != nil {
+			return hub.Actor{}, &session.Error{Code: status.Unauthenticated, Message: err.Error()}
+		}
+		return hub.Actor{Principal: c.Subject, Groups: c.Groups, LoginSession: c.LoginSession, Expires: c.SessionExpiresAt()}, nil
+	}
 }
 
 // originChecker allows requests without Origin, the hub's own origin, and

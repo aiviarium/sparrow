@@ -1,7 +1,8 @@
 // Command echo-node is an example Sparrow node. By default it speaks on its
 // standard input and output, as a process a hub starts (sections 4.7 and
 // 10.2); with -url it dials a hub over WebTransport or WebSocket instead.
-// Logs go to standard error.
+// Logs go to standard error. With -web-modules it ships client modules
+// (Web Profile 9.4) in its facet.
 //
 // It publishes one facet named after the node ID (default "echo") with a
 // service Echo:
@@ -38,6 +39,7 @@ func main() {
 	id := flag.String("id", "echo", "node ID; the facet is named after it")
 	url := flag.String("url", "", "hub URL (https:// WebTransport, ws:// or wss:// WebSocket); empty for stdio")
 	credential := flag.String("credential", "", "link credential, sent as [\"link\", credential] when dialing")
+	webModules := flag.String("web-modules", "", "file holding a CBOR list of signed web-module entries, published as the facet's web.modules annotation (Web Profile 9.4)")
 	flag.Parse()
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
@@ -48,7 +50,19 @@ func main() {
 	n := node.New(opts)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	if _, err := n.Add(ctx, Facet(*id, n, log)); err != nil {
+	f := Facet(*id, n, log)
+	if *webModules != "" {
+		b, err := os.ReadFile(*webModules)
+		if err == nil {
+			err = cbor.Validate(b, cbor.Options{})
+		}
+		if err != nil {
+			log.Error("web modules", "err", err)
+			os.Exit(1)
+		}
+		f.Def.Annotations["web.modules"] = b
+	}
+	if _, err := n.Add(ctx, f); err != nil {
 		log.Error("add facet", "err", err)
 		os.Exit(1)
 	}

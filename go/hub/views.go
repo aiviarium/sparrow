@@ -12,6 +12,7 @@ import (
 	"github.com/aiviarium/sparrow-rpc/go/names"
 	"github.com/aiviarium/sparrow-rpc/go/schema"
 	"github.com/aiviarium/sparrow-rpc/go/session"
+	"github.com/aiviarium/sparrow-rpc/go/web"
 )
 
 type viewKind int
@@ -207,6 +208,15 @@ func (h *Hub) viewForLocked(v *viewer) *schema.Schema {
 	}
 	if d := h.defaultsLocked(fs); d != nil {
 		sc.Annotations[DefaultsAnnotation] = d
+	}
+	if h.o.Web && h.cfg != nil {
+		if v, ok := h.cfg.Extensions[WebExtension]; ok {
+			if anns, err := web.ParseTopLevel(v, h.o.WebRoots); err == nil {
+				for k, a := range anns {
+					sc.Annotations[k] = a
+				}
+			}
+		}
 	}
 	return sc.Canonical()
 }

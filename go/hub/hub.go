@@ -74,8 +74,16 @@ type Options struct {
 	// Policy replaces the built-in grant policy (ref.policy). Call
 	// Hub.PolicyChanged when its decisions change.
 	Policy Policy
-	// Web publishes facet 1 sparrow.web (Web Profile 9.4).
+	// Web publishes facet 1 sparrow.web (Web Profile 9.4) and the
+	// top-level web.* annotations of the document extension ref.web.
 	Web bool
+	// WebRoots are the root keys of the client build, if the operator
+	// gives them: ref.web certificates and revocation lists must then be
+	// signed by one of them.
+	WebRoots [][]byte
+	// OnModuleRejected is called for every moduleRejected notification a
+	// client sends (9.4), after it is logged.
+	OnModuleRejected func(principal, id, version, reason string)
 	// StartTimeout bounds how long a call waits for a node that is not
 	// connected (10.7); default 10 s.
 	StartTimeout time.Duration
@@ -113,20 +121,21 @@ type Hub struct {
 	ctx   context.Context
 	stop  context.CancelFunc
 
-	mu        sync.Mutex
-	tab       *table
-	cfg       *admin.Config
-	rev       uint64
-	nodes     map[string]*node
-	viewers   map[*viewer]struct{}
-	policy    *hubPolicy
-	ifaces    map[string]*schema.Interface // interface hash -> interface
-	calls     map[*activeCall]struct{}
-	contexts  map[string]*callContext
-	adminID   uint64
-	closed    bool
-	wg        sync.WaitGroup
-	reconcile sync.Mutex // serializes Apply
+	mu         sync.Mutex
+	tab        *table
+	cfg        *admin.Config
+	rev        uint64
+	nodes      map[string]*node
+	viewers    map[*viewer]struct{}
+	policy     *hubPolicy
+	ifaces     map[string]*schema.Interface // interface hash -> interface
+	calls      map[*activeCall]struct{}
+	contexts   map[string]*callContext
+	adminID    uint64
+	rejections int
+	closed     bool
+	wg         sync.WaitGroup
+	reconcile  sync.Mutex // serializes Apply
 }
 
 // New opens the hub's state from the store and applies the persisted
@@ -216,6 +225,13 @@ func New(o Options) (*Hub, error) {
 	h.wg.Add(1)
 	go h.credentialLoop()
 	return h, nil
+}
+
+// SchemaFor returns the schema a client session of this principal gets
+// (for the Web Profile's /connect and schema resources, package web). An
+// empty principal is the anonymous viewer: only what everyone may see.
+func (h *Hub) SchemaFor(principal string, groups []string) (*schema.Schema, error) {
+	return h.viewFor(&viewer{h: h, kind: viewClient, actor: Actor{Principal: principal, Groups: groups}}), nil
 }
 
 // Admin returns the administration manager.

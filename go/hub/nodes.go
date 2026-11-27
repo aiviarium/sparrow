@@ -32,6 +32,7 @@ import (
 	"github.com/aiviarium/sparrow-rpc/go/transport/pipe"
 	"github.com/aiviarium/sparrow-rpc/go/transport/websocket"
 	"github.com/aiviarium/sparrow-rpc/go/transport/webtransport"
+	"github.com/aiviarium/sparrow-rpc/go/web"
 	"github.com/aiviarium/sparrow-rpc/go/wire"
 )
 
@@ -143,6 +144,10 @@ func (h *Hub) checkNodeFacetsLocked(n *node, sc *schema.Schema) ([]nodeFacet, er
 			}
 		} else if !names.OwnedBy(n.id, f.Name) {
 			return nil, &session.Error{Code: status.InvalidArgument, Message: fmt.Sprintf("facet %q is not named after node %q (10.2)", f.Name, n.id)}
+		}
+		if err := web.CheckFacet(f); err != nil {
+			// Client modules in the facet's own scope only (9.4).
+			return nil, &session.Error{Code: status.InvalidArgument, Message: err.Error()}
 		}
 		k := facetKey{node: n.id, name: f.Name, major: schema.Major(f.Version)}
 		nf := nodeFacet{local: f.ID, key: k, def: f.Clone()}
@@ -511,6 +516,12 @@ func encStart(s *admin.Start) []byte {
 	return s.AppendTo(nil)
 }
 
+// WebExtension is the document extension holding the top-level web.*
+// schema annotations (web.keys, web.revoked, web.apply and client
+// configuration) a hub with the Web Profile publishes: a CBOR map from
+// annotation key to value (9.4, 9.5).
+const WebExtension = "ref.web"
+
 // LazyExtension is the node extension that makes a spawned node start on
 // its first call instead of at once (CBOR true).
 const LazyExtension = "ref.lazy"
@@ -530,6 +541,9 @@ func (h *Hub) validateExtension(nodeID, key string, v []byte) error {
 		return err
 	case nodeID == "" && key == InterfacesExtension:
 		_, err := parseInterfaces(v)
+		return err
+	case nodeID == "" && key == WebExtension && h.o.Web:
+		_, err := web.ParseTopLevel(v, h.o.WebRoots)
 		return err
 	case nodeID != "" && key == LazyExtension:
 		if b, err := cbor.NewDecoder(v).Bool(); err != nil || len(v) != 1 {

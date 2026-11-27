@@ -11,7 +11,6 @@ import (
 	"github.com/aiviarium/sparrow-rpc/go/cbor"
 	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
 	nd "github.com/aiviarium/sparrow-rpc/go/node"
-	"github.com/aiviarium/sparrow-rpc/go/schema"
 	"github.com/aiviarium/sparrow-rpc/go/session"
 	"github.com/aiviarium/sparrow-rpc/go/status"
 	"github.com/aiviarium/sparrow-rpc/go/wire"
@@ -256,21 +255,5 @@ func TestContextGraceCancelsNested(t *testing.T) {
 		mustCode(t, cause, status.PermissionDenied)
 	case <-time.After(5 * time.Second):
 		t.Fatal("the node's nested call was not cancelled")
-	}
-}
-
-func TestWebFacetStub(t *testing.T) {
-	f := newFixture(t, func(o *Options) { o.Web = true })
-	cli := f.client("websocket", bobToken)
-	fc := cli.Session().PeerFacet(schema.WebFacetName)
-	if fc == nil || fc.ID != schema.WebFacetID {
-		t.Fatal("no facet 1 sparrow.web")
-	}
-	if err := cli.Notify(tctx(t), schema.WebFacetName, "moduleRejected", []any{"acme.charts", "1.0.0", "hostApi"}); err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(50 * time.Millisecond)
-	if cli.Session().Err() != nil {
-		t.Fatal(cli.Session().Err())
 	}
 }

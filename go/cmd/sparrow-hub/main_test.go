@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -51,7 +52,15 @@ type hubProc struct {
 	cmd   *exec.Cmd
 	addrs Addrs
 	log   *bytes.Buffer
+	lw    *lockedWriter
 	done  chan error
+}
+
+// logText returns the hub's log so far.
+func (p *hubProc) logText() string {
+	p.lw.mu.lock()
+	defer p.lw.mu.unlock()
+	return p.log.String()
 }
 
 func writeConfig(t *testing.T, dir string) string {
@@ -80,7 +89,8 @@ func startHub(t *testing.T, dir string) *hubProc {
 	_ = os.Remove(addrFile)
 	cmd := exec.Command(bins["sparrow-hub"], "-config", cfg, "-addr-file", addrFile)
 	p := &hubProc{t: t, cmd: cmd, log: &bytes.Buffer{}, done: make(chan error, 1)}
-	cmd.Stderr = &lockedWriter{w: p.log}
+	p.lw = &lockedWriter{w: p.log}
+	cmd.Stderr = p.lw
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -98,15 +108,10 @@ type lockedWriter struct {
 	mu chanMutex
 }
 
-type chanMutex struct{ ch chan struct{} }
+type chanMutex struct{ m sync.Mutex }
 
-func (m *chanMutex) lock() {
-	if m.ch == nil {
-		m.ch = make(chan struct{}, 1)
-	}
-	m.ch <- struct{}{}
-}
-func (m *chanMutex) unlock() { <-m.ch }
+func (m *chanMutex) lock()   { m.m.Lock() }
+func (m *chanMutex) unlock() { m.m.Unlock() }
 
 func (l *lockedWriter) Write(b []byte) (int, error) {
 	l.mu.lock()
@@ -126,7 +131,7 @@ func (p *hubProc) stop() error {
 		return err
 	case <-time.After(20 * time.Second):
 		_ = p.cmd.Process.Kill()
-		p.t.Errorf("hub did not exit; log:\n%s", p.log.String())
+		p.t.Errorf("hub did not exit; log:\n%s", p.logText())
 		return fmt.Errorf("killed")
 	}
 }
@@ -156,7 +161,7 @@ func (p *hubProc) client(t *testing.T, url, token string, known *session.Config)
 		do.HTTPClient = pinnedClient(h)
 	}
 	if err := n.Dial(ctx, url, do); err != nil {
-		t.Fatalf("dial %s: %v\n%s", url, err, p.log.String())
+		t.Fatalf("dial %s: %v\n%s", url, err, p.logText())
 	}
 	return n
 }
@@ -213,7 +218,7 @@ func TestBinary(t *testing.T) {
 	// Graceful shutdown: a connected client gets GoAway(going_away).
 	live := p.client(t, p.addrs.WebTransport, "alice-token", nil)
 	if err := p.stop(); err != nil {
-		t.Fatalf("exit: %v\n%s", err, p.log.String())
+		t.Fatalf("exit: %v\n%s", err, p.logText())
 	}
 	s := live.Session()
 	if s != nil {

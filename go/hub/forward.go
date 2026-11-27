@@ -191,8 +191,7 @@ func (h *Hub) serveOwn(ctx context.Context, v *viewer, c *session.ServerCall, ac
 	switch lf.ref.Name {
 	case schema.WebFacetName:
 		if c.MethodID() == 0 {
-			in, _ := c.Input()
-			h.log.Warn("a client rejected a module", "module", in)
+			h.moduleRejected(actors[0].Principal, c)
 		}
 		return
 	}
@@ -200,6 +199,33 @@ func (h *Hub) serveOwn(ctx context.Context, v *viewer, c *session.ServerCall, ac
 	h.track(a)
 	defer h.untrack(a)
 	h.admH.ServeCall(ctx, c)
+}
+
+// moduleRejected handles the moduleRejected notification of facet 1
+// (9.4): [id, version, reason], logged and passed to
+// Options.OnModuleRejected. Anything else is dropped like a malformed
+// notification.
+func (h *Hub) moduleRejected(principal string, c *session.ServerCall) {
+	in, err := c.Input()
+	list, ok := in.([]any)
+	if err != nil || !ok || len(list) != 3 {
+		h.log.Debug("malformed moduleRejected dropped", "principal", principal)
+		return
+	}
+	var s [3]string
+	for i, v := range list {
+		if s[i], ok = v.(string); !ok {
+			h.log.Debug("malformed moduleRejected dropped", "principal", principal)
+			return
+		}
+	}
+	h.mu.Lock()
+	h.rejections++
+	h.mu.Unlock()
+	h.log.Warn("a client rejected a module", "principal", principal, "module", s[0], "version", s[1], "reason", s[2])
+	if f := h.o.OnModuleRejected; f != nil {
+		f(principal, s[0], s[1], s[2])
+	}
 }
 
 // forward forwards a call to the node that owns the facet (10.5).
@@ -362,8 +388,10 @@ func (h *Hub) PolicyChanged() {
 type Stats struct {
 	Sessions    int
 	ActiveCalls int
-	Contexts    int
-	Nodes       map[string]NodeStat
+	// ModulesRejected counts moduleRejected notifications (9.4).
+	ModulesRejected int
+	Contexts        int
+	Nodes           map[string]NodeStat
 }
 
 // NodeStat describes one node.
@@ -377,7 +405,7 @@ type NodeStat struct {
 func (h *Hub) Stats() Stats {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	st := Stats{Sessions: len(h.viewers), ActiveCalls: len(h.calls), Contexts: len(h.contexts), Nodes: map[string]NodeStat{}}
+	st := Stats{Sessions: len(h.viewers), ActiveCalls: len(h.calls), Contexts: len(h.contexts), ModulesRejected: h.rejections, Nodes: map[string]NodeStat{}}
 	for id, n := range h.nodes {
 		st.Nodes[id] = NodeStat{State: n.state.String(), Connected: n.link != nil, Listed: append([]uint64{}, n.listed...)}
 	}
