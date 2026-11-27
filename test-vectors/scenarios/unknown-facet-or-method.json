@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "spec_revision": "core rev377 (draft); hub-admin rev38 (draft)",
+  "spec_revision": "core rev394 (draft); hub-admin rev41 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "unknown-facet-or-method",
   "description": "A Request naming a facet or a method the callee does not have is answered with Error(unimplemented); the call ends and the stream is idle (7.1).",

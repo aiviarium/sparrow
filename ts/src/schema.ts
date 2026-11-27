@@ -820,6 +820,12 @@ function validateDefs(where: string, types: TypeDef[], services: Service[], sigi
     if (s.kind > SigilKind.symbol) throw err('bad_sigil_kind', `${where}: sigil ${s.id} has kind ${s.kind}`);
     ix.sigils.set(s.id, s);
   }
+  // Sigil names are unique within a facet or interface (6.5).
+  const sigilNames = new Set<string>();
+  for (const s of sigils) {
+    if (sigilNames.has(s.name)) throw err('duplicate_sigil_name', `${where}: sigil ${s.id} is named ${JSON.stringify(s.name)} like another`);
+    sigilNames.add(s.name);
+  }
   for (const s of services) {
     if (ix.services.has(s.id)) throw err('duplicate_id', `${where}: service ${s.id}`);
     if (isRet(Space.service, s.id)) throw err('retired_id_reused', `${where}: service ${s.id} is retired`);
@@ -1462,10 +1468,14 @@ export class FacetBuilder {
     return v;
   }
 
-  /** Defines an enum; each value becomes a kind-0 sigil named after it. Returns the TypeId and the sigils. */
+  /**
+   * Defines an enum; each value becomes a kind-0 sigil named `<name>.<value>`
+   * (core 6.5), so two enums can both have a value `none`. Returns the TypeId
+   * and the sigils, keyed by value name.
+   */
   enum(name: string, values: string[], opts: { id?: number; annotations?: Annotations } = {}): { type: number; values: Record<string, number> } {
     const sig: Record<string, number> = {};
-    const ids = values.map((v) => (sig[v] = this.sigil(v, SigilKind.enumValue)));
+    const ids = values.map((v) => (sig[v] = this.sigil(`${name}.${v}`, SigilKind.enumValue)));
     const id = this.typeId(opts.id);
     this.f.types.push({ kind: 'enum', id, name, values: ids, annotations: { ...(opts.annotations ?? {}) } });
     return { type: id, values: sig };

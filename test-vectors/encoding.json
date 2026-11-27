@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev377 (draft); hub-admin rev38 (draft)",
+  "spec_revision": "core rev394 (draft); hub-admin rev41 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "encoding",
   "vectors": [

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"time"
 	"unicode/utf8"
 )
 
@@ -423,6 +424,16 @@ type Time struct {
 // Unix returns an integer-seconds Time.
 func Unix(sec int64) Time { return Time{Sec: sec} }
 
+// FromTime returns t as a Time: integer seconds when t has no fraction of a
+// second, otherwise float seconds (which keep about a microsecond of
+// precision for present-day times).
+func FromTime(t time.Time) Time {
+	if t.Nanosecond() == 0 {
+		return Unix(t.Unix())
+	}
+	return Time{IsFloat: true, Float: float64(t.Unix()) + float64(t.Nanosecond())/1e9}
+}
+
 // Seconds returns the time in seconds as a float64.
 func (t Time) Seconds() float64 {
 	if t.IsFloat {
@@ -431,10 +442,60 @@ func (t Time) Seconds() float64 {
 	return float64(t.Sec)
 }
 
-// AppendTime appends tag 1 and the time's integer or float seconds.
+// UnixMilli returns the time in whole milliseconds: seconds*1000 (one
+// float64 multiplication) rounded to the nearest integer, halves up
+// (towards later times), exactly as JavaScript's Math.round, which the
+// TypeScript implementation uses to make a Date. ok is false for a float
+// that is not finite or a time outside the int64 range of milliseconds.
+func (t Time) UnixMilli() (ms int64, ok bool) {
+	if !t.IsFloat {
+		if t.Sec > math.MaxInt64/1000 || t.Sec < math.MinInt64/1000 {
+			return 0, false
+		}
+		return t.Sec * 1000, true
+	}
+	y := t.Float * 1000
+	m := math.Floor(y)
+	if y-m >= 0.5 { // exact for every float64; floor(y+0.5) is not
+		m++
+	}
+	if math.IsNaN(m) || m >= 1<<63 || m < -(1<<63) {
+		return 0, false
+	}
+	return int64(m), true
+}
+
+// Time returns the time as a time.Time (float seconds to the nanosecond
+// float64 holds). A float that is not finite gives the zero time.Time.
+func (t Time) Time() time.Time {
+	if !t.IsFloat {
+		return time.Unix(t.Sec, 0)
+	}
+	if math.IsNaN(t.Float) || math.IsInf(t.Float, 0) || math.Abs(t.Float) >= 1<<62 {
+		return time.Time{}
+	}
+	sec := math.Floor(t.Float)
+	ns := math.Round((t.Float - sec) * 1e9)
+	return time.Unix(int64(sec), int64(ns))
+}
+
+// integral reports whether f has no fraction and fits int64.
+func integral(f float64) (int64, bool) {
+	if f != math.Trunc(f) || f >= 1<<63 || f < -(1<<63) {
+		return 0, false
+	}
+	return int64(f), true
+}
+
+// AppendTime appends tag 1 and the time's seconds: an integer when there is
+// no fraction (core 6.3), also for a float Time such as 2.0, otherwise the
+// float in its shortest exact width.
 func AppendTime(dst []byte, t Time) []byte {
 	dst = AppendTag(dst, TagEpochTime)
 	if t.IsFloat {
+		if s, ok := integral(t.Float); ok {
+			return AppendInt(dst, s)
+		}
 		return AppendFloat(dst, t.Float)
 	}
 	return AppendInt(dst, t.Sec)

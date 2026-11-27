@@ -181,12 +181,14 @@ func (b *FacetBuilder) sigil(name string, kind uint64) uint64 {
 	return id
 }
 
-// Enum defines an enum; it returns the type and the sigil of each value.
+// Enum defines an enum; it returns the type and the sigil of each value,
+// keyed by the value name. Each value's sigil is named after the enum,
+// "<name>.<value>" (core 6.5), so two enums can both have a value "none".
 func (b *FacetBuilder) Enum(name string, values ...string) (schema.TypeRef, map[string]uint64) {
 	m := map[string]uint64{}
 	ids := make([]uint64, 0, len(values))
 	for _, v := range values {
-		s := b.sigil(v, schema.SigilEnumValue)
+		s := b.sigil(name+"."+v, schema.SigilEnumValue)
 		m[v] = s
 		ids = append(ids, s)
 	}

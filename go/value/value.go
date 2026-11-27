@@ -341,12 +341,12 @@ func (e *encoder) named(dst []byte, id uint64, v any, path string, depth int, in
 	case schema.TypeTimestamp:
 		switch x := v.(type) {
 		case cbor.Time:
+			if x.IsFloat && (math.IsNaN(x.Float) || math.IsInf(x.Float, 0)) {
+				return nil, verr(path, "timestamp %v is not finite", x.Float)
+			}
 			return cbor.AppendTime(dst, x), nil
 		case time.Time:
-			if x.Nanosecond() == 0 {
-				return cbor.AppendTime(dst, cbor.Unix(x.Unix())), nil
-			}
-			return cbor.AppendTime(dst, cbor.Time{IsFloat: true, Float: float64(x.UnixNano()) / 1e9}), nil
+			return cbor.AppendTime(dst, cbor.FromTime(x)), nil
 		}
 		return nil, verr(path, "timestamp needs cbor.Time, got %T", v)
 	case schema.TypeUUID:
@@ -632,6 +632,9 @@ func (c *Codec) decodeNamed(d *cbor.Decoder, id uint64, path string, depth int, 
 		return append([]byte{}, v...), wrap(err)
 	case schema.TypeTimestamp:
 		v, err := d.Time()
+		if err == nil && v.IsFloat && (math.IsNaN(v.Float) || math.IsInf(v.Float, 0)) {
+			return nil, verr(path, "timestamp %v is not finite", v.Float)
+		}
 		return v, wrap(err)
 	case schema.TypeUUID:
 		tag, err := d.Tag()

@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "spec_revision": "core rev377 (draft); hub-admin rev38 (draft)",
+  "spec_revision": "core rev394 (draft); hub-admin rev41 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "callee-error-while-streaming",
   "description": "The callee fails a client-stream call while input is still arriving. It forgets the call with its Error: it stops counting it and ignores the caller's later input, granting no more credit for it, but on this leased stream it notes when the caller's half finishes, since only then is the stream idle. An Item already on its way when the Error was sent is ignored; when the Error arrives the caller sends End next, with no further Item or Bytes, and the stream is idle (7.1, 7.6).",

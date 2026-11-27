@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "spec_revision": "core rev377 (draft); hub-admin rev38 (draft)",
+  "spec_revision": "core rev394 (draft); hub-admin rev41 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "handshake-optimistic-mismatch",
   "description": "Optimistic start with a stale cached schema hash. The server MUST NOT dispatch any call of the session: it sends Welcome with its current schema so the client can update its cache, then GoAway(schema_mismatch) with retry_after_ms 0, and closes. The client reconnects and resends its calls; none of them ran (5.3).",
@@ -9,7 +9,7 @@
     "schema": "schema/scenario-host",
     "session": "none",
     "client_cache": {
-      "schema_hash": "01f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3",
+      "schema_hash": "01ba32c1de96b5b9be8568df192b68d37ed45d7166bec6ea1f536b32c082eeacbc",
       "note": "the hash of schema/server-base, which this server does not serve"
     }
   },
@@ -32,14 +32,14 @@
           "v4.public.TEST-ONLY-TICKET"
         ],
         {
-          "$bytes": "01f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3"
+          "$bytes": "01ba32c1de96b5b9be8568df192b68d37ed45d7166bec6ea1f536b32c082eeacbc"
         },
         null,
         {},
         true
       ],
-      "diag": "[0, [1], {}, [\"bearer\", \"v4.public.TEST-ONLY-TICKET\"], h'01f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3', null, {}, true]",
-      "cbor": "88008101a08266626561726572781a76342e7075626c69632e544553542d4f4e4c592d5449434b4554582101f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3f6a0f5"
+      "diag": "[0, [1], {}, [\"bearer\", \"v4.public.TEST-ONLY-TICKET\"], h'01ba32c1de96b5b9be8568df192b68d37ed45d7166bec6ea1f536b32c082eeacbc', null, {}, true]",
+      "cbor": "88008101a08266626561726572781a76342e7075626c69632e544553542d4f4e4c592d5449434b4554582101ba32c1de96b5b9be8568df192b68d37ed45d7166bec6ea1f536b32c082eeacbcf6a0f5"
     },
     {
       "step": 2,
@@ -49,11 +49,11 @@
       "message": [
         2,
         {
-          "$bytes": "01f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3"
+          "$bytes": "01ba32c1de96b5b9be8568df192b68d37ed45d7166bec6ea1f536b32c082eeacbc"
         }
       ],
-      "diag": "[2, h'01f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3']",
-      "cbor": "8202582101f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3"
+      "diag": "[2, h'01ba32c1de96b5b9be8568df192b68d37ed45d7166bec6ea1f536b32c082eeacbc']",
+      "cbor": "8202582101ba32c1de96b5b9be8568df192b68d37ed45d7166bec6ea1f536b32c082eeacbc"
     },
     {
       "step": 3,

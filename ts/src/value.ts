@@ -9,11 +9,17 @@
 //   float32, float64    number (always encoded as a float; float32 is rounded)
 //   string              string
 //   bytes               Uint8Array
-//   timestamp           Date (encoders also take a number of epoch seconds)
+//   timestamp           Date, to the millisecond: float seconds are rounded to the nearest
+//                       millisecond, halves up (Math.round(seconds * 1000)), as Go's
+//                       cbor.Time.UnixMilli; NaN, infinities and times outside Date's range
+//                       (±8.64e12 s) are refused. Encoders also take a number (or bigint) of
+//                       epoch seconds; integer seconds are sent as an integer (core 6.3)
 //   uuid                string "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" (encoders also take 16 bytes)
 //   dynamic             { type: TypeId, value }   (encoders also take a type name)
 //   symbol              string; a sigil without a kind-2 name decodes as a number
-//   enum                the value's sigil name (string); an unknown value decodes as its sigil number
+//   enum                the value name (string): the sigil name without the `<enum name>.` prefix
+//                       (core 6.5); encoders also take the full sigil name or the sigil number;
+//                       an unknown value decodes as its sigil number
 //   struct, sparse      an object keyed by field name; absent optional fields are left out
 //   union               { variant: name, value }; an unknown variant decodes as
 //                       { variant: tag, value: <generic CBOR value> }
@@ -66,6 +72,9 @@ export interface UnionValue {
 }
 
 export const MAX_VALUE_DEPTH = 64;
+
+/** The largest magnitude of a Date's time value, in milliseconds (ECMA-262 21.4.1.1). */
+const MAX_DATE_MS = 8.64e15;
 
 const I64_MIN = -(1n << 63n);
 const I64_MAX = (1n << 63n) - 1n;
@@ -131,6 +140,14 @@ export class Codec {
 
   sigilName(id: number): string | undefined {
     return this.sigilNames.get(id);
+  }
+
+  /** The name an enum value is shown as: its sigil name without the `<enum name>.` prefix. */
+  private enumValueName(td: { name: string }, s: number): string | undefined {
+    const n = this.sigilNames.get(s);
+    if (n === undefined) return undefined;
+    const prefix = `${td.name}.`;
+    return n.length > prefix.length && n.startsWith(prefix) ? n.slice(prefix.length) : n;
   }
 
   /**
@@ -274,24 +291,25 @@ export class Codec {
         w.byteString(v);
         return;
       case T.timestamp: {
-        w.tag(TAG_EPOCH_TIME);
+        // Integer seconds when there is no fraction, else float seconds (core 6.3).
+        let s: number | bigint;
         if (v instanceof Date) {
           const ms = v.getTime();
           if (Number.isNaN(ms)) throw new ValueError(path, 'invalid Date');
-          if (ms % 1000 === 0) w.int(ms / 1000);
-          else w.float(ms / 1000);
-          return;
+          s = ms / 1000;
+        } else if ((typeof v === 'number' && Number.isFinite(v)) || typeof v === 'bigint') {
+          s = v;
+        } else throw new ValueError(path, `timestamp needs a Date or epoch seconds, got ${describe(v)}`);
+        let n = intOf(s);
+        if (n !== null && (n < I64_MIN || n > I64_MAX)) {
+          // As Go's cbor.AppendTime: an integral number beyond int64 goes as a float.
+          if (typeof s === 'bigint') throw new ValueError(path, `timestamp ${s} s is outside the 64-bit range`);
+          n = null;
         }
-        if (typeof v === 'number' && Number.isFinite(v)) {
-          if (Number.isInteger(v)) w.int(v);
-          else w.float(v);
-          return;
-        }
-        if (typeof v === 'bigint') {
-          w.int(v);
-          return;
-        }
-        throw new ValueError(path, `timestamp needs a Date or epoch seconds, got ${describe(v)}`);
+        w.tag(TAG_EPOCH_TIME);
+        if (n !== null) w.int(typeof s === 'number' && Number.isSafeInteger(s) ? s : n);
+        else w.float(s as number);
+        return;
       }
       case T.uuid: {
         let b: Uint8Array;
@@ -338,7 +356,10 @@ export class Codec {
       case 'enum': {
         let s: number | undefined;
         if (typeof v === 'number') s = td.values.includes(v) ? v : undefined;
-        else if (typeof v === 'string') s = td.values.find((x) => this.sigilNames.get(x) === v);
+        else if (typeof v === 'string') {
+          s = td.values.find((x) => this.sigilNames.get(x) === v); // the full sigil name
+          if (s === undefined) s = td.values.find((x) => this.enumValueName(td, x) === v);
+        }
         if (s === undefined) throw new ValueError(path, `${describe(v)} is not a value of enum ${td.name}`);
         w.uint(s);
         return;
@@ -506,7 +527,10 @@ export class Codec {
         const tag = this.wrap(path, () => r.tag());
         if (tag !== TAG_EPOCH_TIME) throw new ValueError(path, 'timestamp needs tag 1');
         const s = this.wrap(path, () => r.float());
-        return new Date(s * 1000);
+        // new Date(s * 1000) would truncate: 1.001 s is 1000.9999999999999 ms.
+        const ms = Math.round(s * 1000);
+        if (!Number.isFinite(ms) || Math.abs(ms) > MAX_DATE_MS) throw new ValueError(path, `timestamp ${s} is not finite or outside the range of Date`);
+        return new Date(ms === 0 ? 0 : ms);
       }
       case T.uuid: {
         const tag = this.wrap(path, () => r.tag());
@@ -540,7 +564,7 @@ export class Codec {
         return this.dec(r, td.target, path, depth + 1, inDyn);
       case 'enum': {
         const s = this.wrap(path, () => r.uint());
-        if (typeof s === 'number' && td.values.includes(s)) return this.sigilNames.get(s) ?? s;
+        if (typeof s === 'number' && td.values.includes(s)) return this.enumValueName(td, s) ?? s;
         return s;
       }
       case 'union': {

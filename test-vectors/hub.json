@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev377 (draft); hub-admin rev38 (draft)",
+  "spec_revision": "core rev394 (draft); hub-admin rev41 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "hub",
   "vectors": [
@@ -13,7 +13,7 @@
       "facet_map": {
         "hub_facet_id": 17,
         "node_facet_id": 16,
-        "facet_hash": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
+        "facet_hash": "018c5d4c298597d22a8aff64f1e55c75ffe3040cc902ef6b9fd0e5427399e02799"
       },
       "elapsed_ms": 50,
       "caller_stream": "leased",

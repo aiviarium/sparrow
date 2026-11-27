@@ -587,7 +587,7 @@ func runSuite(ctx context.Context, s *session.Session) ([]string, error) {
 				0: "héllo ✓", 1: int64(-42), 2: uint64(4294967296), 3: 1.5, 4: true, 5: []byte{0, 1, 2, 255},
 				6: cbor.Time{IsFloat: true, Float: 1795780800.5}, 7: uuid, 8: []any{"a", "b"},
 				9:  cbor.Map{{Key: "alice", Value: int64(3)}, {Key: "bob", Value: int64(-1)}},
-				10: p.sigil("green"),
+				10: p.sigil("Color.green"),
 				11: value.Union{Tag: 1, Value: value.Struct{0: int64(1), 1: int64(2), 2: "p"}},
 				12: value.Struct{0: int64(-7), 1: int64(9007199254740991)},
 				13: value.Struct{1: "q"},

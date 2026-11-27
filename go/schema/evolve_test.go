@@ -150,7 +150,7 @@ func iface() *Interface {
 		Services: []Service{{ID: 0, Name: "Renderer", Methods: []Method{
 			{ID: 0, Name: "render", Input: Named(64), Output: Named(TypeBytes), Errors: []uint64{66, 3}, Flags: MethodIdempotent},
 		}}},
-		Sigils: []Sigil{{ID: 64, Name: "line"}, {ID: 65, Name: "bar"}, {ID: 66, Name: "unsupported", Kind: SigilError}},
+		Sigils: []Sigil{{ID: 64, Name: "Kind.line"}, {ID: 65, Name: "Kind.bar"}, {ID: 66, Name: "unsupported", Kind: SigilError}},
 	}
 }
 

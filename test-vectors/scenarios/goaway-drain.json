@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "spec_revision": "core rev377 (draft); hub-admin rev38 (draft)",
+  "spec_revision": "core rev394 (draft); hub-admin rev41 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "goaway-drain",
   "description": "A graceful drain. The server sends GoAway(going_away) with retry_after_ms; neither peer opens new calls. A Request that crosses the GoAway is answered with Error(going_away). Running calls continue until they finish (or a grace period, RECOMMENDED 30 s, ends), then the transport is closed (5.6).",

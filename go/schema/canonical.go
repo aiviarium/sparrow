@@ -55,6 +55,7 @@ const (
 	CodeImplementsMismatch    Code = "implements_mismatch"
 	CodeReservedTypeID        Code = "reserved_type_id"
 	CodeInvalidNotification   Code = "invalid_notification"
+	CodeDuplicateSigilName    Code = "duplicate_sigil_name"
 )
 
 func errorf(code Code, f string, args ...any) *Error {

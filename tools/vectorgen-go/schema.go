@@ -428,6 +428,16 @@ func validateDefs(where string, types, services, sigils, ret []any) (*defs, *del
 		}
 		d.sigils[id] = num(sd[2])
 	}
+	// Sigil names are unique within a facet or interface (6.5).
+	sigilNames := map[string]bool{}
+	for _, s := range sigils {
+		sd := s.([]any)
+		n := sd[1].(string)
+		if sigilNames[n] {
+			return nil, derr("duplicate_sigil_name", "%s: sigil %d is named %q like another", where, num(sd[0]), n)
+		}
+		sigilNames[n] = true
+	}
 	for _, sv := range services {
 		s := sv.([]any)
 		sid := num(s[0])

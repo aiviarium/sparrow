@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"strings"
 	"testing"
+	"time"
 
 	fx "github.com/fxamacker/cbor/v2"
 )
@@ -438,4 +439,70 @@ func FuzzValidate(f *testing.F) {
 			t.Fatal("NoFloats accepted a float")
 		}
 	})
+}
+
+// timestampMillis is shared with the TypeScript tests
+// (ts/test/value.test.ts): seconds as float64, and the millisecond both
+// implementations round them to (seconds*1000, nearest, halves up).
+var timestampMillis = []struct {
+	sec float64
+	ms  int64
+}{
+	{1.001, 1001}, // 1000.9999999999999 ms: truncating would give 1000
+	{1.0015, 1002},
+	{-1.5005, -1500},
+	{0.0005, 1},
+	{-0.0005, 0},
+	{-1.5, -1500},
+	{-0.0015, -1},
+	{0.00049999999999999994, 0}, // floor(y+0.5) would give 1
+	{1e-9, 0},
+	{-1e-9, 0},
+	{1795780800.5, 1795780800500},
+	{1795780800.0015, 1795780800002},
+}
+
+func TestTime(t *testing.T) {
+	for _, c := range timestampMillis {
+		if ms, ok := (Time{IsFloat: true, Float: c.sec}).UnixMilli(); !ok || ms != c.ms {
+			t.Errorf("UnixMilli(%v) = %d, %v; want %d", c.sec, ms, ok, c.ms)
+		}
+	}
+	if ms, ok := Unix(-3).UnixMilli(); !ok || ms != -3000 {
+		t.Errorf("Unix(-3).UnixMilli() = %d, %v", ms, ok)
+	}
+	for _, bad := range []Time{{IsFloat: true, Float: math.NaN()}, {IsFloat: true, Float: math.Inf(-1)}, {IsFloat: true, Float: 1e300}, Unix(math.MaxInt64)} {
+		if _, ok := bad.UnixMilli(); ok {
+			t.Errorf("UnixMilli(%+v) ok", bad)
+		}
+	}
+	// Integer seconds whenever there is no fraction (core 6.3).
+	enc := []struct {
+		t    Time
+		want string
+	}{
+		{Unix(0), "c100"},
+		{Unix(-1), "c120"},
+		{Time{IsFloat: true, Float: 2}, "c102"},
+		{Time{IsFloat: true, Float: -2}, "c121"},
+		{Time{IsFloat: true, Float: math.Copysign(0, -1)}, "c100"},
+		{Time{IsFloat: true, Float: 1.5}, "c1f93e00"},
+		{Time{IsFloat: true, Float: -1.5}, "c1f9be00"},
+		{FromTime(time.Unix(1795780800, 0)), "c11a6b0970c0"},
+		{FromTime(time.Unix(-2, 500_000_000)), "c1f9be00"}, // -1.5 s
+		{FromTime(time.UnixMilli(1795780800500)), "c1fb41dac25c30200000"},
+	}
+	for _, c := range enc {
+		if got := hex.EncodeToString(AppendTime(nil, c.t)); got != c.want {
+			t.Errorf("AppendTime(%+v) = %s, want %s", c.t, got, c.want)
+		}
+	}
+	// FromTime and Time keep the time to well under a microsecond today.
+	now := time.Unix(1795780800, 123_456_000)
+	if d := FromTime(now).Time().Sub(now); d > time.Microsecond || d < -time.Microsecond {
+		t.Errorf("round trip of %v is off by %v", now, d)
+	}
+	if got := (Time{IsFloat: true, Float: -1.5}).Time(); !got.Equal(time.Unix(-2, 500_000_000)) {
+		t.Errorf("Time(-1.5) = %v", got)
+	}
 }

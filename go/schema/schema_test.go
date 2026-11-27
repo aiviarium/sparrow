@@ -114,6 +114,8 @@ func TestValidateFacet(t *testing.T) {
 		{"error not kind 1", func(f *Facet) { f.Services[0].Methods[1].Errors = []uint64{70} }, CodeDanglingReference},
 		{"error in reserved range", func(f *Facet) { f.Services[0].Methods[1].Errors = []uint64{40} }, CodeDanglingReference},
 		{"bad sigil kind", func(f *Facet) { f.Sigils[3].Kind = 3 }, CodeBadSigilKind},
+		{"duplicate sigil name", func(f *Facet) { f.Sigils[3].Name = "Color.red" }, CodeDuplicateSigilName},
+		{"duplicate sigil name across kinds", func(f *Facet) { f.Sigils[0].Name = "note.updated" }, CodeDuplicateSigilName},
 		{"stream in a field", func(f *Facet) { f.Types[0].Fields[1].Type = Stream(Named(6)) }, CodeStreamMisplaced},
 		{"stream in an alias", func(f *Facet) { f.Types[6].Target = Stream(Named(6)) }, CodeStreamMisplaced},
 		{"stream of stream", func(f *Facet) {
@@ -148,6 +150,12 @@ func TestValidateFacet(t *testing.T) {
 		{"peer-prefixed facet name", func(f *Facet) { f.Name = "hub-b/acme.notes" }, ""},
 		{"tombstone may reference anything", func(f *Facet) { f.Types[0].Fields[3].Type = Stream(Named(500)) }, ""},
 		{"End flags set without need", func(f *Facet) { f.Services[0].Methods[0].Flags |= MethodInputEnd | MethodOutputEnd }, ""},
+		{"two enums with a value none", func(f *Facet) {
+			f.Types = append(f.Types,
+				TypeDef{Kind: KindEnum, ID: 73, Name: "Mode", Values: []uint64{90}},
+				TypeDef{Kind: KindEnum, ID: 74, Name: "Level", Values: []uint64{91}})
+			f.Sigils = append(f.Sigils, Sigil{ID: 90, Name: "Mode.none"}, Sigil{ID: 91, Name: "Level.none"})
+		}, ""},
 		{"core error code listed", func(f *Facet) { f.Services[0].Methods[0].Errors = []uint64{5, 31} }, ""},
 		{"recursive types", func(f *Facet) {
 			f.Types = append(f.Types, TypeDef{Kind: KindStruct, ID: 73, Name: "Tree", Fields: []Field{

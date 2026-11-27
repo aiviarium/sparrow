@@ -181,6 +181,12 @@ function validateDefs(where, types, services, sigils, retired) {
     if (ret.has(`3:${s[0]}`)) throw new DeltaError('retired_id_reused', `${where} sigil ${s[0]}`);
     d.sigils.set(s[0], s[2]);
   }
+  // Sigil names are unique within a facet or interface (6.5).
+  const sigilNames = new Set();
+  for (const s of sigils) {
+    if (sigilNames.has(s[1])) throw new DeltaError('duplicate_sigil_name', `${where} sigil ${s[0]} ${JSON.stringify(s[1])}`);
+    sigilNames.add(s[1]);
+  }
   for (const s of services) {
     if (d.services.has(s[0])) throw new DeltaError('duplicate_id', `${where} service ${s[0]}`);
     if (ret.has(`1:${s[0]}`)) throw new DeltaError('retired_id_reused', `${where} service ${s[0]}`);

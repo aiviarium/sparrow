@@ -209,7 +209,7 @@ func chartsFacet(o chartsOpts) []any {
 		renderMethods = append(renderMethods, method(2, "drawPng", 64, tBytes, list(66), fIdempotent, nil))
 	}
 	services := list(service(0, "ChartRenderer", renderMethods, ann{"auth.hint": "public"}))
-	sigils := list(sigil(66, "chart.unsupported", 1, ann{"http.status": 422}), sigil(64, "line", 0, nil), sigil(65, "bar", 0, nil))
+	sigils := list(sigil(66, "chart.unsupported", 1, ann{"http.status": 422}), sigil(64, "Kind.line", 0, nil), sigil(65, "Kind.bar", 0, nil))
 	var an ann
 	if !o.noExtras {
 		themeAnn := ann(nil)
@@ -376,6 +376,14 @@ func schemaVectors() O {
 	}
 	add(o("name", "interface/invalid-not-closed", "description", "An interface with a type its services never reach. An interface contains exactly the types and sigils its services reach (section 6.5).",
 		"spec", "6.5", "type", "interface", "input", tj(badIface), "expected_valid", false, "expected_error", "interface_not_closed"))
+
+	dupIface := rendererIface()
+	dupIface[4].([]any)[0].([]any)[1] = "ChartKind.line"
+	if e := validateIface(dupIface); e == nil || e.Code != "duplicate_sigil_name" {
+		panic(fmt.Sprint("duplicate sigil name interface: ", e))
+	}
+	add(o("name", "interface/invalid-duplicate-sigil-name", "description", "acme.charts.Renderer with its error sigil 66 renamed 'ChartKind.line', the name of enum value sigil 64. Sigil names MUST be unique within a facet or interface (6.5).",
+		"spec", "6.5", "type", "interface", "input", tj(dupIface), "expected_valid", false, "expected_error", "duplicate_sigil_name"))
 
 	// References inside tombstones do not count towards reachability (6.5).
 	withTombstone := func(defineLegacy bool) []any {
@@ -663,6 +671,11 @@ func schemaVectors() O {
 		{"schema/delta-invalid-reserved-type-id", "Replace facet 16 with 1.2.0 that adds a struct whose field has type 12. TypeIds 12-31 are reserved for built-ins of later core versions, so a schema that uses them is invalid (6.4).",
 			"schema/delta-1-replace-facet", "reserved_type_id", r.a, []any{[]any{0, mod(func(p []any) {
 				p[pTypes] = append(p[pTypes].([]any), structDef(76, "Future", list(field(0, "x", 12, 0, nil)), 0, nil))
+			})}}},
+		{"schema/delta-invalid-duplicate-sigil-name", "Replace facet 16 with 1.2.0 that adds an enum Shade (type 76) whose one value, sigil 84, is named 'Color.red' like sigil 70. Sigil names MUST be unique within a facet; an enum value's sigil is named after its enum, so Shade's red would be 'Shade.red' (6.5).",
+			"schema/delta-1-replace-facet", "duplicate_sigil_name", r.a, []any{[]any{0, mod(func(p []any) {
+				p[pTypes] = append(p[pTypes].([]any), enumDef(76, "Shade", list(84), nil))
+				p[pSigils] = append(p[pSigils].([]any), sigil(84, "Color.red", 0, nil))
 			})}}},
 		{"schema/delta-invalid-readd-renamed", "Facet 17 was removed in epoch 2. Bringing ID 17 back with a different name ('acme.maps') is not allowed (section 6.1).",
 			"schema/delta-2-new-major", "removed_facet_mismatch", r.b, []any{[]any{0, chartsFacet(chartsOpts{id: facetCharts, name: "acme.maps", version: "1.0.0", noExtras: true})}}},

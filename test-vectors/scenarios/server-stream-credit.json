@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "spec_revision": "core rev377 (draft); hub-admin rev38 (draft)",
+  "spec_revision": "core rev394 (draft); hub-admin rev41 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "server-stream-credit",
   "description": "A server stream with initial credit 10 for the callee's half, set by the caller with metadata key credit (35). Each Item [18, 2, n] counts 4 bytes. The server sends while its credit is above zero, so the third Item takes it to -2 and the server holds the rest back until the client grants 8 more. End counts zero bytes and is never held back (7.4).",

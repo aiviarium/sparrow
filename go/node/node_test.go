@@ -222,6 +222,30 @@ func TestBuilderFlags(t *testing.T) {
 	}
 }
 
+// TestBuilderEnumSigilNames: an enum value's sigil is named
+// "<enum>.<value>" (core 6.5), so two enums can share a value name, and
+// sigil names stay unique within the facet.
+func TestBuilderEnumSigilNames(t *testing.T) {
+	t.Parallel()
+	b := NewFacet("x", "1.0.0")
+	_, mode := b.Enum("Mode", "none", "fast")
+	_, level := b.Enum("Level", "none")
+	f := b.MustBuild()
+	names := map[uint64]string{}
+	for _, s := range f.Def.Sigils {
+		names[s.ID] = s.Name
+	}
+	if names[mode["none"]] != "Mode.none" || names[mode["fast"]] != "Mode.fast" || names[level["none"]] != "Level.none" {
+		t.Fatalf("sigil names %v", names)
+	}
+	dup := NewFacet("x", "1.0.0")
+	dup.ErrorCode("conflict")
+	dup.Symbol("conflict")
+	if _, err := dup.Build(); err == nil {
+		t.Fatal("two sigils named conflict accepted")
+	}
+}
+
 // TestRunDialReconnects: after the hub drains a session, the node dials
 // again (after retry_after_ms) and republishes its facets.
 func TestRunDialReconnects(t *testing.T) {

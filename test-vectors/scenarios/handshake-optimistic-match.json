@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "spec_revision": "core rev377 (draft); hub-admin rev38 (draft)",
+  "spec_revision": "core rev394 (draft); hub-admin rev41 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "handshake-optimistic-match",
   "description": "Optimistic start (5.3) with a cached schema the server still serves: Hello, Ready and a call to an idempotent method go out in one flight on the shared lane, before Welcome. The server's schema matches, so it dispatches the call after Ready.",
