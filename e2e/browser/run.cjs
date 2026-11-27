@@ -10,6 +10,10 @@
 // certificate is accepted for fetch and WebSocket with ignoreHTTPSErrors;
 // WebTransport pins it with serverCertificateHashes, which needs an ECDSA
 // certificate valid for at most 14 days.
+//
+// Playwright is found with require('playwright') (NODE_PATH may point at a
+// global install), its browser as Playwright installs it
+// (PLAYWRIGHT_BROWSERS_PATH), or the binary SPARROW_CHROMIUM names.
 const { chromium } = require('playwright');
 const fs = require('fs');
 const http = require('http');
@@ -31,7 +35,10 @@ async function main() {
     console.error('usage: node run.cjs <web base> <token>');
     process.exit(2);
   }
-  const browser = await chromium.launch();
+  // SPARROW_CHROMIUM names a Chromium or Chrome binary to use instead of
+  // Playwright's own (for example a CI runner's google-chrome).
+  const executablePath = process.env.SPARROW_CHROMIUM || undefined;
+  const browser = await chromium.launch({ executablePath });
   const result = { browser: browser.version() };
   try {
     const ctx = await browser.newContext({ ignoreHTTPSErrors: true });

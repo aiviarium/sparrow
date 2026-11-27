@@ -1,0 +1,117 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    name: go (vet, gofmt, race tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: go
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+      - name: go vet
+        run: go vet ./...
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "gofmt -l lists:"; echo "$unformatted"; exit 1
+          fi
+      - name: go test -race
+        run: go test -race -count=1 ./...
+
+  vectors:
+    name: vectors (regenerate, no drift, verify-js)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/vectorgen-go/go.mod
+          cache-dependency-path: tools/vectorgen-go/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tools/verify-js/package-lock.json
+      - name: Regenerate vectors
+        working-directory: tools/vectorgen-go
+        run: |
+          go vet ./...
+          go run . -out ../../test-vectors
+      - name: Check the committed vectors are current
+        run: git diff --exit-code -- test-vectors
+      - name: Verify with the independent JS verifier
+        working-directory: tools/verify-js
+        run: |
+          npm ci
+          npm run -s verify
+
+  fuzz:
+    name: fuzz (${{ matrix.pkg }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg: [admin, cbor, hub, names, schema, session, value, web, websign, wire]
+    defaults:
+      run:
+        working-directory: go
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+      - name: Fuzz every target of the package for 15 s
+        # go test -fuzz takes one target per run.
+        run: |
+          set -eu
+          targets=$(go test -list '^Fuzz' ./${{ matrix.pkg }} | grep '^Fuzz' || true)
+          [ -n "$targets" ] || { echo "no fuzz targets in ${{ matrix.pkg }}"; exit 1; }
+          for t in $targets; do
+            echo "::group::$t"
+            go test ./${{ matrix.pkg }} -run '^$' -fuzz "^$t\$" -fuzztime 15s
+            echo "::endgroup::"
+          done
+      - name: Keep the failing inputs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashers-${{ matrix.pkg }}
+          path: go/${{ matrix.pkg }}/testdata/fuzz
+          if-no-files-found: ignore
+
+  browser:
+    name: browser (headless Chromium, Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright and its Chromium
+        run: |
+          npm install -g playwright@1.63.0
+          echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+          npx -y playwright@1.63.0 install --with-deps chromium
+      - name: TestBrowser
+        working-directory: go
+        env:
+          SPARROW_BROWSER: '1'
+        run: go test -count=1 -run TestBrowser -v ./cmd/sparrow-hub
