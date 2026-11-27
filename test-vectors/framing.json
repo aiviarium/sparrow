@@ -1,0 +1,372 @@
+{
+  "spec_revision": "core rev108 (2026-11-26 draft)",
+  "generator": "tools/vectorgen-go",
+  "area": "framing",
+  "vectors": [
+    {
+      "name": "varint/0",
+      "description": "QUIC variable-length integer, shortest form.",
+      "spec": "4.1 (RFC 9000, section 16)",
+      "type": "quic_varint",
+      "value": 0,
+      "encoded": "00"
+    },
+    {
+      "name": "varint/37",
+      "description": "QUIC variable-length integer, shortest form.",
+      "spec": "4.1 (RFC 9000, section 16)",
+      "type": "quic_varint",
+      "value": 37,
+      "encoded": "25"
+    },
+    {
+      "name": "varint/63",
+      "description": "QUIC variable-length integer, shortest form.",
+      "spec": "4.1 (RFC 9000, section 16)",
+      "type": "quic_varint",
+      "value": 63,
+      "encoded": "3f"
+    },
+    {
+      "name": "varint/64",
+      "description": "QUIC variable-length integer, shortest form.",
+      "spec": "4.1 (RFC 9000, section 16)",
+      "type": "quic_varint",
+      "value": 64,
+      "encoded": "4040"
+    },
+    {
+      "name": "varint/15293",
+      "description": "QUIC variable-length integer, shortest form.",
+      "spec": "4.1 (RFC 9000, section 16)",
+      "type": "quic_varint",
+      "value": 15293,
+      "encoded": "7bbd"
+    },
+    {
+      "name": "varint/16383",
+      "description": "QUIC variable-length integer, shortest form.",
+      "spec": "4.1 (RFC 9000, section 16)",
+      "type": "quic_varint",
+      "value": 16383,
+      "encoded": "7fff"
+    },
+    {
+      "name": "varint/16384",
+      "description": "QUIC variable-length integer, shortest form.",
+      "spec": "4.1 (RFC 9000, section 16)",
+      "type": "quic_varint",
+      "value": 16384,
+      "encoded": "80004000"
+    },
+    {
+      "name": "varint/494878333",
+      "description": "QUIC variable-length integer, shortest form.",
+      "spec": "4.1 (RFC 9000, section 16)",
+      "type": "quic_varint",
+      "value": 494878333,
+      "encoded": "9d7f3e7d"
+    },
+    {
+      "name": "varint/1073741823",
+      "description": "QUIC variable-length integer, shortest form.",
+      "spec": "4.1 (RFC 9000, section 16)",
+      "type": "quic_varint",
+      "value": 1073741823,
+      "encoded": "bfffffff"
+    },
+    {
+      "name": "varint/1073741824",
+      "description": "QUIC variable-length integer, shortest form.",
+      "spec": "4.1 (RFC 9000, section 16)",
+      "type": "quic_varint",
+      "value": 1073741824,
+      "encoded": "c000000040000000"
+    },
+    {
+      "name": "varint/151288809941952652",
+      "description": "QUIC variable-length integer, shortest form.",
+      "spec": "4.1 (RFC 9000, section 16)",
+      "type": "quic_varint",
+      "value": {
+        "$int": "151288809941952652"
+      },
+      "encoded": "c2197c5eff14e88c"
+    },
+    {
+      "name": "varint/4611686018427387903",
+      "description": "QUIC variable-length integer, shortest form.",
+      "spec": "4.1 (RFC 9000, section 16)",
+      "type": "quic_varint",
+      "value": {
+        "$int": "4611686018427387903"
+      },
+      "encoded": "ffffffffffffffff"
+    },
+    {
+      "name": "varint/37-non-minimal",
+      "description": "Two-byte encoding of 37 (RFC 9000, section A.1). Receivers decode it as 37; senders use the shortest form.",
+      "spec": "4.1 (RFC 9000, section 16)",
+      "type": "quic_varint",
+      "decode_only": true,
+      "value": 37,
+      "encoded": "4025"
+    },
+    {
+      "name": "stream-header/table",
+      "description": "Meaning of the first byte the opener of a stream sends. The other direction has no header.",
+      "spec": "4.1",
+      "type": "stream_header_table",
+      "entries": [
+        {
+          "byte": "00",
+          "shared_lane_open": false,
+          "opener": "client",
+          "result": "shared_lane",
+          "note": "first shared lane"
+        },
+        {
+          "byte": "00",
+          "shared_lane_open": true,
+          "opener": "client",
+          "result": "protocol_error",
+          "note": "a second shared lane"
+        },
+        {
+          "byte": "00",
+          "shared_lane_open": false,
+          "opener": "server",
+          "result": "protocol_error",
+          "note": "shared lane opened by the server"
+        },
+        {
+          "byte": "01",
+          "shared_lane_open": false,
+          "opener": "client",
+          "result": "leased_stream"
+        },
+        {
+          "byte": "01",
+          "shared_lane_open": false,
+          "opener": "server",
+          "result": "leased_stream"
+        },
+        {
+          "byte": "02",
+          "shared_lane_open": false,
+          "opener": "client",
+          "result": "protocol_error"
+        },
+        {
+          "byte": "3f",
+          "shared_lane_open": false,
+          "opener": "client",
+          "result": "protocol_error"
+        },
+        {
+          "byte": "40",
+          "shared_lane_open": false,
+          "opener": "client",
+          "result": "profile_reserved"
+        },
+        {
+          "byte": "7f",
+          "shared_lane_open": false,
+          "opener": "server",
+          "result": "profile_reserved"
+        },
+        {
+          "byte": "80",
+          "shared_lane_open": false,
+          "opener": "client",
+          "result": "protocol_error"
+        },
+        {
+          "byte": "ff",
+          "shared_lane_open": false,
+          "opener": "client",
+          "result": "protocol_error"
+        }
+      ]
+    },
+    {
+      "name": "envelope/kind-ranges",
+      "description": "What a receiver does with a message whose kind it does not know. Kinds 0-9 and 16-25 are defined by this revision; every other kind in 0-47 is unknown.",
+      "spec": "3.3",
+      "type": "kind_range_table",
+      "entries": [
+        {
+          "kind": 0,
+          "owner": "core",
+          "if_unknown": "close_protocol_error"
+        },
+        {
+          "kind": 25,
+          "owner": "core",
+          "if_unknown": "close_protocol_error"
+        },
+        {
+          "kind": 26,
+          "owner": "core",
+          "if_unknown": "close_protocol_error"
+        },
+        {
+          "kind": 47,
+          "owner": "core",
+          "if_unknown": "close_protocol_error"
+        },
+        {
+          "kind": 48,
+          "owner": "core",
+          "if_unknown": "ignore"
+        },
+        {
+          "kind": 63,
+          "owner": "core",
+          "if_unknown": "ignore"
+        },
+        {
+          "kind": 64,
+          "owner": "profile",
+          "if_unknown": "close_protocol_error"
+        },
+        {
+          "kind": 111,
+          "owner": "profile",
+          "if_unknown": "close_protocol_error"
+        },
+        {
+          "kind": 112,
+          "owner": "profile",
+          "if_unknown": "ignore"
+        },
+        {
+          "kind": 127,
+          "owner": "profile",
+          "if_unknown": "ignore"
+        },
+        {
+          "kind": 128,
+          "owner": "invalid",
+          "if_unknown": "close_protocol_error"
+        },
+        {
+          "kind": 1000,
+          "owner": "invalid",
+          "if_unknown": "close_protocol_error"
+        }
+      ]
+    },
+    {
+      "name": "example-7.7/request",
+      "description": "Section 7.7 example: unary Request, call ID 2, method 1042 (sparrow.ui.Panels.open), empty metadata, input struct [\"settings\", true]. Confirms the spec bytes exactly.",
+      "spec": "7.7",
+      "type": "message",
+      "kind": 16,
+      "kind_name": "Request",
+      "message": [
+        16,
+        2,
+        1042,
+        {},
+        [
+          "settings",
+          true
+        ]
+      ],
+      "diag": "[16, 2, 1042, {}, [\"settings\", true]]",
+      "cbor": "851002190412a0826873657474696e6773f5",
+      "length": 18,
+      "framed": "12851002190412a0826873657474696e6773f5",
+      "spec_framed": "12851002190412a0826873657474696e6773f5",
+      "matches_spec": true
+    },
+    {
+      "name": "example-7.7/response",
+      "description": "Section 7.7 example: Response [17, 2, null] on the same leased stream. Confirms the spec bytes exactly.",
+      "spec": "7.7",
+      "type": "message",
+      "kind": 17,
+      "kind_name": "Response",
+      "message": [
+        17,
+        2,
+        null
+      ],
+      "diag": "[17, 2, null]",
+      "cbor": "831102f6",
+      "length": 4,
+      "framed": "04831102f6",
+      "spec_framed": "04831102f6",
+      "matches_spec": true
+    },
+    {
+      "name": "framing/two-byte-prefix",
+      "description": "Item whose CBOR is longer than 63 bytes, so the length prefix takes two bytes.",
+      "spec": "4.1, 7.2",
+      "type": "message",
+      "kind": 18,
+      "kind_name": "Item",
+      "message": [
+        18,
+        6,
+        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      ],
+      "diag": "[18, 6, \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"]",
+      "cbor": "831206786478787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878",
+      "length": 105,
+      "framed": "4069831206786478787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878"
+    },
+    {
+      "name": "stream/shared-lane-open",
+      "description": "First bytes the client writes on the shared lane: header 0x00, then the length-prefixed Hello (handshake vector hello/basic).",
+      "spec": "4.1, 5.2",
+      "type": "stream",
+      "parts": [
+        {
+          "what": "stream header (shared lane)",
+          "hex": "00"
+        },
+        {
+          "what": "length prefix",
+          "hex": "2d"
+        },
+        {
+          "what": "Hello",
+          "hex": "88008101a08266626561726572781a76342e7075626c69632e544553542d4f4e4c592d5449434b4554f6f6a0f4",
+          "ref": "hello/basic"
+        }
+      ],
+      "bytes": "002d88008101a08266626561726572781a76342e7075626c69632e544553542d4f4e4c592d5449434b4554f6f6a0f4"
+    },
+    {
+      "name": "stream/leased-open-7.7",
+      "description": "The caller's direction of the leased stream in section 7.7 when it is newly opened: header 0x01, then the framed Request. The callee's direction carries only the framed Response (no header).",
+      "spec": "4.1, 7.7",
+      "type": "stream",
+      "parts": [
+        {
+          "what": "stream header (leased stream)",
+          "hex": "01"
+        },
+        {
+          "what": "framed Request",
+          "hex": "12851002190412a0826873657474696e6773f5",
+          "ref": "example-7.7/request"
+        }
+      ],
+      "bytes": "0112851002190412a0826873657474696e6773f5",
+      "reverse_bytes": "04831102f6"
+    },
+    {
+      "name": "websocket/7.7",
+      "description": "WebSocket binding: each binary WebSocket message carries exactly one Sparrow message, with no length prefix and no stream header.",
+      "spec": "4.6",
+      "type": "websocket",
+      "ws_messages": [
+        "851002190412a0826873657474696e6773f5",
+        "831102f6"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,970 @@
+{
+  "spec_revision": "core rev108 (2026-11-26 draft)",
+  "generator": "tools/vectorgen-go",
+  "area": "calls",
+  "vectors": [
+    {
+      "name": "request/get-with-metadata",
+      "description": "Unary Request (call 2) to acme.notes.Notes.get (100) with core metadata keys deadline (32) = 5000 ms, trace (33) = binary traceparent, credit (35) = 256 KiB, plus an application text key. Input is a NoteId (uuid, tag 37).",
+      "spec": "7.2",
+      "type": "message",
+      "kind": 16,
+      "kind_name": "Request",
+      "message": [
+        16,
+        2,
+        100,
+        {
+          "$map": [
+            [
+              32,
+              5000
+            ],
+            [
+              33,
+              {
+                "$bytes": "004bf92f3577b34da6a3ce929d0e0e473600f067aa0ba902b701"
+              }
+            ],
+            [
+              35,
+              262144
+            ],
+            [
+              "x-tenant",
+              "acme"
+            ]
+          ]
+        },
+        {
+          "$tag": 37,
+          "value": {
+            "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+          }
+        }
+      ],
+      "diag": "[16, 2, 100, {32: 5000, 33: h'004bf92f3577b34da6a3ce929d0e0e473600f067aa0ba902b701', 35: 262144, \"x-tenant\": \"acme\"}, 37(h'6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b')]",
+      "cbor": "8510021864a418201913881821581a004bf92f3577b34da6a3ce929d0e0e473600f067aa0ba902b70118231a0004000068782d74656e616e746461636d65d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b",
+      "length": 81,
+      "framed": "40518510021864a418201913881821581a004bf92f3577b34da6a3ce929d0e0e473600f067aa0ba902b70118231a0004000068782d74656e616e746461636d65d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+    },
+    {
+      "name": "response/get",
+      "description": "Response (call 2) carrying a Note struct: tag 5 is a removed field (null slot), tag 7 'pinned' is absent so the trailing null is omitted.",
+      "spec": "7.2, 3.4",
+      "type": "message",
+      "kind": 17,
+      "kind_name": "Response",
+      "message": [
+        17,
+        2,
+        [
+          {
+            "$tag": 37,
+            "value": {
+              "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+            }
+          },
+          "Groceries",
+          "milk, eggs",
+          [
+            "home"
+          ],
+          {
+            "$tag": 1,
+            "value": 1795737600
+          },
+          null,
+          71
+        ]
+      ],
+      "diag": "[17, 2, [37(h'6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b'), \"Groceries\", \"milk, eggs\", [\"home\"], 1(1795737600), null, 71]]",
+      "cbor": "83110287d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b6947726f6365726965736a6d696c6b2c20656767738164686f6d65c11a6b08c800f61847",
+      "length": 59,
+      "framed": "3b83110287d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b6947726f6365726965736a6d696c6b2c20656767738164686f6d65c11a6b08c800f61847"
+    },
+    {
+      "name": "request/put",
+      "description": "Unary Request (call 4) to put (101) with a Note.",
+      "spec": "7.2",
+      "type": "message",
+      "kind": 16,
+      "kind_name": "Request",
+      "message": [
+        16,
+        4,
+        101,
+        {},
+        [
+          {
+            "$tag": 37,
+            "value": {
+              "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+            }
+          },
+          "Groceries",
+          "milk, eggs",
+          [
+            "home"
+          ],
+          {
+            "$tag": 1,
+            "value": 1795737600
+          },
+          null,
+          71
+        ]
+      ],
+      "diag": "[16, 4, 101, {}, [37(h'6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b'), \"Groceries\", \"milk, eggs\", [\"home\"], 1(1795737600), null, 71]]",
+      "cbor": "8510041865a087d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b6947726f6365726965736a6d696c6b2c20656767738164686f6d65c11a6b08c800f61847",
+      "length": 62,
+      "framed": "3e8510041865a087d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b6947726f6365726965736a6d696c6b2c20656767738164686f6d65c11a6b08c800f61847"
+    },
+    {
+      "name": "response/put",
+      "description": "Response (call 4) with the NoteId.",
+      "spec": "7.2",
+      "type": "message",
+      "kind": 17,
+      "kind_name": "Response",
+      "message": [
+        17,
+        4,
+        {
+          "$tag": 37,
+          "value": {
+            "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+          }
+        }
+      ],
+      "diag": "[17, 4, 37(h'6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b')]",
+      "cbor": "831104d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b",
+      "length": 22,
+      "framed": "16831104d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+    },
+    {
+      "name": "error/application",
+      "description": "Error (call 4) with the method's own error sigil acme.notes.conflict (65) and details as a typed value [type_id, value] (here type 6 string).",
+      "spec": "7.2, 8",
+      "type": "message",
+      "kind": 20,
+      "kind_name": "Error",
+      "message": [
+        20,
+        4,
+        65,
+        "note was modified concurrently",
+        [
+          6,
+          "expected revision 7"
+        ]
+      ],
+      "diag": "[20, 4, 65, \"note was modified concurrently\", [6, \"expected revision 7\"]]",
+      "cbor": "8514041841781e6e6f746520776173206d6f64696669656420636f6e63757272656e746c798206736578706563746564207265766973696f6e2037",
+      "length": 59,
+      "framed": "3b8514041841781e6e6f746520776173206d6f64696669656420636f6e63757272656e746c798206736578706563746564207265766973696f6e2037"
+    },
+    {
+      "name": "error/core-no-details",
+      "description": "Error with a core status (deadline_exceeded, 4) and no details.",
+      "spec": "7.2, 8",
+      "type": "message",
+      "kind": 20,
+      "kind_name": "Error",
+      "message": [
+        20,
+        14,
+        4,
+        "deadline exceeded",
+        null
+      ],
+      "diag": "[20, 14, 4, \"deadline exceeded\", null]",
+      "cbor": "85140e0471646561646c696e65206578636565646564f6",
+      "length": 23,
+      "framed": "1785140e0471646561646c696e65206578636565646564f6"
+    },
+    {
+      "name": "request/watch",
+      "description": "Server-stream subscription Request (call 6) to watch (102, flag shared) with a sparse NoteFilter {1: green, 2: 50}.",
+      "spec": "7.2, 7.3, 3.4",
+      "type": "message",
+      "kind": 16,
+      "kind_name": "Request",
+      "message": [
+        16,
+        6,
+        102,
+        {},
+        {
+          "$map": [
+            [
+              1,
+              71
+            ],
+            [
+              2,
+              50
+            ]
+          ]
+        }
+      ],
+      "diag": "[16, 6, 102, {}, {1: 71, 2: 50}]",
+      "cbor": "8510061866a0a2011847021832",
+      "length": 13,
+      "framed": "0d8510061866a0a2011847021832"
+    },
+    {
+      "name": "headers",
+      "description": "Headers (call 6) before the first Item.",
+      "spec": "7.2",
+      "type": "message",
+      "kind": 22,
+      "kind_name": "Headers",
+      "message": [
+        22,
+        6,
+        {
+          "x-cursor": "c-1842"
+        }
+      ],
+      "diag": "[22, 6, {\"x-cursor\": \"c-1842\"}]",
+      "cbor": "831606a168782d637572736f7266632d31383432",
+      "length": 20,
+      "framed": "14831606a168782d637572736f7266632d31383432"
+    },
+    {
+      "name": "item/upserted",
+      "description": "Item (call 6): union Change variant 0 'upserted' with a Note.",
+      "spec": "7.2, 3.4",
+      "type": "message",
+      "kind": 18,
+      "kind_name": "Item",
+      "message": [
+        18,
+        6,
+        [
+          0,
+          [
+            {
+              "$tag": 37,
+              "value": {
+                "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+              }
+            },
+            "Groceries",
+            "milk, eggs",
+            [
+              "home"
+            ],
+            {
+              "$tag": 1,
+              "value": 1795737600
+            },
+            null,
+            71
+          ]
+        ]
+      ],
+      "diag": "[18, 6, [0, [37(h'6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b'), \"Groceries\", \"milk, eggs\", [\"home\"], 1(1795737600), null, 71]]]",
+      "cbor": "831206820087d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b6947726f6365726965736a6d696c6b2c20656767738164686f6d65c11a6b08c800f61847",
+      "length": 61,
+      "framed": "3d831206820087d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b6947726f6365726965736a6d696c6b2c20656767738164686f6d65c11a6b08c800f61847"
+    },
+    {
+      "name": "item/deleted",
+      "description": "Item (call 6): union Change variant 1 'deleted' with a NoteId.",
+      "spec": "7.2, 3.4",
+      "type": "message",
+      "kind": 18,
+      "kind_name": "Item",
+      "message": [
+        18,
+        6,
+        [
+          1,
+          {
+            "$tag": 37,
+            "value": {
+              "$bytes": "0b5e7d3c2a194f8e8d7c6b5a49382716"
+            }
+          }
+        ]
+      ],
+      "diag": "[18, 6, [1, 37(h'0b5e7d3c2a194f8e8d7c6b5a49382716')]]",
+      "cbor": "8312068201d825500b5e7d3c2a194f8e8d7c6b5a49382716",
+      "length": 24,
+      "framed": "188312068201d825500b5e7d3c2a194f8e8d7c6b5a49382716"
+    },
+    {
+      "name": "item/cleared",
+      "description": "Item (call 6): union Change variant 2 'cleared' with unit (null).",
+      "spec": "7.2, 3.4",
+      "type": "message",
+      "kind": 18,
+      "kind_name": "Item",
+      "message": [
+        18,
+        6,
+        [
+          2,
+          null
+        ]
+      ],
+      "diag": "[18, 6, [2, null]]",
+      "cbor": "8312068202f6",
+      "length": 6,
+      "framed": "068312068202f6"
+    },
+    {
+      "name": "credit",
+      "description": "Credit (call 6) granting 32768 more bytes.",
+      "spec": "7.2, 7.4",
+      "type": "message",
+      "kind": 24,
+      "kind_name": "Credit",
+      "message": [
+        24,
+        6,
+        32768
+      ],
+      "diag": "[24, 6, 32768]",
+      "cbor": "83181806198000",
+      "length": 7,
+      "framed": "0783181806198000"
+    },
+    {
+      "name": "cancel",
+      "description": "Cancel (call 6) with status cancelled (1).",
+      "spec": "7.2, 7.5",
+      "type": "message",
+      "kind": 23,
+      "kind_name": "Cancel",
+      "message": [
+        23,
+        6,
+        1
+      ],
+      "diag": "[23, 6, 1]",
+      "cbor": "83170601",
+      "length": 4,
+      "framed": "0483170601"
+    },
+    {
+      "name": "error/cancelled",
+      "description": "The callee's final answer to the Cancel: Error(cancelled).",
+      "spec": "7.5",
+      "type": "message",
+      "kind": 20,
+      "kind_name": "Error",
+      "message": [
+        20,
+        6,
+        1,
+        "cancelled",
+        null
+      ],
+      "diag": "[20, 6, 1, \"cancelled\", null]",
+      "cbor": "851406016963616e63656c6c6564f6",
+      "length": 15,
+      "framed": "0f851406016963616e63656c6c6564f6"
+    },
+    {
+      "name": "request/export",
+      "description": "Download Request (call 8) to export (104, output [4]) with a sparse NoteFilter {0: \"groceries\"}.",
+      "spec": "7.3, 7.8",
+      "type": "message",
+      "kind": 16,
+      "kind_name": "Request",
+      "message": [
+        16,
+        8,
+        104,
+        {},
+        {
+          "$map": [
+            [
+              0,
+              "groceries"
+            ]
+          ]
+        }
+      ],
+      "diag": "[16, 8, 104, {}, {0: \"groceries\"}]",
+      "cbor": "8510081868a0a1006967726f636572696573",
+      "length": 18,
+      "framed": "128510081868a0a1006967726f636572696573"
+    },
+    {
+      "name": "progress/with-total",
+      "description": "Progress (call 8): 512 KiB of 2 MiB done, with a note.",
+      "spec": "7.2",
+      "type": "message",
+      "kind": 21,
+      "kind_name": "Progress",
+      "message": [
+        21,
+        8,
+        524288,
+        2097152,
+        "exporting"
+      ],
+      "diag": "[21, 8, 524288, 2097152, \"exporting\"]",
+      "cbor": "8515081a000800001a00200000696578706f7274696e67",
+      "length": 23,
+      "framed": "178515081a000800001a00200000696578706f7274696e67"
+    },
+    {
+      "name": "progress/minimal",
+      "description": "Progress (call 8) with total and note null.",
+      "spec": "7.2",
+      "type": "message",
+      "kind": 21,
+      "kind_name": "Progress",
+      "message": [
+        21,
+        8,
+        10,
+        null,
+        null
+      ],
+      "diag": "[21, 8, 10, null, null]",
+      "cbor": "8515080af6f6",
+      "length": 6,
+      "framed": "068515080af6f6"
+    },
+    {
+      "name": "bytes/inline-chunk",
+      "description": "Bytes (call 8), token 0 (inline, output type is exactly [4]), not final.",
+      "spec": "7.2, 7.8",
+      "type": "message",
+      "kind": 25,
+      "kind_name": "Bytes",
+      "message": [
+        25,
+        8,
+        0,
+        {
+          "$bytes": "504b0304"
+        },
+        false
+      ],
+      "diag": "[25, 8, 0, h'504b0304', false]",
+      "cbor": "851819080044504b0304f4",
+      "length": 11,
+      "framed": "0b851819080044504b0304f4"
+    },
+    {
+      "name": "bytes/inline-final-empty",
+      "description": "Bytes (call 8), token 0, empty final chunk (allowed).",
+      "spec": "7.8",
+      "type": "message",
+      "kind": 25,
+      "kind_name": "Bytes",
+      "message": [
+        25,
+        8,
+        0,
+        {
+          "$bytes": ""
+        },
+        true
+      ],
+      "diag": "[25, 8, 0, h'', true]",
+      "cbor": "851819080040f5",
+      "length": 7,
+      "framed": "07851819080040f5"
+    },
+    {
+      "name": "end/empty-trailers",
+      "description": "End (call 8) with empty trailers, finishing the callee's half (flag 0x10).",
+      "spec": "7.2, 7.1",
+      "type": "message",
+      "kind": 19,
+      "kind_name": "End",
+      "message": [
+        19,
+        8,
+        {}
+      ],
+      "diag": "[19, 8, {}]",
+      "cbor": "831308a0",
+      "length": 4,
+      "framed": "04831308a0"
+    },
+    {
+      "name": "request/attach-by-reference",
+      "description": "Request (call 10) to attach (103, flag 0x8). The Attachment struct's [4] field (tag 2) carries byte token 1.",
+      "spec": "7.8, 3.4",
+      "type": "message",
+      "kind": 16,
+      "kind_name": "Request",
+      "message": [
+        16,
+        10,
+        103,
+        {},
+        [
+          "photo.jpg",
+          "image/jpeg",
+          1
+        ]
+      ],
+      "diag": "[16, 10, 103, {}, [\"photo.jpg\", \"image/jpeg\", 1]]",
+      "cbor": "85100a1867a0836970686f746f2e6a70676a696d6167652f6a70656701",
+      "length": 29,
+      "framed": "1d85100a1867a0836970686f746f2e6a70676a696d6167652f6a70656701"
+    },
+    {
+      "name": "bytes/token-1-final",
+      "description": "Bytes (call 10) for token 1, final chunk.",
+      "spec": "7.8",
+      "type": "message",
+      "kind": 25,
+      "kind_name": "Bytes",
+      "message": [
+        25,
+        10,
+        1,
+        {
+          "$bytes": "ffd8ffe000104a464946"
+        },
+        true
+      ],
+      "diag": "[25, 10, 1, h'ffd8ffe000104a464946', true]",
+      "cbor": "8518190a014affd8ffe000104a464946f5",
+      "length": 17,
+      "framed": "118518190a014affd8ffe000104a464946f5"
+    },
+    {
+      "name": "end/with-trailers",
+      "description": "End (call 10) finishing the caller's half, with an application trailer.",
+      "spec": "7.2",
+      "type": "message",
+      "kind": 19,
+      "kind_name": "End",
+      "message": [
+        19,
+        10,
+        {
+          "x-bytes": 10
+        }
+      ],
+      "diag": "[19, 10, {\"x-bytes\": 10}]",
+      "cbor": "83130aa167782d62797465730a",
+      "length": 13,
+      "framed": "0d83130aa167782d62797465730a"
+    },
+    {
+      "name": "response/attach",
+      "description": "Response (call 10): unit output (null).",
+      "spec": "7.2",
+      "type": "message",
+      "kind": 17,
+      "kind_name": "Response",
+      "message": [
+        17,
+        10,
+        null
+      ],
+      "diag": "[17, 10, null]",
+      "cbor": "83110af6",
+      "length": 4,
+      "framed": "0483110af6"
+    },
+    {
+      "name": "request/import-client-stream",
+      "description": "Client-stream Request (call 12) to import (110): input null, Items follow.",
+      "spec": "7.3",
+      "type": "message",
+      "kind": 16,
+      "kind_name": "Request",
+      "message": [
+        16,
+        12,
+        110,
+        {},
+        null
+      ],
+      "diag": "[16, 12, 110, {}, null]",
+      "cbor": "85100c186ea0f6",
+      "length": 7,
+      "framed": "0785100c186ea0f6"
+    },
+    {
+      "name": "item/import",
+      "description": "Item (call 12) carrying a Note.",
+      "spec": "7.2",
+      "type": "message",
+      "kind": 18,
+      "kind_name": "Item",
+      "message": [
+        18,
+        12,
+        [
+          {
+            "$tag": 37,
+            "value": {
+              "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+            }
+          },
+          "Groceries",
+          "milk, eggs",
+          [
+            "home"
+          ],
+          {
+            "$tag": 1,
+            "value": 1795737600
+          },
+          null,
+          71
+        ]
+      ],
+      "diag": "[18, 12, [37(h'6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b'), \"Groceries\", \"milk, eggs\", [\"home\"], 1(1795737600), null, 71]]",
+      "cbor": "83120c87d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b6947726f6365726965736a6d696c6b2c20656767738164686f6d65c11a6b08c800f61847",
+      "length": 59,
+      "framed": "3b83120c87d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b6947726f6365726965736a6d696c6b2c20656767738164686f6d65c11a6b08c800f61847"
+    },
+    {
+      "name": "response/import",
+      "description": "Response (call 12): uint count.",
+      "spec": "7.2",
+      "type": "message",
+      "kind": 17,
+      "kind_name": "Response",
+      "message": [
+        17,
+        12,
+        1
+      ],
+      "diag": "[17, 12, 1]",
+      "cbor": "83110c01",
+      "length": 4,
+      "framed": "0483110c01"
+    },
+    {
+      "name": "request/server-to-client",
+      "description": "Request from server to client (odd call ID 1) to the client schema's method navigate (65): IDs belong to the callee's (client's) schema.",
+      "spec": "6.1, 7.1",
+      "type": "message",
+      "kind": 16,
+      "kind_name": "Request",
+      "message": [
+        16,
+        1,
+        65,
+        {},
+        "/notes/6f1c2e4a"
+      ],
+      "diag": "[16, 1, 65, {}, \"/notes/6f1c2e4a\"]",
+      "cbor": "8510011841a06f2f6e6f7465732f3666316332653461",
+      "length": 22,
+      "framed": "168510011841a06f2f6e6f7465732f3666316332653461"
+    },
+    {
+      "name": "request/notification",
+      "description": "Notification: Request with call ID 0 to touch (113, flag 0x2), input unit. Sent on the shared lane, no reply.",
+      "spec": "7.1, 7.3",
+      "type": "message",
+      "kind": 16,
+      "kind_name": "Request",
+      "message": [
+        16,
+        0,
+        113,
+        {},
+        null
+      ],
+      "diag": "[16, 0, 113, {}, null]",
+      "cbor": "8510001871a0f6",
+      "length": 7,
+      "framed": "078510001871a0f6"
+    },
+    {
+      "name": "control/schema-update",
+      "description": "SchemaUpdate epoch 1 with the new hash and the delta of vector schema/delta-1-add.",
+      "spec": "5.5, 6.6",
+      "type": "message",
+      "kind": 3,
+      "kind_name": "SchemaUpdate",
+      "message": [
+        3,
+        1,
+        {
+          "$bytes": "0196d17796aff8e0d8cc8cbfcd06101147640728fa7f4a0d0ba47d86d49ebf5e81"
+        },
+        [
+          [
+            2,
+            [
+              73,
+              "acme.notes.Color.yellow",
+              0,
+              {}
+            ]
+          ],
+          [
+            0,
+            [
+              1,
+              66,
+              "acme.notes.Color",
+              [
+                73,
+                70,
+                72,
+                71
+              ],
+              {}
+            ]
+          ],
+          [
+            0,
+            [
+              0,
+              75,
+              "acme.notes.TagCount",
+              [
+                [
+                  1,
+                  "count",
+                  3,
+                  0,
+                  {}
+                ],
+                [
+                  0,
+                  "tag",
+                  6,
+                  0,
+                  {}
+                ]
+              ],
+              0,
+              {}
+            ]
+          ],
+          [
+            1,
+            [
+              64,
+              "acme.notes.Notes",
+              [
+                [
+                  103,
+                  "attach",
+                  69,
+                  0,
+                  [
+                    64
+                  ],
+                  8,
+                  {
+                    "doc": "Attach a file to a note; the file data travels as a byte token."
+                  }
+                ],
+                [
+                  101,
+                  "put",
+                  64,
+                  68,
+                  [
+                    65,
+                    64
+                  ],
+                  0,
+                  {}
+                ],
+                [
+                  104,
+                  "export",
+                  65,
+                  [
+                    4
+                  ],
+                  [],
+                  17,
+                  {
+                    "http.contentType": "application/zip"
+                  }
+                ],
+                [
+                  100,
+                  "get",
+                  68,
+                  64,
+                  [],
+                  1,
+                  {
+                    "doc": "Fetch one note by id."
+                  }
+                ],
+                [
+                  102,
+                  "watch",
+                  65,
+                  [
+                    3,
+                    67
+                  ],
+                  [],
+                  20,
+                  {}
+                ],
+                [
+                  105,
+                  "tagCounts",
+                  0,
+                  [
+                    0,
+                    75
+                  ],
+                  [],
+                  1,
+                  {}
+                ]
+              ],
+              {
+                "doc": "Personal notes."
+              }
+            ]
+          ],
+          [
+            5,
+            "2026.11.4"
+          ]
+        ]
+      ],
+      "diag": "[3, 1, h'0196d17796aff8e0d8cc8cbfcd06101147640728fa7f4a0d0ba47d86d49ebf5e81', [[2, [73, \"acme.notes.Color.yellow\", 0, {}]], [0, [1, 66, \"acme.notes.Color\", [73, 70, 72, 71], {}]], [0, [0, 75, \"acme.notes.TagCount\", [[1, \"count\", 3, 0, {}], [0, \"tag\", 6, 0, {}]], 0, {}]], [1, [64, \"acme.notes.Notes\", [[103, \"attach\", 69, 0, [64], 8, {\"doc\": \"Attach a file to a note; the file data travels as a byte token.\"}], [101, \"put\", 64, 68, [65, 64], 0, {}], [104, \"export\", 65, [4], [], 17, {\"http.contentType\": \"application/zip\"}], [100, \"get\", 68, 64, [], 1, {\"doc\": \"Fetch one note by id.\"}], [102, \"watch\", 65, [3, 67], [], 20, {}], [105, \"tagCounts\", 0, [0, 75], [], 1, {}]], {\"doc\": \"Personal notes.\"}]], [5, \"2026.11.4\"]]]",
+      "cbor": "84030158210196d17796aff8e0d8cc8cbfcd06101147640728fa7f4a0d0ba47d86d49ebf5e818582028418497761636d652e6e6f7465732e436f6c6f722e79656c6c6f7700a08200850118427061636d652e6e6f7465732e436f6c6f72841849184618481847a082008600184b7361636d652e6e6f7465732e546167436f756e7482850165636f756e740300a08500637461670600a000a082018418407061636d652e6e6f7465732e4e6f746573868718676661747461636818450081184008a163646f63783f41747461636820612066696c6520746f2061206e6f74653b207468652066696c6520646174612074726176656c732061732061206279746520746f6b656e2e8718656370757418401844821841184000a0871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a697087186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718666577617463681841820318438014a087186969746167436f756e7473008200184b8001a0a163646f636f506572736f6e616c206e6f7465732e820569323032362e31312e34",
+      "length": 442,
+      "framed": "41ba84030158210196d17796aff8e0d8cc8cbfcd06101147640728fa7f4a0d0ba47d86d49ebf5e818582028418497761636d652e6e6f7465732e436f6c6f722e79656c6c6f7700a08200850118427061636d652e6e6f7465732e436f6c6f72841849184618481847a082008600184b7361636d652e6e6f7465732e546167436f756e7482850165636f756e740300a08500637461670600a000a082018418407061636d652e6e6f7465732e4e6f746573868718676661747461636818450081184008a163646f63783f41747461636820612066696c6520746f2061206e6f74653b207468652066696c6520646174612074726176656c732061732061206279746520746f6b656e2e8718656370757418401844821841184000a0871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a697087186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718666577617463681841820318438014a087186969746167436f756e7473008200184b8001a0a163646f636f506572736f6e616c206e6f7465732e820569323032362e31312e34",
+      "refs": {
+        "hash": "schema/delta-1-add"
+      }
+    },
+    {
+      "name": "control/schema-ack",
+      "description": "SchemaAck acknowledging epoch 1.",
+      "spec": "5.5, 6.6",
+      "type": "message",
+      "kind": 4,
+      "kind_name": "SchemaAck",
+      "message": [
+        4,
+        1
+      ],
+      "diag": "[4, 1]",
+      "cbor": "820401",
+      "length": 3,
+      "framed": "03820401"
+    },
+    {
+      "name": "control/auth-refresh",
+      "description": "AuthRefresh with a fresh (fake) bearer ticket.",
+      "spec": "5.5",
+      "type": "message",
+      "kind": 5,
+      "kind_name": "AuthRefresh",
+      "message": [
+        5,
+        [
+          "bearer",
+          "v4.public.TEST-ONLY-REFRESHED"
+        ]
+      ],
+      "diag": "[5, [\"bearer\", \"v4.public.TEST-ONLY-REFRESHED\"]]",
+      "cbor": "82058266626561726572781d76342e7075626c69632e544553542d4f4e4c592d524546524553484544",
+      "length": 41,
+      "framed": "2982058266626561726572781d76342e7075626c69632e544553542d4f4e4c592d524546524553484544"
+    },
+    {
+      "name": "control/auth-status-ok",
+      "description": "AuthStatus ok with the session expiry as a timestamp (tag 1, integer seconds).",
+      "spec": "5.5",
+      "type": "message",
+      "kind": 6,
+      "kind_name": "AuthStatus",
+      "message": [
+        6,
+        0,
+        {
+          "$tag": 1,
+          "value": 1795766400
+        }
+      ],
+      "diag": "[6, 0, 1(1795766400)]",
+      "cbor": "830600c11a6b093880",
+      "length": 9,
+      "framed": "09830600c11a6b093880"
+    },
+    {
+      "name": "control/auth-status-expiring",
+      "description": "AuthStatus warning: unauthenticated (16), no expiry.",
+      "spec": "5.5",
+      "type": "message",
+      "kind": 6,
+      "kind_name": "AuthStatus",
+      "message": [
+        6,
+        16,
+        null
+      ],
+      "diag": "[6, 16, null]",
+      "cbor": "830610f6",
+      "length": 4,
+      "framed": "04830610f6"
+    },
+    {
+      "name": "control/ping",
+      "description": "Ping with nonce 42.",
+      "spec": "5.5",
+      "type": "message",
+      "kind": 7,
+      "kind_name": "Ping",
+      "message": [
+        7,
+        42
+      ],
+      "diag": "[7, 42]",
+      "cbor": "8207182a",
+      "length": 4,
+      "framed": "048207182a"
+    },
+    {
+      "name": "control/pong",
+      "description": "Pong echoing nonce 42.",
+      "spec": "5.5",
+      "type": "message",
+      "kind": 8,
+      "kind_name": "Pong",
+      "message": [
+        8,
+        42
+      ],
+      "diag": "[8, 42]",
+      "cbor": "8208182a",
+      "length": 4,
+      "framed": "048208182a"
+    },
+    {
+      "name": "control/goaway",
+      "description": "GoAway(protocol_error) outside any call.",
+      "spec": "5.5, 8",
+      "type": "message",
+      "kind": 9,
+      "kind_name": "GoAway",
+      "message": [
+        9,
+        17,
+        "unknown message kind 26",
+        null,
+        null
+      ],
+      "diag": "[9, 17, \"unknown message kind 26\", null, null]",
+      "cbor": "85091177756e6b6e6f776e206d657373616765206b696e64203236f6f6",
+      "length": 29,
+      "framed": "1d85091177756e6b6e6f776e206d657373616765206b696e64203236f6f6"
+    }
+  ]
+}

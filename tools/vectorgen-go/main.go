@@ -1,0 +1,51 @@
+// Command vectorgen generates the Sparrow RPC test vectors.
+//
+//	go run . -out ../../test-vectors
+//
+// Output is deterministic: running it twice gives identical files.
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
+const specRevision = "core rev108 (2026-11-26 draft)"
+
+func main() {
+	out := flag.String("out", "../../test-vectors", "output directory")
+	flag.Parse()
+	files := []struct {
+		name  string
+		build func() O
+	}{
+		{"encoding.json", encodingVectors},
+		{"framing.json", framingVectors},
+		{"handshake.json", handshakeVectors},
+		{"calls.json", callVectors},
+		{"credit.json", creditVectors},
+		{"schema.json", schemaVectors},
+		{"signing.json", signingVectors},
+		{"status.json", statusVectors},
+	}
+	must(os.MkdirAll(*out, 0o755))
+	for _, f := range files {
+		doc := append(o("spec_revision", specRevision, "generator", "tools/vectorgen-go"), f.build()...)
+		raw, err := marshalNoEscape(doc)
+		must(err)
+		var buf bytes.Buffer
+		must(json.Indent(&buf, raw, "", "  "))
+		buf.WriteByte('\n')
+		path := filepath.Join(*out, f.name)
+		must(os.WriteFile(path, buf.Bytes(), 0o644))
+		var n struct {
+			Vectors []json.RawMessage `json:"vectors"`
+		}
+		must(json.Unmarshal(buf.Bytes(), &n))
+		fmt.Printf("%-16s %3d vectors\n", f.name, len(n.Vectors))
+	}
+}

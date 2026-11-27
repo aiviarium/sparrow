@@ -1,0 +1,29 @@
+name: vectors
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  vectors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Regenerate vectors
+        working-directory: tools/vectorgen-go
+        run: |
+          go vet ./...
+          go run . -out ../../test-vectors
+      - name: Check committed vectors are current
+        run: git diff --exit-code -- test-vectors
+      - name: Verify with the independent JS verifier
+        working-directory: tools/verify-js
+        run: |
+          npm ci
+          node verify.mjs ../../test-vectors

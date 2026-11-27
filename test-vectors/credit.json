@@ -1,0 +1,317 @@
+{
+  "spec_revision": "core rev108 (2026-11-26 draft)",
+  "generator": "tools/vectorgen-go",
+  "area": "credit",
+  "vectors": [
+    {
+      "name": "credit/item/small",
+      "description": "Item with a small union value.",
+      "spec": "7.4",
+      "type": "credit_count",
+      "message": [
+        18,
+        6,
+        [
+          1,
+          {
+            "$tag": 37,
+            "value": {
+              "$bytes": "0b5e7d3c2a194f8e8d7c6b5a49382716"
+            }
+          }
+        ]
+      ],
+      "cbor": "8312068201d825500b5e7d3c2a194f8e8d7c6b5a49382716",
+      "framed_length": 25,
+      "counted_bytes": 24
+    },
+    {
+      "name": "credit/item/note",
+      "description": "Item with a Note.",
+      "spec": "7.4",
+      "type": "credit_count",
+      "message": [
+        18,
+        6,
+        [
+          0,
+          [
+            {
+              "$tag": 37,
+              "value": {
+                "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+              }
+            },
+            "Groceries",
+            "milk, eggs",
+            [
+              "home"
+            ],
+            {
+              "$tag": 1,
+              "value": 1795737600
+            },
+            null,
+            71
+          ]
+        ]
+      ],
+      "cbor": "831206820087d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b6947726f6365726965736a6d696c6b2c20656767738164686f6d65c11a6b08c800f61847",
+      "framed_length": 62,
+      "counted_bytes": 61
+    },
+    {
+      "name": "credit/item/long-string",
+      "description": "Item whose length prefix takes two bytes: the prefix is not counted.",
+      "spec": "7.4",
+      "type": "credit_count",
+      "message": [
+        18,
+        6,
+        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      ],
+      "cbor": "831206786478787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878",
+      "framed_length": 107,
+      "counted_bytes": 105
+    },
+    {
+      "name": "credit/progress",
+      "description": "Progress counts like Item.",
+      "spec": "7.4",
+      "type": "credit_count",
+      "message": [
+        21,
+        8,
+        524288,
+        2097152,
+        "exporting"
+      ],
+      "cbor": "8515081a000800001a00200000696578706f7274696e67",
+      "framed_length": 24,
+      "counted_bytes": 23
+    },
+    {
+      "name": "credit/bytes/4",
+      "description": "Bytes counts only the length of data (4), not the message.",
+      "spec": "7.4",
+      "type": "credit_count",
+      "message": [
+        25,
+        8,
+        0,
+        {
+          "$bytes": "504b0304"
+        },
+        false
+      ],
+      "cbor": "851819080044504b0304f4",
+      "framed_length": 12,
+      "counted_bytes": 4
+    },
+    {
+      "name": "credit/bytes/empty-final",
+      "description": "Empty final chunk counts 0.",
+      "spec": "7.4",
+      "type": "credit_count",
+      "message": [
+        25,
+        8,
+        0,
+        {
+          "$bytes": ""
+        },
+        true
+      ],
+      "cbor": "851819080040f5",
+      "framed_length": 8,
+      "counted_bytes": 0
+    },
+    {
+      "name": "credit/bytes/300",
+      "description": "Bytes with 300 bytes of data (0xab); the 3-byte CBOR header on data is not counted.",
+      "spec": "7.4",
+      "type": "credit_count",
+      "message": [
+        25,
+        8,
+        0,
+        {
+          "$bytes": "abababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababab"
+        },
+        false
+      ],
+      "cbor": "851819080059012cababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababf4",
+      "framed_length": 311,
+      "counted_bytes": 300
+    },
+    {
+      "name": "credit/request",
+      "description": "Request does not count.",
+      "spec": "7.4",
+      "type": "credit_count",
+      "message": [
+        16,
+        2,
+        1042,
+        {},
+        [
+          "settings",
+          true
+        ]
+      ],
+      "cbor": "851002190412a0826873657474696e6773f5",
+      "framed_length": 19,
+      "counted_bytes": 0
+    },
+    {
+      "name": "credit/response",
+      "description": "Response does not count.",
+      "spec": "7.4",
+      "type": "credit_count",
+      "message": [
+        17,
+        2,
+        null
+      ],
+      "cbor": "831102f6",
+      "framed_length": 5,
+      "counted_bytes": 0
+    },
+    {
+      "name": "credit/headers",
+      "description": "Headers does not count.",
+      "spec": "7.4",
+      "type": "credit_count",
+      "message": [
+        22,
+        6,
+        {
+          "x-cursor": "c-1842"
+        }
+      ],
+      "cbor": "831606a168782d637572736f7266632d31383432",
+      "framed_length": 21,
+      "counted_bytes": 0
+    },
+    {
+      "name": "credit/end",
+      "description": "End does not count.",
+      "spec": "7.4",
+      "type": "credit_count",
+      "message": [
+        19,
+        8,
+        {}
+      ],
+      "cbor": "831308a0",
+      "framed_length": 5,
+      "counted_bytes": 0
+    },
+    {
+      "name": "credit/error",
+      "description": "Error does not count.",
+      "spec": "7.4",
+      "type": "credit_count",
+      "message": [
+        20,
+        6,
+        1,
+        "cancelled",
+        null
+      ],
+      "cbor": "851406016963616e63656c6c6564f6",
+      "framed_length": 16,
+      "counted_bytes": 0
+    },
+    {
+      "name": "credit/cancel",
+      "description": "Cancel does not count.",
+      "spec": "7.4",
+      "type": "credit_count",
+      "message": [
+        23,
+        6,
+        1
+      ],
+      "cbor": "83170601",
+      "framed_length": 5,
+      "counted_bytes": 0
+    },
+    {
+      "name": "credit/credit",
+      "description": "Credit does not count.",
+      "spec": "7.4",
+      "type": "credit_count",
+      "message": [
+        24,
+        6,
+        32768
+      ],
+      "cbor": "83181806198000",
+      "framed_length": 8,
+      "counted_bytes": 0
+    },
+    {
+      "name": "credit/sequence-small-window",
+      "description": "Callee's half of call 6 with initial credit 100 (set by the caller with metadata key credit (35) = 100). A sender may send while its remaining credit is above zero, even if the message is larger, and the credit then goes negative. Grants add up.",
+      "spec": "7.4",
+      "type": "credit_sequence",
+      "initial_credit": 100,
+      "steps": [
+        {
+          "action": "send",
+          "message": [
+            18,
+            6,
+            "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+          ],
+          "cbor": "8312067836797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979",
+          "counted_bytes": 59,
+          "remaining_after": 41
+        },
+        {
+          "action": "send",
+          "message": [
+            18,
+            6,
+            "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+          ],
+          "cbor": "8312067836797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979",
+          "counted_bytes": 59,
+          "remaining_after": -18
+        },
+        {
+          "action": "check",
+          "may_send": false,
+          "remaining": -18
+        },
+        {
+          "action": "receive_credit",
+          "message": [
+            24,
+            6,
+            50
+          ],
+          "amount": 50,
+          "remaining_after": 32
+        },
+        {
+          "action": "send",
+          "message": [
+            18,
+            6,
+            "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+          ],
+          "cbor": "8312067836797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979",
+          "counted_bytes": 59,
+          "remaining_after": -27
+        },
+        {
+          "action": "check",
+          "may_send": false,
+          "remaining": -27
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,952 @@
+{
+  "spec_revision": "core rev108 (2026-11-26 draft)",
+  "generator": "tools/vectorgen-go",
+  "area": "handshake",
+  "vectors": [
+    {
+      "name": "hello/basic",
+      "description": "Minimal Hello: protocol version 1, no capabilities, a bearer ticket (fake), no cached schema, no client schema, default params, not optimistic.",
+      "spec": "5.4",
+      "type": "message",
+      "kind": 0,
+      "kind_name": "Hello",
+      "message": [
+        0,
+        [
+          1
+        ],
+        {},
+        [
+          "bearer",
+          "v4.public.TEST-ONLY-TICKET"
+        ],
+        null,
+        null,
+        {},
+        false
+      ],
+      "diag": "[0, [1], {}, [\"bearer\", \"v4.public.TEST-ONLY-TICKET\"], null, null, {}, false]",
+      "cbor": "88008101a08266626561726572781a76342e7075626c69632e544553542d4f4e4c592d5449434b4554f6f6a0f4",
+      "length": 45,
+      "framed": "2d88008101a08266626561726572781a76342e7075626c69632e544553542d4f4e4c592d5449434b4554f6f6a0f4"
+    },
+    {
+      "name": "hello/full",
+      "description": "Hello speaking versions 2 and 1 (2 preferred), datagrams capability, bearer ticket, the cached server schema hash, the client's own schema inline as [2, hash, schema], and params limiting the server to 2 leased streams and 64 concurrent calls.",
+      "spec": "5.4, 6.1",
+      "type": "message",
+      "kind": 0,
+      "kind_name": "Hello",
+      "message": [
+        0,
+        [
+          2,
+          1
+        ],
+        {
+          "datagrams": true
+        },
+        [
+          "bearer",
+          "v4.public.TEST-ONLY-TICKET"
+        ],
+        {
+          "$bytes": "01a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13"
+        },
+        [
+          2,
+          {
+            "$bytes": "015e016f4ce705404ec0bd5eb5e119ef30fa770f85bfed34cbf595ba9e570d7fb3"
+          },
+          [
+            1,
+            "acme.notes.web",
+            "1.4.0",
+            [],
+            [
+              [
+                64,
+                "acme.notes.ClientUi",
+                [
+                  [
+                    64,
+                    "toast",
+                    6,
+                    0,
+                    [],
+                    2,
+                    {}
+                  ],
+                  [
+                    65,
+                    "navigate",
+                    6,
+                    1,
+                    [],
+                    0,
+                    {}
+                  ]
+                ],
+                {}
+              ]
+            ],
+            [],
+            {}
+          ]
+        ],
+        {
+          "maxStreams": 2,
+          "maxConcurrentCalls": 64
+        },
+        false
+      ],
+      "diag": "[0, [2, 1], {\"datagrams\": true}, [\"bearer\", \"v4.public.TEST-ONLY-TICKET\"], h'01a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13', [2, h'015e016f4ce705404ec0bd5eb5e119ef30fa770f85bfed34cbf595ba9e570d7fb3', [1, \"acme.notes.web\", \"1.4.0\", [], [[64, \"acme.notes.ClientUi\", [[64, \"toast\", 6, 0, [], 2, {}], [65, \"navigate\", 6, 1, [], 0, {}]], {}]], [], {}]], {\"maxStreams\": 2, \"maxConcurrentCalls\": 64}, false]",
+      "cbor": "8800820201a169646174616772616d73f58266626561726572781a76342e7075626c69632e544553542d4f4e4c592d5449434b4554582101a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac1383025821015e016f4ce705404ec0bd5eb5e119ef30fa770f85bfed34cbf595ba9e570d7fb387016e61636d652e6e6f7465732e77656265312e342e3080818418407361636d652e6e6f7465732e436c69656e7455698287184065746f61737406008002a0871841686e6176696761746506018000a0a080a0a26a6d617853747265616d7302726d6178436f6e63757272656e7443616c6c731840f4",
+      "length": 243,
+      "framed": "40f38800820201a169646174616772616d73f58266626561726572781a76342e7075626c69632e544553542d4f4e4c592d5449434b4554582101a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac1383025821015e016f4ce705404ec0bd5eb5e119ef30fa770f85bfed34cbf595ba9e570d7fb387016e61636d652e6e6f7465732e77656265312e342e3080818418407361636d652e6e6f7465732e436c69656e7455698287184065746f61737406008002a0871841686e6176696761746506018000a0a080a0a26a6d617853747265616d7302726d6178436f6e63757272656e7443616c6c731840f4",
+      "refs": {
+        "known_schema": "schema/server-base",
+        "client_schema": "schema/client"
+      }
+    },
+    {
+      "name": "hello/optimistic",
+      "description": "Optimistic Hello (section 5.3): exactly one protocol version, the cached schema hash, optimistic = true.",
+      "spec": "5.3, 5.4",
+      "type": "message",
+      "kind": 0,
+      "kind_name": "Hello",
+      "message": [
+        0,
+        [
+          1
+        ],
+        {},
+        [
+          "bearer",
+          "v4.public.TEST-ONLY-TICKET"
+        ],
+        {
+          "$bytes": "01a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13"
+        },
+        null,
+        {},
+        true
+      ],
+      "diag": "[0, [1], {}, [\"bearer\", \"v4.public.TEST-ONLY-TICKET\"], h'01a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13', null, {}, true]",
+      "cbor": "88008101a08266626561726572781a76342e7075626c69632e544553542d4f4e4c592d5449434b4554582101a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13f6a0f5",
+      "length": 79,
+      "framed": "404f88008101a08266626561726572781a76342e7075626c69632e544553542d4f4e4c592d5449434b4554582101a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13f6a0f5",
+      "refs": {
+        "known_schema": "schema/server-base"
+      }
+    },
+    {
+      "name": "welcome/unchanged",
+      "description": "Welcome choosing version 1, datagrams, a fixed TEST session_id (00..0f), server props, schema offer [0, hash] (client's cached schema is current) and server params.",
+      "spec": "5.4",
+      "type": "message",
+      "kind": 1,
+      "kind_name": "Welcome",
+      "message": [
+        1,
+        1,
+        {
+          "datagrams": true
+        },
+        {
+          "$bytes": "000102030405060708090a0b0c0d0e0f"
+        },
+        {
+          "server": "acme-notes/2026.11.3",
+          "web.title": "Acme Notes"
+        },
+        [
+          0,
+          {
+            "$bytes": "01a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13"
+          }
+        ],
+        {
+          "maxStreams": 32,
+          "leaseCredit": 2097152,
+          "idleTimeoutMs": 20000,
+          "maxMessageSize": 4194304
+        }
+      ],
+      "diag": "[1, 1, {\"datagrams\": true}, h'000102030405060708090a0b0c0d0e0f', {\"server\": \"acme-notes/2026.11.3\", \"web.title\": \"Acme Notes\"}, [0, h'01a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13'], {\"maxStreams\": 32, \"leaseCredit\": 2097152, \"idleTimeoutMs\": 20000, \"maxMessageSize\": 4194304}]",
+      "cbor": "870101a169646174616772616d73f550000102030405060708090a0b0c0d0e0fa2667365727665727461636d652d6e6f7465732f323032362e31312e33697765622e7469746c656a41636d65204e6f7465738200582101a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13a46a6d617853747265616d7318206b6c656173654372656469741a002000006d69646c6554696d656f75744d73194e206e6d61784d65737361676553697a651a00400000",
+      "length": 187,
+      "framed": "40bb870101a169646174616772616d73f550000102030405060708090a0b0c0d0e0fa2667365727665727461636d652d6e6f7465732f323032362e31312e33697765622e7469746c656a41636d65204e6f7465738200582101a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13a46a6d617853747265616d7318206b6c656173654372656469741a002000006d69646c6554696d656f75744d73194e206e6d61784d65737361676553697a651a00400000",
+      "refs": {
+        "hash": "schema/server-base"
+      }
+    },
+    {
+      "name": "welcome/delta",
+      "description": "Welcome with schema offer [1, hash, from, delta]: the delta of vector schema/delta-1-add from the schema the client named.",
+      "spec": "5.4, 6.6",
+      "type": "message",
+      "kind": 1,
+      "kind_name": "Welcome",
+      "message": [
+        1,
+        1,
+        {},
+        {
+          "$bytes": "000102030405060708090a0b0c0d0e0f"
+        },
+        {
+          "server": "acme-notes/2026.11.3",
+          "web.title": "Acme Notes"
+        },
+        [
+          1,
+          {
+            "$bytes": "0196d17796aff8e0d8cc8cbfcd06101147640728fa7f4a0d0ba47d86d49ebf5e81"
+          },
+          {
+            "$bytes": "01a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13"
+          },
+          [
+            [
+              2,
+              [
+                73,
+                "acme.notes.Color.yellow",
+                0,
+                {}
+              ]
+            ],
+            [
+              0,
+              [
+                1,
+                66,
+                "acme.notes.Color",
+                [
+                  73,
+                  70,
+                  72,
+                  71
+                ],
+                {}
+              ]
+            ],
+            [
+              0,
+              [
+                0,
+                75,
+                "acme.notes.TagCount",
+                [
+                  [
+                    1,
+                    "count",
+                    3,
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "tag",
+                    6,
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ]
+            ],
+            [
+              1,
+              [
+                64,
+                "acme.notes.Notes",
+                [
+                  [
+                    103,
+                    "attach",
+                    69,
+                    0,
+                    [
+                      64
+                    ],
+                    8,
+                    {
+                      "doc": "Attach a file to a note; the file data travels as a byte token."
+                    }
+                  ],
+                  [
+                    101,
+                    "put",
+                    64,
+                    68,
+                    [
+                      65,
+                      64
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    104,
+                    "export",
+                    65,
+                    [
+                      4
+                    ],
+                    [],
+                    17,
+                    {
+                      "http.contentType": "application/zip"
+                    }
+                  ],
+                  [
+                    100,
+                    "get",
+                    68,
+                    64,
+                    [],
+                    1,
+                    {
+                      "doc": "Fetch one note by id."
+                    }
+                  ],
+                  [
+                    102,
+                    "watch",
+                    65,
+                    [
+                      3,
+                      67
+                    ],
+                    [],
+                    20,
+                    {}
+                  ],
+                  [
+                    105,
+                    "tagCounts",
+                    0,
+                    [
+                      0,
+                      75
+                    ],
+                    [],
+                    1,
+                    {}
+                  ]
+                ],
+                {
+                  "doc": "Personal notes."
+                }
+              ]
+            ],
+            [
+              5,
+              "2026.11.4"
+            ]
+          ]
+        ],
+        {}
+      ],
+      "diag": "[1, 1, {}, h'000102030405060708090a0b0c0d0e0f', {\"server\": \"acme-notes/2026.11.3\", \"web.title\": \"Acme Notes\"}, [1, h'0196d17796aff8e0d8cc8cbfcd06101147640728fa7f4a0d0ba47d86d49ebf5e81', h'01a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13', [[2, [73, \"acme.notes.Color.yellow\", 0, {}]], [0, [1, 66, \"acme.notes.Color\", [73, 70, 72, 71], {}]], [0, [0, 75, \"acme.notes.TagCount\", [[1, \"count\", 3, 0, {}], [0, \"tag\", 6, 0, {}]], 0, {}]], [1, [64, \"acme.notes.Notes\", [[103, \"attach\", 69, 0, [64], 8, {\"doc\": \"Attach a file to a note; the file data travels as a byte token.\"}], [101, \"put\", 64, 68, [65, 64], 0, {}], [104, \"export\", 65, [4], [], 17, {\"http.contentType\": \"application/zip\"}], [100, \"get\", 68, 64, [], 1, {\"doc\": \"Fetch one note by id.\"}], [102, \"watch\", 65, [3, 67], [], 20, {}], [105, \"tagCounts\", 0, [0, 75], [], 1, {}]], {\"doc\": \"Personal notes.\"}]], [5, \"2026.11.4\"]]], {}]",
+      "cbor": "870101a050000102030405060708090a0b0c0d0e0fa2667365727665727461636d652d6e6f7465732f323032362e31312e33697765622e7469746c656a41636d65204e6f746573840158210196d17796aff8e0d8cc8cbfcd06101147640728fa7f4a0d0ba47d86d49ebf5e81582101a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac138582028418497761636d652e6e6f7465732e436f6c6f722e79656c6c6f7700a08200850118427061636d652e6e6f7465732e436f6c6f72841849184618481847a082008600184b7361636d652e6e6f7465732e546167436f756e7482850165636f756e740300a08500637461670600a000a082018418407061636d652e6e6f7465732e4e6f746573868718676661747461636818450081184008a163646f63783f41747461636820612066696c6520746f2061206e6f74653b207468652066696c6520646174612074726176656c732061732061206279746520746f6b656e2e8718656370757418401844821841184000a0871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a697087186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718666577617463681841820318438014a087186969746167436f756e7473008200184b8001a0a163646f636f506572736f6e616c206e6f7465732e820569323032362e31312e34a0",
+      "length": 548,
+      "framed": "4224870101a050000102030405060708090a0b0c0d0e0fa2667365727665727461636d652d6e6f7465732f323032362e31312e33697765622e7469746c656a41636d65204e6f746573840158210196d17796aff8e0d8cc8cbfcd06101147640728fa7f4a0d0ba47d86d49ebf5e81582101a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac138582028418497761636d652e6e6f7465732e436f6c6f722e79656c6c6f7700a08200850118427061636d652e6e6f7465732e436f6c6f72841849184618481847a082008600184b7361636d652e6e6f7465732e546167436f756e7482850165636f756e740300a08500637461670600a000a082018418407061636d652e6e6f7465732e4e6f746573868718676661747461636818450081184008a163646f63783f41747461636820612066696c6520746f2061206e6f74653b207468652066696c6520646174612074726176656c732061732061206279746520746f6b656e2e8718656370757418401844821841184000a0871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a697087186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718666577617463681841820318438014a087186969746167436f756e7473008200184b8001a0a163646f636f506572736f6e616c206e6f7465732e820569323032362e31312e34a0",
+      "refs": {
+        "hash": "schema/delta-1-add",
+        "from": "schema/server-base"
+      }
+    },
+    {
+      "name": "welcome/full",
+      "description": "Welcome with the full canonical schema inline: [2, hash, schema].",
+      "spec": "5.4, 6.2",
+      "type": "message",
+      "kind": 1,
+      "kind_name": "Welcome",
+      "message": [
+        1,
+        1,
+        {},
+        {
+          "$bytes": "000102030405060708090a0b0c0d0e0f"
+        },
+        {
+          "server": "acme-notes/2026.11.3",
+          "web.title": "Acme Notes"
+        },
+        [
+          2,
+          {
+            "$bytes": "01a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13"
+          },
+          [
+            1,
+            "acme.notes",
+            "2026.11.3",
+            [
+              [
+                0,
+                64,
+                "acme.notes.Note",
+                [
+                  [
+                    0,
+                    "id",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    1,
+                    "title",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    2,
+                    "body",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {
+                      "ui.maxLength": 20000,
+                      "ui.multiline": true
+                    }
+                  ],
+                  [
+                    3,
+                    "tags",
+                    [
+                      0,
+                      6
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    4,
+                    "updated",
+                    8,
+                    0,
+                    {}
+                  ],
+                  [
+                    6,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    7,
+                    "pinned",
+                    1,
+                    3,
+                    {
+                      "deprecated.use": "acme.notes.Note.color"
+                    }
+                  ]
+                ],
+                0,
+                {
+                  "ui.icon": "sticky-note",
+                  "ui.label": "Note"
+                }
+              ],
+              [
+                0,
+                65,
+                "acme.notes.NoteFilter",
+                [
+                  [
+                    0,
+                    "query",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    1,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    2,
+                    "limit",
+                    [
+                      2,
+                      3
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    3,
+                    "since",
+                    [
+                      2,
+                      8
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    4,
+                    "tags",
+                    [
+                      2,
+                      [
+                        0,
+                        6
+                      ]
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                1,
+                {}
+              ],
+              [
+                1,
+                66,
+                "acme.notes.Color",
+                [
+                  70,
+                  71,
+                  72
+                ],
+                {}
+              ],
+              [
+                2,
+                67,
+                "acme.notes.Change",
+                [
+                  [
+                    0,
+                    "upserted",
+                    64,
+                    {}
+                  ],
+                  [
+                    1,
+                    "deleted",
+                    68,
+                    {}
+                  ],
+                  [
+                    2,
+                    "cleared",
+                    0,
+                    {}
+                  ]
+                ],
+                {}
+              ],
+              [
+                3,
+                68,
+                "acme.notes.NoteId",
+                9,
+                {}
+              ],
+              [
+                0,
+                69,
+                "acme.notes.Attachment",
+                [
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    1,
+                    "mime",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    2,
+                    "data",
+                    [
+                      4
+                    ],
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ]
+            ],
+            [
+              [
+                64,
+                "acme.notes.Notes",
+                [
+                  [
+                    100,
+                    "get",
+                    68,
+                    64,
+                    [],
+                    1,
+                    {
+                      "doc": "Fetch one note by id."
+                    }
+                  ],
+                  [
+                    101,
+                    "put",
+                    64,
+                    68,
+                    [
+                      64,
+                      65
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    102,
+                    "watch",
+                    65,
+                    [
+                      3,
+                      67
+                    ],
+                    [],
+                    20,
+                    {}
+                  ],
+                  [
+                    103,
+                    "attach",
+                    69,
+                    0,
+                    [
+                      64
+                    ],
+                    8,
+                    {
+                      "doc": "Attach a file to a note; the file data travels as a byte token."
+                    }
+                  ],
+                  [
+                    104,
+                    "export",
+                    65,
+                    [
+                      4
+                    ],
+                    [],
+                    17,
+                    {
+                      "http.contentType": "application/zip"
+                    }
+                  ]
+                ],
+                {
+                  "doc": "Personal notes."
+                }
+              ],
+              [
+                65,
+                "acme.notes.Admin",
+                [
+                  [
+                    110,
+                    "import",
+                    [
+                      3,
+                      64
+                    ],
+                    3,
+                    [
+                      64
+                    ],
+                    8,
+                    {}
+                  ],
+                  [
+                    111,
+                    "sync",
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      65
+                    ],
+                    24,
+                    {}
+                  ],
+                  [
+                    112,
+                    "restore",
+                    [
+                      4
+                    ],
+                    3,
+                    [],
+                    8,
+                    {
+                      "auth.role": "admin"
+                    }
+                  ],
+                  [
+                    113,
+                    "touch",
+                    0,
+                    0,
+                    [],
+                    2,
+                    {}
+                  ]
+                ],
+                {
+                  "auth.role": "admin"
+                }
+              ]
+            ],
+            [
+              [
+                64,
+                "acme.notes.quota_exceeded",
+                1,
+                {
+                  "http.status": 429
+                }
+              ],
+              [
+                65,
+                "acme.notes.conflict",
+                1,
+                {
+                  "http.status": 409
+                }
+              ],
+              [
+                70,
+                "acme.notes.Color.red",
+                0,
+                {}
+              ],
+              [
+                71,
+                "acme.notes.Color.green",
+                0,
+                {}
+              ],
+              [
+                72,
+                "acme.notes.Color.blue",
+                0,
+                {}
+              ],
+              [
+                80,
+                "note.updated",
+                2,
+                {}
+              ],
+              [
+                81,
+                "note.deleted",
+                2,
+                {}
+              ]
+            ],
+            {
+              "web.apply": "reload",
+              "acme.owner": "notes-team"
+            }
+          ]
+        ],
+        {
+          "maxStreams": 32,
+          "leaseCredit": 2097152,
+          "idleTimeoutMs": 20000,
+          "maxMessageSize": 4194304
+        }
+      ],
+      "diag": "[1, 1, {}, h'000102030405060708090a0b0c0d0e0f', {\"server\": \"acme-notes/2026.11.3\", \"web.title\": \"Acme Notes\"}, [2, h'01a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13', [1, \"acme.notes\", \"2026.11.3\", [[0, 64, \"acme.notes.Note\", [[0, \"id\", 68, 0, {}], [1, \"title\", 6, 0, {}], [2, \"body\", [2, 6], 1, {\"ui.maxLength\": 20000, \"ui.multiline\": true}], [3, \"tags\", [0, 6], 0, {}], [4, \"updated\", 8, 0, {}], [6, \"color\", [2, 66], 1, {}], [7, \"pinned\", 1, 3, {\"deprecated.use\": \"acme.notes.Note.color\"}]], 0, {\"ui.icon\": \"sticky-note\", \"ui.label\": \"Note\"}], [0, 65, \"acme.notes.NoteFilter\", [[0, \"query\", [2, 6], 1, {}], [1, \"color\", [2, 66], 1, {}], [2, \"limit\", [2, 3], 1, {}], [3, \"since\", [2, 8], 1, {}], [4, \"tags\", [2, [0, 6]], 1, {}]], 1, {}], [1, 66, \"acme.notes.Color\", [70, 71, 72], {}], [2, 67, \"acme.notes.Change\", [[0, \"upserted\", 64, {}], [1, \"deleted\", 68, {}], [2, \"cleared\", 0, {}]], {}], [3, 68, \"acme.notes.NoteId\", 9, {}], [0, 69, \"acme.notes.Attachment\", [[0, \"name\", 6, 0, {}], [1, \"mime\", [2, 6], 1, {}], [2, \"data\", [4], 0, {}]], 0, {}]], [[64, \"acme.notes.Notes\", [[100, \"get\", 68, 64, [], 1, {\"doc\": \"Fetch one note by id.\"}], [101, \"put\", 64, 68, [64, 65], 0, {}], [102, \"watch\", 65, [3, 67], [], 20, {}], [103, \"attach\", 69, 0, [64], 8, {\"doc\": \"Attach a file to a note; the file data travels as a byte token.\"}], [104, \"export\", 65, [4], [], 17, {\"http.contentType\": \"application/zip\"}]], {\"doc\": \"Personal notes.\"}], [65, \"acme.notes.Admin\", [[110, \"import\", [3, 64], 3, [64], 8, {}], [111, \"sync\", [3, 67], [3, 67], [65], 24, {}], [112, \"restore\", [4], 3, [], 8, {\"auth.role\": \"admin\"}], [113, \"touch\", 0, 0, [], 2, {}]], {\"auth.role\": \"admin\"}]], [[64, \"acme.notes.quota_exceeded\", 1, {\"http.status\": 429}], [65, \"acme.notes.conflict\", 1, {\"http.status\": 409}], [70, \"acme.notes.Color.red\", 0, {}], [71, \"acme.notes.Color.green\", 0, {}], [72, \"acme.notes.Color.blue\", 0, {}], [80, \"note.updated\", 2, {}], [81, \"note.deleted\", 2, {}]], {\"web.apply\": \"reload\", \"acme.owner\": \"notes-team\"}]], {\"maxStreams\": 32, \"leaseCredit\": 2097152, \"idleTimeoutMs\": 20000, \"maxMessageSize\": 4194304}]",
+      "cbor": "870101a050000102030405060708090a0b0c0d0e0fa2667365727665727461636d652d6e6f7465732f323032362e31312e33697765622e7469746c656a41636d65204e6f7465738302582101a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac1387016a61636d652e6e6f74657369323032362e31312e3386860018406f61636d652e6e6f7465732e4e6f7465878500626964184400a08501657469746c650600a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58503647461677382000600a0850467757064617465640800a0850665636f6c6f728202184201a085076670696e6e65640103a16e646570726563617465642e7573657561636d652e6e6f7465732e4e6f74652e636f6c6f7200a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018417561636d652e6e6f7465732e4e6f746546696c74657285850065717565727982020601a0850165636f6c6f728202184201a08502656c696d697482020301a085036573696e636582020801a085046474616773820282000601a001a0850118427061636d652e6e6f7465732e436f6c6f7283184618471848a0850218437161636d652e6e6f7465732e4368616e67658384006875707365727465641840a084016764656c657465641844a0840267636c656172656400a0a0850318447161636d652e6e6f7465732e4e6f7465496409a0860018457561636d652e6e6f7465732e4174746163686d656e74838500646e616d650600a08501646d696d6582020601a085026464617461810400a000a0828418407061636d652e6e6f7465732e4e6f7465738587186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718656370757418401844821840184100a08718666577617463681841820318438014a08718676661747461636818450081184008a163646f63783f41747461636820612066696c6520746f2061206e6f74653b207468652066696c6520646174612074726176656c732061732061206279746520746f6b656e2e871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a6970a163646f636f506572736f6e616c206e6f7465732e8418417061636d652e6e6f7465732e41646d696e8487186e66696d706f7274820318400381184008a087186f6473796e6382031843820318438118411818a087187067726573746f72658104038008a169617574682e726f6c656561646d696e87187165746f75636800008002a0a169617574682e726f6c656561646d696e87841840781961636d652e6e6f7465732e71756f74615f657863656564656401a16b687474702e7374617475731901ad8418417361636d652e6e6f7465732e636f6e666c69637401a16b687474702e7374617475731901998418467461636d652e6e6f7465732e436f6c6f722e72656400a08418477661636d652e6e6f7465732e436f6c6f722e677265656e00a08418487561636d652e6e6f7465732e436f6c6f722e626c756500a08418506c6e6f74652e7570646174656402a08418516c6e6f74652e64656c6574656402a0a2697765622e6170706c796672656c6f61646a61636d652e6f776e65726a6e6f7465732d7465616da46a6d617853747265616d7318206b6c656173654372656469741a002000006d69646c6554696d656f75744d73194e206e6d61784d65737361676553697a651a00400000",
+      "length": 1309,
+      "framed": "451d870101a050000102030405060708090a0b0c0d0e0fa2667365727665727461636d652d6e6f7465732f323032362e31312e33697765622e7469746c656a41636d65204e6f7465738302582101a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac1387016a61636d652e6e6f74657369323032362e31312e3386860018406f61636d652e6e6f7465732e4e6f7465878500626964184400a08501657469746c650600a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58503647461677382000600a0850467757064617465640800a0850665636f6c6f728202184201a085076670696e6e65640103a16e646570726563617465642e7573657561636d652e6e6f7465732e4e6f74652e636f6c6f7200a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018417561636d652e6e6f7465732e4e6f746546696c74657285850065717565727982020601a0850165636f6c6f728202184201a08502656c696d697482020301a085036573696e636582020801a085046474616773820282000601a001a0850118427061636d652e6e6f7465732e436f6c6f7283184618471848a0850218437161636d652e6e6f7465732e4368616e67658384006875707365727465641840a084016764656c657465641844a0840267636c656172656400a0a0850318447161636d652e6e6f7465732e4e6f7465496409a0860018457561636d652e6e6f7465732e4174746163686d656e74838500646e616d650600a08501646d696d6582020601a085026464617461810400a000a0828418407061636d652e6e6f7465732e4e6f7465738587186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718656370757418401844821840184100a08718666577617463681841820318438014a08718676661747461636818450081184008a163646f63783f41747461636820612066696c6520746f2061206e6f74653b207468652066696c6520646174612074726176656c732061732061206279746520746f6b656e2e871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a6970a163646f636f506572736f6e616c206e6f7465732e8418417061636d652e6e6f7465732e41646d696e8487186e66696d706f7274820318400381184008a087186f6473796e6382031843820318438118411818a087187067726573746f72658104038008a169617574682e726f6c656561646d696e87187165746f75636800008002a0a169617574682e726f6c656561646d696e87841840781961636d652e6e6f7465732e71756f74615f657863656564656401a16b687474702e7374617475731901ad8418417361636d652e6e6f7465732e636f6e666c69637401a16b687474702e7374617475731901998418467461636d652e6e6f7465732e436f6c6f722e72656400a08418477661636d652e6e6f7465732e436f6c6f722e677265656e00a08418487561636d652e6e6f7465732e436f6c6f722e626c756500a08418506c6e6f74652e7570646174656402a08418516c6e6f74652e64656c6574656402a0a2697765622e6170706c796672656c6f61646a61636d652e6f776e65726a6e6f7465732d7465616da46a6d617853747265616d7318206b6c656173654372656469741a002000006d69646c6554696d656f75744d73194e206e6d61784d65737361676553697a651a00400000",
+      "refs": {
+        "hash": "schema/server-base"
+      }
+    },
+    {
+      "name": "welcome/out-of-band",
+      "description": "Welcome telling the client to fetch the schema over HTTP: [3, hash, location]. The location uses the web profile URL with the hash in base64url without padding.",
+      "spec": "5.4, 9.3",
+      "type": "message",
+      "kind": 1,
+      "kind_name": "Welcome",
+      "message": [
+        1,
+        1,
+        {},
+        {
+          "$bytes": "000102030405060708090a0b0c0d0e0f"
+        },
+        {
+          "server": "acme-notes/2026.11.3",
+          "web.title": "Acme Notes"
+        },
+        [
+          3,
+          {
+            "$bytes": "01a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13"
+          },
+          "/sparrow/schema/AaJxzPqNtLxdfSx-RtJtTy6KWqtd1unLAuMhkz85OKwT"
+        ],
+        {
+          "maxStreams": 32,
+          "leaseCredit": 2097152,
+          "idleTimeoutMs": 20000,
+          "maxMessageSize": 4194304
+        }
+      ],
+      "diag": "[1, 1, {}, h'000102030405060708090a0b0c0d0e0f', {\"server\": \"acme-notes/2026.11.3\", \"web.title\": \"Acme Notes\"}, [3, h'01a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13', \"/sparrow/schema/AaJxzPqNtLxdfSx-RtJtTy6KWqtd1unLAuMhkz85OKwT\"], {\"maxStreams\": 32, \"leaseCredit\": 2097152, \"idleTimeoutMs\": 20000, \"maxMessageSize\": 4194304}]",
+      "cbor": "870101a050000102030405060708090a0b0c0d0e0fa2667365727665727461636d652d6e6f7465732f323032362e31312e33697765622e7469746c656a41636d65204e6f7465738303582101a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13783c2f73706172726f772f736368656d612f41614a787a50714e744c78646653782d52744a745479364b5771746431756e4c41754d686b7a38354f4b7754a46a6d617853747265616d7318206b6c656173654372656469741a002000006d69646c6554696d656f75744d73194e206e6d61784d65737361676553697a651a00400000",
+      "length": 238,
+      "framed": "40ee870101a050000102030405060708090a0b0c0d0e0fa2667365727665727461636d652d6e6f7465732f323032362e31312e33697765622e7469746c656a41636d65204e6f7465738303582101a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13783c2f73706172726f772f736368656d612f41614a787a50714e744c78646653782d52744a745479364b5771746431756e4c41754d686b7a38354f4b7754a46a6d617853747265616d7318206b6c656173654372656469741a002000006d69646c6554696d656f75744d73194e206e6d61784d65737361676553697a651a00400000",
+      "refs": {
+        "hash": "schema/server-base"
+      }
+    },
+    {
+      "name": "ready",
+      "description": "Ready naming the server schema hash the client loaded.",
+      "spec": "5.4",
+      "type": "message",
+      "kind": 2,
+      "kind_name": "Ready",
+      "message": [
+        2,
+        {
+          "$bytes": "01a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13"
+        }
+      ],
+      "diag": "[2, h'01a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13']",
+      "cbor": "8202582101a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13",
+      "length": 37,
+      "framed": "258202582101a271ccfa8db4bc5d7d2c7e46d26d4f2e8a5aab5dd6e9cb02e321933f3938ac13",
+      "refs": {
+        "schema_hash": "schema/server-base"
+      }
+    },
+    {
+      "name": "goaway/unsupported-version",
+      "description": "GoAway(unsupported_version) listing the server's versions.",
+      "spec": "5.4, 5.5",
+      "type": "message",
+      "kind": 9,
+      "kind_name": "GoAway",
+      "message": [
+        9,
+        19,
+        "no common protocol version",
+        null,
+        [
+          1
+        ]
+      ],
+      "diag": "[9, 19, \"no common protocol version\", null, [1]]",
+      "cbor": "850913781a6e6f20636f6d6d6f6e2070726f746f636f6c2076657273696f6ef68101",
+      "length": 34,
+      "framed": "22850913781a6e6f20636f6d6d6f6e2070726f746f636f6c2076657273696f6ef68101"
+    },
+    {
+      "name": "goaway/unauthenticated",
+      "description": "GoAway(unauthenticated) after a rejected credential.",
+      "spec": "5.4, 5.5",
+      "type": "message",
+      "kind": 9,
+      "kind_name": "GoAway",
+      "message": [
+        9,
+        16,
+        "credential rejected",
+        null,
+        null
+      ],
+      "diag": "[9, 16, \"credential rejected\", null, null]",
+      "cbor": "8509107363726564656e7469616c2072656a6563746564f6f6",
+      "length": 25,
+      "framed": "198509107363726564656e7469616c2072656a6563746564f6f6"
+    },
+    {
+      "name": "goaway/schema-mismatch",
+      "description": "GoAway(schema_mismatch) with retry_after_ms 0, as after a rejected optimistic start (section 5.3).",
+      "spec": "5.3, 5.5",
+      "type": "message",
+      "kind": 9,
+      "kind_name": "GoAway",
+      "message": [
+        9,
+        18,
+        "schema changed",
+        0,
+        null
+      ],
+      "diag": "[9, 18, \"schema changed\", 0, null]",
+      "cbor": "8509126e736368656d61206368616e67656400f6",
+      "length": 20,
+      "framed": "148509126e736368656d61206368616e67656400f6"
+    },
+    {
+      "name": "goaway/draining",
+      "description": "GoAway(going_away) before a deploy, asking the client to reconnect after 15 s.",
+      "spec": "5.5, 5.6",
+      "type": "message",
+      "kind": 9,
+      "kind_name": "GoAway",
+      "message": [
+        9,
+        21,
+        "server restarting for deploy",
+        15000,
+        null
+      ],
+      "diag": "[9, 21, \"server restarting for deploy\", 15000, null]",
+      "cbor": "850915781c7365727665722072657374617274696e6720666f72206465706c6f79193a98f6",
+      "length": 37,
+      "framed": "25850915781c7365727665722072657374617274696e6720666f72206465706c6f79193a98f6"
+    }
+  ]
+}

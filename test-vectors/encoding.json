@@ -1,0 +1,1554 @@
+{
+  "spec_revision": "core rev108 (2026-11-26 draft)",
+  "generator": "tools/vectorgen-go",
+  "area": "encoding",
+  "vectors": [
+    {
+      "name": "int/uint/0",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 3,
+      "logical": {
+        "declared": "uint",
+        "value": 0
+      },
+      "value": 0,
+      "diag": "0",
+      "cbor": "00"
+    },
+    {
+      "name": "int/uint/23",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 3,
+      "logical": {
+        "declared": "uint",
+        "value": 23
+      },
+      "value": 23,
+      "diag": "23",
+      "cbor": "17"
+    },
+    {
+      "name": "int/uint/24",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 3,
+      "logical": {
+        "declared": "uint",
+        "value": 24
+      },
+      "value": 24,
+      "diag": "24",
+      "cbor": "1818"
+    },
+    {
+      "name": "int/uint/255",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 3,
+      "logical": {
+        "declared": "uint",
+        "value": 255
+      },
+      "value": 255,
+      "diag": "255",
+      "cbor": "18ff"
+    },
+    {
+      "name": "int/uint/256",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 3,
+      "logical": {
+        "declared": "uint",
+        "value": 256
+      },
+      "value": 256,
+      "diag": "256",
+      "cbor": "190100"
+    },
+    {
+      "name": "int/uint/65535",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 3,
+      "logical": {
+        "declared": "uint",
+        "value": 65535
+      },
+      "value": 65535,
+      "diag": "65535",
+      "cbor": "19ffff"
+    },
+    {
+      "name": "int/uint/65536",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 3,
+      "logical": {
+        "declared": "uint",
+        "value": 65536
+      },
+      "value": 65536,
+      "diag": "65536",
+      "cbor": "1a00010000"
+    },
+    {
+      "name": "int/uint/4294967295",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 3,
+      "logical": {
+        "declared": "uint",
+        "value": 4294967295
+      },
+      "value": 4294967295,
+      "diag": "4294967295",
+      "cbor": "1affffffff"
+    },
+    {
+      "name": "int/uint/4294967296",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 3,
+      "logical": {
+        "declared": "uint",
+        "value": 4294967296
+      },
+      "value": 4294967296,
+      "diag": "4294967296",
+      "cbor": "1b0000000100000000"
+    },
+    {
+      "name": "int/uint/9007199254740991",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 3,
+      "logical": {
+        "declared": "uint",
+        "value": 9007199254740991
+      },
+      "value": 9007199254740991,
+      "diag": "9007199254740991",
+      "cbor": "1b001fffffffffffff"
+    },
+    {
+      "name": "int/uint/9007199254740992",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 3,
+      "logical": {
+        "declared": "uint",
+        "value": {
+          "$int": "9007199254740992"
+        }
+      },
+      "value": {
+        "$int": "9007199254740992"
+      },
+      "diag": "9007199254740992",
+      "cbor": "1b0020000000000000"
+    },
+    {
+      "name": "int/uint/18446744073709551615",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 3,
+      "logical": {
+        "declared": "uint",
+        "value": {
+          "$int": "18446744073709551615"
+        }
+      },
+      "value": {
+        "$int": "18446744073709551615"
+      },
+      "diag": "18446744073709551615",
+      "cbor": "1bffffffffffffffff"
+    },
+    {
+      "name": "int/int/-1",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 2,
+      "logical": {
+        "declared": "int",
+        "value": -1
+      },
+      "value": -1,
+      "diag": "-1",
+      "cbor": "20"
+    },
+    {
+      "name": "int/int/-24",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 2,
+      "logical": {
+        "declared": "int",
+        "value": -24
+      },
+      "value": -24,
+      "diag": "-24",
+      "cbor": "37"
+    },
+    {
+      "name": "int/int/-25",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 2,
+      "logical": {
+        "declared": "int",
+        "value": -25
+      },
+      "value": -25,
+      "diag": "-25",
+      "cbor": "3818"
+    },
+    {
+      "name": "int/int/-256",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 2,
+      "logical": {
+        "declared": "int",
+        "value": -256
+      },
+      "value": -256,
+      "diag": "-256",
+      "cbor": "38ff"
+    },
+    {
+      "name": "int/int/-257",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 2,
+      "logical": {
+        "declared": "int",
+        "value": -257
+      },
+      "value": -257,
+      "diag": "-257",
+      "cbor": "390100"
+    },
+    {
+      "name": "int/int/-9223372036854775808",
+      "description": "Integers MUST use the shortest form.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "int",
+      "schema_type": 2,
+      "logical": {
+        "declared": "int",
+        "value": {
+          "$int": "-9223372036854775808"
+        }
+      },
+      "value": {
+        "$int": "-9223372036854775808"
+      },
+      "diag": "-9223372036854775808",
+      "cbor": "3b7fffffffffffffff"
+    },
+    {
+      "name": "float/float64/1.5",
+      "description": "Exact in half precision.",
+      "spec": "3.1, 3.2",
+      "type": "value",
+      "rule": "float",
+      "schema_type": "float64",
+      "logical": {
+        "declared": "float64",
+        "value": "1.5"
+      },
+      "value": {
+        "$float": "1.5"
+      },
+      "diag": "1.5_1",
+      "cbor": "f93e00"
+    },
+    {
+      "name": "float/float64/1",
+      "description": "Integral float value 1.0 declared float64: shortest exact width is half precision. NOTE: a JavaScript encoder that is not told the declared type encodes the number 1 as integer 0x01 instead (see SPEC-ISSUES.md).",
+      "spec": "3.1, 3.2",
+      "type": "value",
+      "rule": "float",
+      "schema_type": "float64",
+      "logical": {
+        "declared": "float64",
+        "value": "1"
+      },
+      "value": {
+        "$float": "1"
+      },
+      "diag": "1.0_1",
+      "cbor": "f93c00"
+    },
+    {
+      "name": "float/float64/100000",
+      "description": "Integral float 100000.0: not exact in half, exact in single precision. Same JavaScript caveat as float/float64/1.",
+      "spec": "3.1, 3.2",
+      "type": "value",
+      "rule": "float",
+      "schema_type": "float64",
+      "logical": {
+        "declared": "float64",
+        "value": "100000"
+      },
+      "value": {
+        "$float": "100000"
+      },
+      "diag": "100000.0_2",
+      "cbor": "fa47c35000"
+    },
+    {
+      "name": "float/float64/65504",
+      "description": "Largest finite half-precision value.",
+      "spec": "3.1, 3.2",
+      "type": "value",
+      "rule": "float",
+      "schema_type": "float64",
+      "logical": {
+        "declared": "float64",
+        "value": "65504"
+      },
+      "value": {
+        "$float": "65504"
+      },
+      "diag": "65504.0_1",
+      "cbor": "f97bff"
+    },
+    {
+      "name": "float/float64/5.960464477539063e-08",
+      "description": "Smallest positive half-precision subnormal.",
+      "spec": "3.1, 3.2",
+      "type": "value",
+      "rule": "float",
+      "schema_type": "float64",
+      "logical": {
+        "declared": "float64",
+        "value": "5.960464477539063e-08"
+      },
+      "value": {
+        "$float": "5.960464477539063e-08"
+      },
+      "diag": "5.960464477539063e-8_1",
+      "cbor": "f90001"
+    },
+    {
+      "name": "float/float64/0.1",
+      "description": "Not exact in single precision: needs double.",
+      "spec": "3.1, 3.2",
+      "type": "value",
+      "rule": "float",
+      "schema_type": "float64",
+      "logical": {
+        "declared": "float64",
+        "value": "0.1"
+      },
+      "value": {
+        "$float": "0.1"
+      },
+      "diag": "0.1_3",
+      "cbor": "fb3fb999999999999a"
+    },
+    {
+      "name": "float/float32/0.1",
+      "description": "Declared float32: the float32 value nearest 0.1 (0.10000000149011612) is exact in single precision.",
+      "spec": "3.1, 3.2",
+      "type": "value",
+      "rule": "float",
+      "schema_type": "float32",
+      "logical": {
+        "declared": "float32",
+        "value": "0.1"
+      },
+      "value": {
+        "$float": "0.10000000149011612"
+      },
+      "diag": "0.10000000149011612_2",
+      "cbor": "fa3dcccccd"
+    },
+    {
+      "name": "float/float32/3.4028234663852886e+38",
+      "description": "Largest finite float32.",
+      "spec": "3.1, 3.2",
+      "type": "value",
+      "rule": "float",
+      "schema_type": "float32",
+      "logical": {
+        "declared": "float32",
+        "value": "3.4028234663852886e+38"
+      },
+      "value": {
+        "$float": "3.4028234663852886e+38"
+      },
+      "diag": "3.4028234663852886e+38_2",
+      "cbor": "fa7f7fffff"
+    },
+    {
+      "name": "float/float64/1.0000000000000002",
+      "description": "Needs all 53 bits of mantissa.",
+      "spec": "3.1, 3.2",
+      "type": "value",
+      "rule": "float",
+      "schema_type": "float64",
+      "logical": {
+        "declared": "float64",
+        "value": "1.0000000000000002"
+      },
+      "value": {
+        "$float": "1.0000000000000002"
+      },
+      "diag": "1.0000000000000002_3",
+      "cbor": "fb3ff0000000000001"
+    },
+    {
+      "name": "float/float64/1e+300",
+      "description": "Out of single-precision range.",
+      "spec": "3.1, 3.2",
+      "type": "value",
+      "rule": "float",
+      "schema_type": "float64",
+      "logical": {
+        "declared": "float64",
+        "value": "1e+300"
+      },
+      "value": {
+        "$float": "1e+300"
+      },
+      "diag": "1.0e+300_3",
+      "cbor": "fb7e37e43c8800759c"
+    },
+    {
+      "name": "float/float64/-0",
+      "description": "Negative zero is a distinct half-precision value.",
+      "spec": "3.1, 3.2",
+      "type": "value",
+      "rule": "float",
+      "schema_type": "float64",
+      "logical": {
+        "declared": "float64",
+        "value": "-0"
+      },
+      "value": {
+        "$float": "-0"
+      },
+      "diag": "-0.0_1",
+      "cbor": "f98000"
+    },
+    {
+      "name": "float/float64/NaN",
+      "description": "NaN in its canonical half-precision form 0xf97e00 (RFC 8949, section 4.2.1).",
+      "spec": "3.1, 3.2",
+      "type": "value",
+      "rule": "float",
+      "schema_type": "float64",
+      "logical": {
+        "declared": "float64",
+        "value": "NaN"
+      },
+      "value": {
+        "$float": "NaN"
+      },
+      "diag": "NaN",
+      "cbor": "f97e00"
+    },
+    {
+      "name": "float/float64/Infinity",
+      "description": "Positive infinity in half precision.",
+      "spec": "3.1, 3.2",
+      "type": "value",
+      "rule": "float",
+      "schema_type": "float64",
+      "logical": {
+        "declared": "float64",
+        "value": "Infinity"
+      },
+      "value": {
+        "$float": "Infinity"
+      },
+      "diag": "Infinity",
+      "cbor": "f97c00"
+    },
+    {
+      "name": "float/float64/-Infinity",
+      "description": "Negative infinity in half precision.",
+      "spec": "3.1, 3.2",
+      "type": "value",
+      "rule": "float",
+      "schema_type": "float64",
+      "logical": {
+        "declared": "float64",
+        "value": "-Infinity"
+      },
+      "value": {
+        "$float": "-Infinity"
+      },
+      "diag": "-Infinity",
+      "cbor": "f9fc00"
+    },
+    {
+      "name": "float/integer-on-wire",
+      "description": "Decoders MUST accept an integer where a float type is declared (JavaScript cannot tell 3 from 3.0). The wire bytes 0x03 decode to float64 3.0; the canonical encoding of 3.0 is f94200.",
+      "spec": "3.1",
+      "type": "decode_only",
+      "rule": "float_from_int",
+      "schema_type": "float64",
+      "cbor": "03",
+      "decoded_float": "3",
+      "canonical_cbor": "f94200"
+    },
+    {
+      "name": "struct/note",
+      "description": "Note (type 64): tag 5 is a removed field, encoded as null so later fields do not shift; tag 7 'pinned' is absent, so the trailing null is omitted.",
+      "spec": "3.4",
+      "type": "value",
+      "rule": "struct",
+      "schema_type": 64,
+      "logical": {
+        "type": "acme.notes.Note",
+        "fields": [
+          {
+            "tag": 0,
+            "name": "id",
+            "value": {
+              "$tag": 37,
+              "value": {
+                "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+              }
+            }
+          },
+          {
+            "tag": 1,
+            "name": "title",
+            "value": "Groceries"
+          },
+          {
+            "tag": 2,
+            "name": "body",
+            "value": "milk, eggs"
+          },
+          {
+            "tag": 3,
+            "name": "tags",
+            "value": [
+              "home"
+            ]
+          },
+          {
+            "tag": 4,
+            "name": "updated",
+            "value": {
+              "$tag": 1,
+              "value": 1795737600
+            }
+          },
+          {
+            "tag": 6,
+            "name": "color",
+            "value": 71
+          }
+        ]
+      },
+      "value": [
+        {
+          "$tag": 37,
+          "value": {
+            "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+          }
+        },
+        "Groceries",
+        "milk, eggs",
+        [
+          "home"
+        ],
+        {
+          "$tag": 1,
+          "value": 1795737600
+        },
+        null,
+        71
+      ],
+      "diag": "[37(h'6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b'), \"Groceries\", \"milk, eggs\", [\"home\"], 1(1795737600), null, 71]",
+      "cbor": "87d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b6947726f6365726965736a6d696c6b2c20656767738164686f6d65c11a6b08c800f61847"
+    },
+    {
+      "name": "struct/note-trailing-nulls",
+      "description": "Note with body and color absent: the null slot for body (tag 2) stays; tags 5 and 6 are trailing nulls and are omitted.",
+      "spec": "3.4",
+      "type": "value",
+      "rule": "struct",
+      "schema_type": 64,
+      "logical": {
+        "type": "acme.notes.Note",
+        "fields": [
+          {
+            "tag": 0,
+            "name": "id",
+            "value": {
+              "$tag": 37,
+              "value": {
+                "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+              }
+            }
+          },
+          {
+            "tag": 1,
+            "name": "title",
+            "value": "Empty"
+          },
+          {
+            "tag": 3,
+            "name": "tags",
+            "value": []
+          },
+          {
+            "tag": 4,
+            "name": "updated",
+            "value": {
+              "$tag": 1,
+              "value": 1795737600
+            }
+          }
+        ]
+      },
+      "value": [
+        {
+          "$tag": 37,
+          "value": {
+            "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+          }
+        },
+        "Empty",
+        null,
+        [],
+        {
+          "$tag": 1,
+          "value": 1795737600
+        }
+      ],
+      "diag": "[37(h'6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b'), \"Empty\", null, [], 1(1795737600)]",
+      "cbor": "85d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b65456d707479f680c11a6b08c800"
+    },
+    {
+      "name": "struct/note-pinned",
+      "description": "Note with the deprecated field pinned (tag 7) set: slots 2, 5 and 6 are null.",
+      "spec": "3.4",
+      "type": "value",
+      "rule": "struct",
+      "schema_type": 64,
+      "logical": {
+        "type": "acme.notes.Note",
+        "fields": [
+          {
+            "tag": 0,
+            "name": "id",
+            "value": {
+              "$tag": 37,
+              "value": {
+                "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+              }
+            }
+          },
+          {
+            "tag": 1,
+            "name": "title",
+            "value": "Empty"
+          },
+          {
+            "tag": 3,
+            "name": "tags",
+            "value": []
+          },
+          {
+            "tag": 4,
+            "name": "updated",
+            "value": {
+              "$tag": 1,
+              "value": 1795737600
+            }
+          },
+          {
+            "tag": 7,
+            "name": "pinned",
+            "value": true
+          }
+        ]
+      },
+      "value": [
+        {
+          "$tag": 37,
+          "value": {
+            "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+          }
+        },
+        "Empty",
+        null,
+        [],
+        {
+          "$tag": 1,
+          "value": 1795737600
+        },
+        null,
+        null,
+        true
+      ],
+      "diag": "[37(h'6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b'), \"Empty\", null, [], 1(1795737600), null, null, true]",
+      "cbor": "88d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b65456d707479f680c11a6b08c800f6f6f5"
+    },
+    {
+      "name": "struct/7.7-input",
+      "description": "The input struct of the section 7.7 example.",
+      "spec": "3.4, 7.7",
+      "type": "value",
+      "rule": "struct",
+      "schema_type": "sparrow.ui.OpenPanel (example, not in the test schema)",
+      "logical": {
+        "type": "sparrow.ui.OpenPanel",
+        "fields": [
+          {
+            "tag": 0,
+            "name": "name",
+            "value": "settings"
+          },
+          {
+            "tag": 1,
+            "name": "focus",
+            "value": true
+          }
+        ]
+      },
+      "value": [
+        "settings",
+        true
+      ],
+      "diag": "[\"settings\", true]",
+      "cbor": "826873657474696e6773f5"
+    },
+    {
+      "name": "struct/attachment-token",
+      "description": "Attachment (type 69) with mime absent and the [4] field carrying byte token 1.",
+      "spec": "3.4, 7.8",
+      "type": "value",
+      "rule": "struct",
+      "schema_type": 69,
+      "logical": {
+        "type": "acme.notes.Attachment",
+        "fields": [
+          {
+            "tag": 0,
+            "name": "name",
+            "value": "a.txt"
+          },
+          {
+            "tag": 2,
+            "name": "data",
+            "value": 1
+          }
+        ]
+      },
+      "value": [
+        "a.txt",
+        null,
+        1
+      ],
+      "diag": "[\"a.txt\", null, 1]",
+      "cbor": "8365612e747874f601"
+    },
+    {
+      "name": "sparse/filter-two",
+      "description": "Sparse NoteFilter (type 65): a map from field tag to value, absent fields left out. Keys sorted (canonical order).",
+      "spec": "3.4",
+      "type": "value",
+      "rule": "sparse_struct",
+      "schema_type": 65,
+      "logical": {
+        "type": "acme.notes.NoteFilter",
+        "fields": [
+          {
+            "tag": 2,
+            "name": "limit",
+            "value": 50
+          },
+          {
+            "tag": 1,
+            "name": "color",
+            "value": 71
+          }
+        ]
+      },
+      "value": {
+        "$map": [
+          [
+            1,
+            71
+          ],
+          [
+            2,
+            50
+          ]
+        ]
+      },
+      "diag": "{1: 71, 2: 50}",
+      "cbor": "a2011847021832"
+    },
+    {
+      "name": "sparse/filter-empty",
+      "description": "Sparse NoteFilter with every field absent: an empty map.",
+      "spec": "3.4",
+      "type": "value",
+      "rule": "sparse_struct",
+      "schema_type": 65,
+      "logical": {
+        "type": "acme.notes.NoteFilter",
+        "fields": null
+      },
+      "value": {},
+      "diag": "{}",
+      "cbor": "a0"
+    },
+    {
+      "name": "sparse/filter-three",
+      "description": "Sparse NoteFilter with query, since and tags.",
+      "spec": "3.4",
+      "type": "value",
+      "rule": "sparse_struct",
+      "schema_type": 65,
+      "logical": {
+        "type": "acme.notes.NoteFilter",
+        "fields": [
+          {
+            "tag": 4,
+            "name": "tags",
+            "value": [
+              "home",
+              "work"
+            ]
+          },
+          {
+            "tag": 0,
+            "name": "query",
+            "value": "milk"
+          },
+          {
+            "tag": 3,
+            "name": "since",
+            "value": {
+              "$tag": 1,
+              "value": 1767225600
+            }
+          }
+        ]
+      },
+      "value": {
+        "$map": [
+          [
+            0,
+            "milk"
+          ],
+          [
+            3,
+            {
+              "$tag": 1,
+              "value": 1767225600
+            }
+          ],
+          [
+            4,
+            [
+              "home",
+              "work"
+            ]
+          ]
+        ]
+      },
+      "diag": "{0: \"milk\", 3: 1(1767225600), 4: [\"home\", \"work\"]}",
+      "cbor": "a300646d696c6b03c11a6955b900048264686f6d6564776f726b"
+    },
+    {
+      "name": "enum/color-green",
+      "description": "Enum value: the sigil as a uint.",
+      "spec": "3.4, 6.5",
+      "type": "value",
+      "rule": "enum",
+      "schema_type": 66,
+      "logical": {
+        "type": "acme.notes.Color",
+        "value_name": "acme.notes.Color.green",
+        "sigil": 71
+      },
+      "value": 71,
+      "diag": "71",
+      "cbor": "1847"
+    },
+    {
+      "name": "union/change-upserted",
+      "description": "Union Change (type 67), variant 0 'upserted' carrying a Note.",
+      "spec": "3.4",
+      "type": "value",
+      "rule": "union",
+      "schema_type": 67,
+      "logical": {
+        "type": "acme.notes.Change",
+        "variant_tag": 0,
+        "variant": "upserted",
+        "value": [
+          {
+            "$tag": 37,
+            "value": {
+              "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+            }
+          },
+          "Groceries",
+          "milk, eggs",
+          [
+            "home"
+          ],
+          {
+            "$tag": 1,
+            "value": 1795737600
+          },
+          null,
+          71
+        ]
+      },
+      "value": [
+        0,
+        [
+          {
+            "$tag": 37,
+            "value": {
+              "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+            }
+          },
+          "Groceries",
+          "milk, eggs",
+          [
+            "home"
+          ],
+          {
+            "$tag": 1,
+            "value": 1795737600
+          },
+          null,
+          71
+        ]
+      ],
+      "diag": "[0, [37(h'6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b'), \"Groceries\", \"milk, eggs\", [\"home\"], 1(1795737600), null, 71]]",
+      "cbor": "820087d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b6947726f6365726965736a6d696c6b2c20656767738164686f6d65c11a6b08c800f61847"
+    },
+    {
+      "name": "union/change-deleted",
+      "description": "Union Change, variant 1 'deleted' carrying a NoteId (uuid).",
+      "spec": "3.4",
+      "type": "value",
+      "rule": "union",
+      "schema_type": 67,
+      "logical": {
+        "type": "acme.notes.Change",
+        "variant_tag": 1,
+        "variant": "deleted",
+        "value": {
+          "$tag": 37,
+          "value": {
+            "$bytes": "0b5e7d3c2a194f8e8d7c6b5a49382716"
+          }
+        }
+      },
+      "value": [
+        1,
+        {
+          "$tag": 37,
+          "value": {
+            "$bytes": "0b5e7d3c2a194f8e8d7c6b5a49382716"
+          }
+        }
+      ],
+      "diag": "[1, 37(h'0b5e7d3c2a194f8e8d7c6b5a49382716')]",
+      "cbor": "8201d825500b5e7d3c2a194f8e8d7c6b5a49382716"
+    },
+    {
+      "name": "union/change-cleared",
+      "description": "Union Change, variant 2 'cleared' carrying unit (null).",
+      "spec": "3.4",
+      "type": "value",
+      "rule": "union",
+      "schema_type": 67,
+      "logical": {
+        "type": "acme.notes.Change",
+        "variant_tag": 2,
+        "variant": "cleared",
+        "value": null
+      },
+      "value": [
+        2,
+        null
+      ],
+      "diag": "[2, null]",
+      "cbor": "8202f6"
+    },
+    {
+      "name": "any/note",
+      "description": "any: [type_id, value] for a Note.",
+      "spec": "3.4, 6.3",
+      "type": "value",
+      "rule": "any",
+      "schema_type": 10,
+      "logical": {
+        "type_id": 64,
+        "value": [
+          {
+            "$tag": 37,
+            "value": {
+              "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+            }
+          },
+          "Groceries",
+          "milk, eggs",
+          [
+            "home"
+          ],
+          {
+            "$tag": 1,
+            "value": 1795737600
+          },
+          null,
+          71
+        ]
+      },
+      "value": [
+        64,
+        [
+          {
+            "$tag": 37,
+            "value": {
+              "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+            }
+          },
+          "Groceries",
+          "milk, eggs",
+          [
+            "home"
+          ],
+          {
+            "$tag": 1,
+            "value": 1795737600
+          },
+          null,
+          71
+        ]
+      ],
+      "diag": "[64, [37(h'6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b'), \"Groceries\", \"milk, eggs\", [\"home\"], 1(1795737600), null, 71]]",
+      "cbor": "82184087d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b6947726f6365726965736a6d696c6b2c20656767738164686f6d65c11a6b08c800f61847"
+    },
+    {
+      "name": "any/string",
+      "description": "any carrying a built-in string (type 6).",
+      "spec": "3.4, 6.3",
+      "type": "value",
+      "rule": "any",
+      "schema_type": 10,
+      "logical": {
+        "type_id": 6,
+        "value": "hello"
+      },
+      "value": [
+        6,
+        "hello"
+      ],
+      "diag": "[6, \"hello\"]",
+      "cbor": "82066568656c6c6f"
+    },
+    {
+      "name": "symbol/with-sigil",
+      "description": "symbol whose string has a sigil (note.updated = 80): the sigil is sent.",
+      "spec": "6.3",
+      "type": "value",
+      "rule": "symbol",
+      "schema_type": 11,
+      "logical": {
+        "text": "note.updated",
+        "sigil": 80
+      },
+      "value": 80,
+      "diag": "80",
+      "cbor": "1850"
+    },
+    {
+      "name": "symbol/text",
+      "description": "symbol without a sigil: the text is sent.",
+      "spec": "6.3",
+      "type": "value",
+      "rule": "symbol",
+      "schema_type": 11,
+      "logical": {
+        "text": "note.archived",
+        "sigil": null
+      },
+      "value": "note.archived",
+      "diag": "\"note.archived\"",
+      "cbor": "6d6e6f74652e6172636869766564"
+    },
+    {
+      "name": "unit",
+      "description": "unit is null.",
+      "spec": "6.3",
+      "type": "value",
+      "rule": "literal",
+      "schema_type": 0,
+      "logical": {
+        "value": null
+      },
+      "value": null,
+      "diag": "null",
+      "cbor": "f6"
+    },
+    {
+      "name": "bool/true",
+      "description": "bool true.",
+      "spec": "6.3",
+      "type": "value",
+      "rule": "literal",
+      "schema_type": 1,
+      "logical": {
+        "value": true
+      },
+      "value": true,
+      "diag": "true",
+      "cbor": "f5"
+    },
+    {
+      "name": "bytes/empty",
+      "description": "Empty byte string.",
+      "spec": "3.4, 6.3",
+      "type": "value",
+      "rule": "literal",
+      "schema_type": 7,
+      "logical": {
+        "value": {
+          "$bytes": ""
+        }
+      },
+      "value": {
+        "$bytes": ""
+      },
+      "diag": "h''",
+      "cbor": "40"
+    },
+    {
+      "name": "bytes/short",
+      "description": "Byte string.",
+      "spec": "3.4, 6.3",
+      "type": "value",
+      "rule": "literal",
+      "schema_type": 7,
+      "logical": {
+        "value": {
+          "$bytes": "00ff10"
+        }
+      },
+      "value": {
+        "$bytes": "00ff10"
+      },
+      "diag": "h'00ff10'",
+      "cbor": "4300ff10"
+    },
+    {
+      "name": "string/utf8",
+      "description": "Text string with non-ASCII UTF-8.",
+      "spec": "3.1, 6.3",
+      "type": "value",
+      "rule": "literal",
+      "schema_type": 6,
+      "logical": {
+        "value": "Grüße ✓"
+      },
+      "value": "Grüße ✓",
+      "diag": "\"Gr\\u00fc\\u00dfe \\u2713\"",
+      "cbor": "6b4772c3bcc39f6520e29c93"
+    },
+    {
+      "name": "timestamp/int",
+      "description": "timestamp: tag 1 + integer seconds (2026-11-27T00:00:00Z).",
+      "spec": "3.5, 6.3",
+      "type": "value",
+      "rule": "literal",
+      "schema_type": 8,
+      "logical": {
+        "value": {
+          "$tag": 1,
+          "value": 1795737600
+        }
+      },
+      "value": {
+        "$tag": 1,
+        "value": 1795737600
+      },
+      "diag": "1(1795737600)",
+      "cbor": "c11a6b08c800"
+    },
+    {
+      "name": "timestamp/float",
+      "description": "timestamp: tag 1 + float seconds (needs double precision).",
+      "spec": "3.5, 6.3",
+      "type": "value",
+      "rule": "literal",
+      "schema_type": 8,
+      "logical": {
+        "value": {
+          "$tag": 1,
+          "value": {
+            "$float": "1.7957376005e+09"
+          }
+        }
+      },
+      "value": {
+        "$tag": 1,
+        "value": {
+          "$float": "1.7957376005e+09"
+        }
+      },
+      "diag": "1(1795737600.5_3)",
+      "cbor": "c1fb41dac23200200000"
+    },
+    {
+      "name": "timestamp/negative",
+      "description": "timestamp before 1970: tag 1 + negative integer.",
+      "spec": "3.5, 6.3",
+      "type": "value",
+      "rule": "literal",
+      "schema_type": 8,
+      "logical": {
+        "value": {
+          "$tag": 1,
+          "value": -1
+        }
+      },
+      "value": {
+        "$tag": 1,
+        "value": -1
+      },
+      "diag": "1(-1)",
+      "cbor": "c120"
+    },
+    {
+      "name": "uuid",
+      "description": "uuid: tag 37 + 16-byte byte string.",
+      "spec": "3.5, 6.3",
+      "type": "value",
+      "rule": "literal",
+      "schema_type": 9,
+      "logical": {
+        "value": {
+          "$tag": 37,
+          "value": {
+            "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+          }
+        }
+      },
+      "value": {
+        "$tag": 37,
+        "value": {
+          "$bytes": "6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+        }
+      },
+      "diag": "37(h'6f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b')",
+      "cbor": "d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b"
+    },
+    {
+      "name": "list/strings",
+      "description": "List of strings ([0, 6]).",
+      "spec": "3.4, 6.3",
+      "type": "value",
+      "rule": "literal",
+      "schema_type": [
+        0,
+        6
+      ],
+      "logical": {
+        "value": [
+          "a",
+          "b"
+        ]
+      },
+      "value": [
+        "a",
+        "b"
+      ],
+      "diag": "[\"a\", \"b\"]",
+      "cbor": "8261616162"
+    },
+    {
+      "name": "list/empty",
+      "description": "Empty list.",
+      "spec": "3.4",
+      "type": "value",
+      "rule": "literal",
+      "schema_type": [
+        0,
+        6
+      ],
+      "logical": {
+        "value": []
+      },
+      "value": [],
+      "diag": "[]",
+      "cbor": "80"
+    },
+    {
+      "name": "map/text-keys",
+      "description": "Map string => uint. Core Deterministic Encoding sorts keys by their encoded bytes, so \"b\" (61 62) sorts before \"aa\" (62 61 61): shorter strings first, unlike plain string order.",
+      "spec": "3.2, 3.4",
+      "type": "value",
+      "rule": "map",
+      "schema_type": [
+        1,
+        6,
+        3
+      ],
+      "logical": {
+        "entries": [
+          [
+            "aa",
+            1
+          ],
+          [
+            "b",
+            2
+          ],
+          [
+            "ab",
+            3
+          ],
+          [
+            "a",
+            4
+          ]
+        ]
+      },
+      "value": {
+        "a": 4,
+        "b": 2,
+        "aa": 1,
+        "ab": 3
+      },
+      "diag": "{\"a\": 4, \"b\": 2, \"aa\": 1, \"ab\": 3}",
+      "cbor": "a46161046162026261610162616203"
+    },
+    {
+      "name": "map/uint-keys",
+      "description": "Map uint => string: 24 (18 18) sorts after 23 (17).",
+      "spec": "3.2, 3.4",
+      "type": "value",
+      "rule": "map",
+      "schema_type": [
+        1,
+        3,
+        6
+      ],
+      "logical": {
+        "entries": [
+          [
+            256,
+            "c"
+          ],
+          [
+            24,
+            "b"
+          ],
+          [
+            23,
+            "a"
+          ],
+          [
+            0,
+            "z"
+          ]
+        ]
+      },
+      "value": {
+        "$map": [
+          [
+            0,
+            "z"
+          ],
+          [
+            23,
+            "a"
+          ],
+          [
+            24,
+            "b"
+          ],
+          [
+            256,
+            "c"
+          ]
+        ]
+      },
+      "diag": "{0: \"z\", 23: \"a\", 24: \"b\", 256: \"c\"}",
+      "cbor": "a400617a176161181861621901006163"
+    },
+    {
+      "name": "map/mixed-keys",
+      "description": "Mixed key types as in metadata ({* symbol => any}) or annotations: uints (major type 0) before negative ints (1) before text (3); bytewise order, so 24 (18 18) sorts before -1 (20).",
+      "spec": "3.2, 3.4",
+      "type": "value",
+      "rule": "map",
+      "schema_type": "metadata / any map",
+      "logical": {
+        "entries": [
+          [
+            "x-tenant",
+            "acme"
+          ],
+          [
+            -1,
+            "neg"
+          ],
+          [
+            35,
+            262144
+          ],
+          [
+            24,
+            "u24"
+          ],
+          [
+            1,
+            "one"
+          ],
+          [
+            "",
+            "empty"
+          ],
+          [
+            -25,
+            "neg25"
+          ]
+        ]
+      },
+      "value": {
+        "$map": [
+          [
+            1,
+            "one"
+          ],
+          [
+            24,
+            "u24"
+          ],
+          [
+            35,
+            262144
+          ],
+          [
+            -1,
+            "neg"
+          ],
+          [
+            -25,
+            "neg25"
+          ],
+          [
+            "",
+            "empty"
+          ],
+          [
+            "x-tenant",
+            "acme"
+          ]
+        ]
+      },
+      "diag": "{1: \"one\", 24: \"u24\", 35: 262144, -1: \"neg\", -25: \"neg25\", \"\": \"empty\", \"x-tenant\": \"acme\"}",
+      "cbor": "a701636f6e6518186375323418231a0004000020636e65673818656e656732356065656d70747968782d74656e616e746461636d65"
+    },
+    {
+      "name": "map/params",
+      "description": "A params map (section 5.4) in canonical order.",
+      "spec": "3.2, 3.4",
+      "type": "value",
+      "rule": "map",
+      "schema_type": "params",
+      "logical": {
+        "entries": [
+          [
+            "maxStreams",
+            32
+          ],
+          [
+            "maxMessageSize",
+            4194304
+          ],
+          [
+            "leaseCredit",
+            2097152
+          ],
+          [
+            "idleTimeoutMs",
+            20000
+          ],
+          [
+            "sharedCredit",
+            65536
+          ],
+          [
+            "maxInlineBytes",
+            65536
+          ],
+          [
+            "maxConcurrentCalls",
+            100
+          ]
+        ]
+      },
+      "value": {
+        "maxStreams": 32,
+        "leaseCredit": 2097152,
+        "sharedCredit": 65536,
+        "idleTimeoutMs": 20000,
+        "maxInlineBytes": 65536,
+        "maxMessageSize": 4194304,
+        "maxConcurrentCalls": 100
+      },
+      "diag": "{\"maxStreams\": 32, \"leaseCredit\": 2097152, \"sharedCredit\": 65536, \"idleTimeoutMs\": 20000, \"maxInlineBytes\": 65536, \"maxMessageSize\": 4194304, \"maxConcurrentCalls\": 100}",
+      "cbor": "a76a6d617853747265616d7318206b6c656173654372656469741a002000006c7368617265644372656469741a000100006d69646c6554696d656f75744d73194e206e6d6178496e6c696e6542797465731a000100006e6d61784d65737361676553697a651a00400000726d6178436f6e63757272656e7443616c6c731864"
+    }
+  ]
+}
