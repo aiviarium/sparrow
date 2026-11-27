@@ -79,6 +79,7 @@ func greeter(t *testing.T, name, version string, extra bool) *Facet {
 // TestNodePublish: a node publishes facets while connected; the hub side
 // sees each change after its SchemaUpdate.
 func TestNodePublish(t *testing.T) {
+	t.Parallel()
 	cc, sc := mem.Pipe(mem.Options{})
 	ctx := tctx(t)
 	hubFacet := NewFacet("sparrow.hub", "1.0.0")
@@ -156,6 +157,7 @@ func TestNodePublish(t *testing.T) {
 // TestNodeServe: a hub dials a node (the node is the Sparrow server and
 // publishes its facets in Welcome) over WebSocket.
 func TestNodeServe(t *testing.T) {
+	t.Parallel()
 	n := New(Options{ID: "greeter"})
 	ctx := tctx(t)
 	if _, err := n.Add(ctx, greeter(t, "greeter", "1.0.0", false)); err != nil {
@@ -198,6 +200,7 @@ func TestNodeServe(t *testing.T) {
 }
 
 func TestBuilderFlags(t *testing.T) {
+	t.Parallel()
 	b := NewFacet("x", "1.0.0")
 	blob := b.Struct("Blob", Field("data", ByteStream()))
 	svc := b.Service("S")
@@ -222,6 +225,7 @@ func TestBuilderFlags(t *testing.T) {
 // TestRunDialReconnects: after the hub drains a session, the node dials
 // again (after retry_after_ms) and republishes its facets.
 func TestRunDialReconnects(t *testing.T) {
+	t.Parallel()
 	sessions := make(chan *session.Session, 4)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, err := websocket.Accept(w, r, nil)

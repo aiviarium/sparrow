@@ -71,6 +71,9 @@ func writeConfig(t *testing.T, dir string) string {
 		"bootstrap": []map[string]string{{"principal": "user:admin", "credential": "admin-secret"}},
 		"tokens":    []map[string]any{{"token": "alice-token", "principal": "user:alice", "groups": []string{"group:eng"}}},
 		"log":       "debug", "shutdownGraceMs": 3000, "connectTimeoutMs": 15000,
+		// Redial within milliseconds: the test waits for nodes that come
+		// back, not for production backoffs.
+		"redialBackoffMs": 5, "redialBackoffMaxMs": 50,
 	}
 	b, _ := json.Marshal(cfg)
 	p := filepath.Join(dir, "hub.json")
@@ -172,7 +175,7 @@ func (p *hubProc) client(t *testing.T, url, token string, known *session.Config)
 // credential; it redials whenever its session ends.
 func (p *hubProc) echoDialIn(t *testing.T, id, cred string, extra ...string) *testutil.Proc {
 	t.Helper()
-	args := append([]string{"-id", id, "-hub", p.addrs.WebTransport, "-hub-pin", p.addrs.Pin, "-credential", cred}, extra...)
+	args := append([]string{"-id", id, "-hub", p.addrs.WebTransport, "-hub-pin", p.addrs.Pin, "-credential", cred, "-backoff", "5ms", "-backoff-max", "50ms", "-attempt-timeout", "2s"}, extra...)
 	return testutil.StartProc(t, "echo-node "+id, bins["echo-node"], args...)
 }
 
@@ -224,10 +227,11 @@ func keepPorts(t *testing.T, dir string, a Addrs) {
 // reconnects by itself and serves a call that waited for it; the hub
 // redials the other) and watch.
 func TestBinary(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	p := startHub(t, dir)
 	keepPorts(t, dir, p.addrs)
-	_, dialURL, dialPin := echoListening(t, "echo-dialed", "hub-to-dialed")
+	dialed, dialURL, dialPin := echoListening(t, "echo-dialed", "hub-to-dialed")
 	p.admin(t, p.addrs.WebSocket, "set-secret", "echo-link", "echo-to-hub")
 	p.admin(t, p.addrs.WebSocket, "set-secret", "dialed-link", "hub-to-dialed")
 	doc := fmt.Sprintf(`{"nodes": {"echo": {"link": {"credential": "echo-link"}}, "echo-dialed": {"link": {"dial": {"url": %q, "pin": %q, "credential": "dialed-link"}}}},
@@ -241,7 +245,7 @@ func TestBinary(t *testing.T) {
 	if !strings.Contains(out, `"revision": 1`) {
 		t.Fatalf("commit: %s", out)
 	}
-	p.echoDialIn(t, "echo", "echo-to-hub")
+	dialIn := p.echoDialIn(t, "echo", "echo-to-hub")
 	if out := p.admin(t, p.addrs.WebSocket, "get"); !strings.Contains(out, `"state": "confirmed"`) || !strings.Contains(out, `"revision": 1`) {
 		t.Fatalf("get: %s", out)
 	}
@@ -350,6 +354,13 @@ func TestBinary(t *testing.T) {
 	if !strings.HasPrefix(read(), `{"snapshot"`) {
 		t.Fatalf("watch: %s", read())
 	}
+	// The nodes stop while the hub still runs, so their GoAway is answered
+	// (a node whose hub is gone waits out the WebTransport linger).
+	for _, pr := range []*testutil.Proc{dialIn, dialed} {
+		if err := pr.Stop(); err != nil {
+			t.Errorf("%s: %v\n%s", pr.Name, err, pr.Log())
+		}
+	}
 }
 
 func pinnedClient(hash []byte) *http.Client {
@@ -371,6 +382,7 @@ func pinnedClient(hash []byte) *http.Client {
 // TestRunInProcess runs the program's Run in this process: plain-ws
 // WebSocket plus WebTransport, and shutdown on cancel.
 func TestRunInProcess(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	cfg := &Config{WebTransport: "127.0.0.1:0", WebSocket: "127.0.0.1:0", WebSocketPlain: true, SelfSigned: true, DataDir: dir}
 	cfg.Bootstrap = append(cfg.Bootstrap, struct {

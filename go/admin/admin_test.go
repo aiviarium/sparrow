@@ -36,6 +36,7 @@ func canon(t *testing.T, b []byte) []byte {
 // codec and re-encodes it to the same bytes, and checks the encoding
 // against the interface with the schema-driven value codec.
 func TestValueVectors(t *testing.T) {
+	t.Parallel()
 	f, err := vectors.Load("admin.json")
 	if err != nil {
 		t.Fatal(err)
@@ -116,6 +117,7 @@ func TestValueVectors(t *testing.T) {
 }
 
 func TestConfigRoundTrip(t *testing.T) {
+	t.Parallel()
 	c := &Config{
 		Nodes: map[string]*NodeConfig{
 			"a": {Link: DialIn("a"), Enabled: ptr(false), Extensions: map[string][]byte{"x.y": {0xf5}}},
@@ -176,6 +178,7 @@ func TestConfigRoundTrip(t *testing.T) {
 func ptr[T any](v T) *T { return &v }
 
 func TestValidate(t *testing.T) {
+	t.Parallel()
 	secrets := map[string]bool{"s1": true, "s2": true, "dial": true, "same-as-s1": true, "also-v1": true}
 	values := map[string]string{"s1": "v1", "s2": "v2", "dial": "v3", "same-as-s1": "v1", "also-v1": "v1"}
 	env := ValidateEnv{
@@ -332,6 +335,7 @@ func nextEvent(t *testing.T, ch <-chan []byte) *Event {
 }
 
 func TestManagerRevisions(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	clk := testutil.NewFakeClock()
 	m, a := newManager(t, dir, clk)
@@ -466,6 +470,7 @@ func TestManagerRevisions(t *testing.T) {
 }
 
 func TestManagerRestartDuringPending(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	clk := testutil.NewFakeClock()
 	m, _ := newManager(t, dir, clk)
@@ -497,6 +502,7 @@ func TestManagerRestartDuringPending(t *testing.T) {
 }
 
 func TestManagerHighWaterSurvivesCrash(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	m, _ := newManager(t, dir, nil)
 	_ = m.SetSecret("cred", []byte("v"))
@@ -526,6 +532,7 @@ func TestManagerHighWaterSurvivesCrash(t *testing.T) {
 }
 
 func TestStoreCrashSafety(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	s, _ := OpenStore(dir)
 	if err := s.Write("x", []byte("old")); err != nil {
@@ -562,6 +569,7 @@ func TestStoreCrashSafety(t *testing.T) {
 }
 
 func TestSecrets(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	m, _ := newManager(t, dir, nil)
 	if err := m.SetSecret("Bad Name", nil); code(err) != status.InvalidArgument {
@@ -603,6 +611,7 @@ func TestSecrets(t *testing.T) {
 }
 
 func TestWatchLagging(t *testing.T) {
+	t.Parallel()
 	m, _ := newManager(t, t.TempDir(), nil)
 	events, lagged, cancel := m.Watch()
 	defer cancel()

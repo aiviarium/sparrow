@@ -138,6 +138,7 @@ func alice(clk *fakeClock) *Login {
 }
 
 func TestTickets(t *testing.T) {
+	t.Parallel()
 	clk := &fakeClock{t: time.Unix(1_800_000_000, 0)}
 	tk := newTickets(t, clk, "edge-1")
 	tok, c, err := tk.Issue(alice(clk))
@@ -297,6 +298,7 @@ func (f *webFixture) do(t *testing.T, method, path, token, ctype, origin, body s
 }
 
 func TestConnect(t *testing.T) {
+	t.Parallel()
 	f := newWebFixture(t)
 	const js = "application/json"
 	body := `{"client": {"name": "sparrow-web", "version": "1.4.0", "hostApi": "3.2.0"}, "knownSchemaHash": "AbC"}`
@@ -368,6 +370,7 @@ func TestConnect(t *testing.T) {
 }
 
 func TestConnectCookieNeedsOrigin(t *testing.T) {
+	t.Parallel()
 	clk := &fakeClock{t: time.Now()}
 	auth := AuthenticatorFunc(func(r *http.Request) (*Login, error) {
 		if _, err := r.Cookie("session"); err != nil {
@@ -402,6 +405,7 @@ func TestConnectCookieNeedsOrigin(t *testing.T) {
 }
 
 func TestSchemaResource(t *testing.T) {
+	t.Parallel()
 	f := newWebFixture(t)
 	h, _ := f.host.byPrincipal["user:alice"].Hash()
 	path := SchemaPath + EncodeHash(h)
@@ -438,6 +442,7 @@ func TestSchemaResource(t *testing.T) {
 }
 
 func TestModuleResources(t *testing.T) {
+	t.Parallel()
 	f := newWebFixture(t)
 	pub := FileName(f.public, "js")
 	priv := FileName(f.private, "js")
@@ -501,6 +506,7 @@ func reasons(rs []Rejection) map[string]string {
 }
 
 func TestLoaderVerdicts(t *testing.T) {
+	t.Parallel()
 	sf := loadSigning(t)
 	top := schema.Annotations{AnnKeys: list(sf.certs...), AnnRevoked: sf.lists["revocation/list-3"]}
 	sc := schemaWith(top,
@@ -540,6 +546,7 @@ func TestLoaderVerdicts(t *testing.T) {
 }
 
 func TestRevocationState(t *testing.T) {
+	t.Parallel()
 	sf := loadSigning(t)
 	certs := list(sf.certs...)
 	l := &Loader{Roots: sf.roots, HostAPI: "3.2.0", Now: func() time.Time { return sf.now }}
@@ -570,6 +577,7 @@ func TestRevocationState(t *testing.T) {
 }
 
 func TestRollbackAndSnapshots(t *testing.T) {
+	t.Parallel()
 	sf := loadSigning(t)
 	at := sf.now
 	v1, v2 := []byte("export default () => 1"), []byte("export default () => 2")
@@ -634,6 +642,7 @@ func TestRollbackAndSnapshots(t *testing.T) {
 }
 
 func TestParseTopLevel(t *testing.T) {
+	t.Parallel()
 	sf := loadSigning(t)
 	m := func(kv ...any) []byte {
 		b := cbor.AppendMapHead(nil, len(kv)/2)
@@ -661,6 +670,7 @@ func TestParseTopLevel(t *testing.T) {
 }
 
 func TestRanges(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		r  string
 		in []string

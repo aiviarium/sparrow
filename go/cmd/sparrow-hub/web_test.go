@@ -154,6 +154,7 @@ func webHub(t *testing.T, extra map[string]any) (*hubProc, *webKeys, []byte) {
 // dialed node, ticket replay refused, AuthRefresh with a refreshed ticket,
 // the schema resource, and module fetch and verification into a snapshot.
 func TestWebEndToEnd(t *testing.T) {
+	t.Parallel()
 	p, keys, certHash := webHub(t, nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()

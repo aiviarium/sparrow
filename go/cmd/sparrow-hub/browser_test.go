@@ -17,6 +17,7 @@ import (
 // to the echo node, which dials in. Set SPARROW_BROWSER=1 to run it
 // (e2e/browser/run.sh does).
 func TestBrowser(t *testing.T) {
+	t.Parallel()
 	if os.Getenv("SPARROW_BROWSER") == "" {
 		t.Skip("set SPARROW_BROWSER=1 to run the browser test")
 	}

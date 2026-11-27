@@ -13,6 +13,7 @@ import (
 // (hub-admin 2): a document that means the same but encodes differently
 // (an explicit default) is an ordinary commit, so a stale base aborts it.
 func TestNoOpCommitIsCanonicalByteEquality(t *testing.T) {
+	t.Parallel()
 	m, _ := newManager(t, t.TempDir(), testutil.NewFakeClock())
 	_ = m.SetSecret("cred", []byte("v"))
 	if _, err := m.Commit(&CommitRequest{Base: 0, Config: doc("a", "b")}); err != nil {
@@ -38,6 +39,7 @@ func TestNoOpCommitIsCanonicalByteEquality(t *testing.T) {
 // hex; unknown keys (such as the old "dial" or "start" at node level) and
 // a link with no or two variants are refused.
 func TestJSONForm(t *testing.T) {
+	t.Parallel()
 	pin := make([]byte, 32)
 	pin[0] = 0xab
 	c := &Config{Nodes: map[string]*NodeConfig{

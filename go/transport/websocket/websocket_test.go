@@ -30,6 +30,7 @@ func serve(t *testing.T, o *AcceptOptions) (string, chan *Conn) {
 }
 
 func TestCloseCodes(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		code   status.Code
 		wsCode int
@@ -64,6 +65,7 @@ func TestCloseCodes(t *testing.T) {
 }
 
 func TestMessages(t *testing.T) {
+	t.Parallel()
 	url, ch := serve(t, nil)
 	c, err := Dial(context.Background(), url, nil)
 	if err != nil {
@@ -95,6 +97,7 @@ func TestMessages(t *testing.T) {
 }
 
 func TestUpgradeChecks(t *testing.T) {
+	t.Parallel()
 	url, _ := serve(t, &AcceptOptions{CheckOrigin: func(r *http.Request) bool { return r.Header.Get("Origin") == "https://ok.example" }})
 	h := http.Header{}
 	h.Set("Origin", "https://evil.example")
