@@ -1,7 +1,7 @@
 {
-  "name": "@aiviarium/sparrow-rpc",
+  "name": "@aiviarium/sparrow",
   "version": "0.1.0",
-  "description": "Sparrow RPC for TypeScript: CBOR, wire format, schemas, schema-driven values, sessions, and the pipe, WebSocket and in-memory bindings.",
+  "description": "Sparrow for TypeScript: CBOR, wire format, schemas, schema-driven values, sessions, and the pipe, WebSocket and in-memory bindings.",
   "license": "MIT OR Apache-2.0",
   "type": "module",
   "engines": {

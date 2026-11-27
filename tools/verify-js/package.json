@@ -1,8 +1,8 @@
 {
-  "name": "sparrow-rpc-verify-js",
+  "name": "sparrow-verify-js",
   "private": true,
   "version": "0.0.0",
-  "description": "Independent JavaScript verifier for the Sparrow RPC test vectors",
+  "description": "Independent JavaScript verifier for the Sparrow test vectors",
   "type": "module",
   "engines": {
     "node": ">=20"

@@ -1,4 +1,4 @@
-// Package names checks the ASCII name grammars of Sparrow RPC: facet names,
+// Package names checks the ASCII name grammars of Sparrow: facet names,
 // node IDs and module ids (sections 6.1, 9.4, 10.2), imported facet names
 // (10.8) and principals (10.4).
 package names

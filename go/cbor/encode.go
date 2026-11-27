@@ -1,4 +1,4 @@
-// Package cbor is the small CBOR (RFC 8949) layer under Sparrow RPC.
+// Package cbor is the small CBOR (RFC 8949) layer under Sparrow.
 //
 // It provides exactly what the protocol needs and nothing more:
 //

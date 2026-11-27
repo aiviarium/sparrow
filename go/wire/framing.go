@@ -1,4 +1,4 @@
-// Package wire implements the Sparrow RPC wire format: QUIC varints, the
+// Package wire implements the Sparrow wire format: QUIC varints, the
 // length-prefixed framing and stream header of section 4.1, the message
 // envelope and kind ranges of section 3.3, typed encoders and decoders for
 // every message of sections 5.4, 5.5 and 7.2, metadata and params maps,

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Independent verifier for the Sparrow RPC test vectors.
+// Independent verifier for the Sparrow test vectors.
 //
 //   node verify.mjs [path/to/test-vectors]
 //

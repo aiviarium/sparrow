@@ -1,4 +1,4 @@
-// Command vectorgen generates the Sparrow RPC test vectors.
+// Command vectorgen generates the Sparrow test vectors.
 //
 //	go run . -out ../../test-vectors
 //

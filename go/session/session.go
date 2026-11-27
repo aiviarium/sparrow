@@ -1,4 +1,4 @@
-// Package session implements one Sparrow RPC session (sections 4-8) over a
+// Package session implements one Sparrow session (sections 4-8) over a
 // transport binding, in either role: the handshake, control messages,
 // schema publication and live updates, and calls with per-call credit,
 // cancellation, deadlines, byte streams and the leased stream pool.

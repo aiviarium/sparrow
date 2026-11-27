@@ -1,4 +1,4 @@
-module sparrow-rpc/tools/vectorgen-go
+module github.com/aiviarium/sparrow/tools/vectorgen-go
 
 go 1.24.7
 

@@ -1,4 +1,4 @@
-// Package vectors loads the Sparrow RPC test vectors (test-vectors/*.json)
+// Package vectors loads the Sparrow test vectors (test-vectors/*.json)
 // and converts their "typed JSON" values into cbor value trees.
 package vectors
 

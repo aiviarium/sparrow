@@ -1,7 +1,7 @@
-// @aiviarium/sparrow-rpc: Sparrow RPC for TypeScript.
+// @aiviarium/sparrow: Sparrow for TypeScript.
 //
 // The main entry point is browser-safe (no Node built-ins). The pipe
-// binding, which needs node:child_process, is in "@aiviarium/sparrow-rpc/pipe";
+// binding, which needs node:child_process, is in "@aiviarium/sparrow/pipe";
 // the WebSocket and in-memory bindings are also exported here.
 
 export * as cbor from './cbor.js';

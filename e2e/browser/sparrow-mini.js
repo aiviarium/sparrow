@@ -1,4 +1,4 @@
-// A minimal Sparrow RPC browser client for the end-to-end test: just
+// A minimal Sparrow browser client for the end-to-end test: just
 // enough CBOR (RFC 8949: unsigned and negative integers, byte and text
 // strings, arrays, maps, tags, simple values) and protocol (Hello, Welcome,
 // Ready, a unary call, SchemaAck, Pong) to prove the WebTransport and

@@ -1,4 +1,4 @@
-# Sparrow RPC — Core Protocol Specification (Draft)
+# Sparrow — Core Protocol Specification (Draft)
 
 Nov 26, 2026 · Christoph Feuerer
 
@@ -6,7 +6,7 @@ Nov 26, 2026 · Christoph Feuerer
 
 ## 1. Overview
 
-Sparrow RPC is a binary, bidirectional, streaming RPC protocol. At session start the server sends a schema describing its services and types. After that, every message refers to methods, types and enum values by compact numeric IDs, and a client that understands the schema can call services it was never compiled against.
+Sparrow is a binary, bidirectional, streaming RPC protocol. At session start the server sends a schema describing its services and types. After that, every message refers to methods, types and enum values by compact numeric IDs, and a client that understands the schema can call services it was never compiled against.
 
 ### 1.1 Goals
 

@@ -1,6 +1,6 @@
-# Sparrow RPC for TypeScript
+# Sparrow for TypeScript
 
-`@aiviarium/sparrow-rpc` is the TypeScript implementation of Sparrow RPC (`../spec/core.md`, core
+`@aiviarium/sparrow` is the TypeScript implementation of Sparrow (`../spec/core.md`, core
 revision 394, sections 3-8): an own CBOR codec, the wire format, the schema model, the schema-driven value codec
 and sessions in either role, over the **pipe** binding (4.7), the **WebSocket** binding (4.6) and an
 **in-memory** pair. It mirrors the semantics of the Go reference implementation (`../go`) and is
@@ -25,10 +25,10 @@ conformance tests at another vector directory; `SPARROW_FUZZ_SEED` changes the f
 
 | Import | Contents |
 | --- | --- |
-| `@aiviarium/sparrow-rpc` | Everything below except the pipe binding. Browser-safe (no Node built-ins). Namespaces `cbor`, `wire`, `schema`; the main classes are also exported directly. |
-| `@aiviarium/sparrow-rpc/pipe` | `pipeConn`, `stdio`, `spawn` (Node only). |
-| `@aiviarium/sparrow-rpc/websocket` | `connectWebSocket`, `webSocketConn`, `SUBPROTOCOL`. |
-| `@aiviarium/sparrow-rpc/mem` | `memPair`. |
+| `@aiviarium/sparrow` | Everything below except the pipe binding. Browser-safe (no Node built-ins). Namespaces `cbor`, `wire`, `schema`; the main classes are also exported directly. |
+| `@aiviarium/sparrow/pipe` | `pipeConn`, `stdio`, `spawn` (Node only). |
+| `@aiviarium/sparrow/websocket` | `connectWebSocket`, `webSocketConn`, `SUBPROTOCOL`. |
+| `@aiviarium/sparrow/mem` | `memPair`. |
 
 Source files: `src/cbor.ts`, `wire.ts`, `status.ts`, `sha256.ts`, `schema.ts`, `value.ts`,
 `session.ts`, `transport.ts`, `transport/{pipe,websocket,mem}.ts`.
@@ -36,8 +36,8 @@ Source files: `src/cbor.ts`, `wire.ts`, `status.ts`, `sha256.ts`, `schema.ts`, `
 ## A node over stdio (the started process is the client)
 
 ```ts
-import { FacetBuilder, Session, SparrowError, T, field, makeSchema, stream } from '@aiviarium/sparrow-rpc';
-import { stdio } from '@aiviarium/sparrow-rpc/pipe';
+import { FacetBuilder, Session, SparrowError, T, field, makeSchema, stream } from '@aiviarium/sparrow';
+import { stdio } from '@aiviarium/sparrow/pipe';
 
 // The facet this process publishes in Hello.client_schema.
 const b = new FacetBuilder('acme.ext', '1.0.0', { id: 16 });

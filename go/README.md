@@ -1,4 +1,4 @@
-# Sparrow RPC: Go reference implementation
+# Sparrow: Go reference implementation
 
 Module `github.com/aiviarium/sparrow/go`, Go 1.24, following core spec revision 394
 (`../spec/core.md`) and hub-admin revision 41 (`../spec/hub-admin.md`). Phase 1 is the encoding,
