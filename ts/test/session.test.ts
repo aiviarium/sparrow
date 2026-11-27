@@ -4,6 +4,7 @@ import * as lib from '../src/index.js';
 import { FacetBuilder, Session, SparrowError, Status, T, field, makeSchema, memPair, stream, type SessionOptions } from '../src/index.js';
 import { encodeMessage, decodeMessage } from '../src/wire.js';
 import { clientHandlers, facets, runClientSuite, serverHandlers } from './fixture/interop.mjs';
+import { eventually, never } from './helpers/wait.js';
 
 function errOf(p: Promise<unknown>): Promise<SparrowError> {
   return p.then(
@@ -181,6 +182,38 @@ describe('session over mem', () => {
     await srv.updateSchema(updated);
     expect(cli.peerEpoch).toBe(1);
     expect(await cli.call('interop.extra', 'twice', 'ab')).toBe('abab');
+    await cli.close();
+  });
+
+  it('6.6 rule 1: answers that use IDs of an unacked epoch wait, even when the request used them', async () => {
+    let release!: () => void;
+    const acked = new Promise<void>((r) => (release = r));
+    const { srv, cli, f } = await pair({}, { onPeerSchemaUpdate: () => acked });
+    const b = new FacetBuilder('interop.extra', '1.0.0', { id: 17 });
+    b.errorCode('extra_failed');
+    const svc = b.service('Extra');
+    svc.method('twice', T.string, T.string);
+    svc.method('fail', T.string, T.unit, { errors: ['extra_failed'] });
+    let ran = 0;
+    (srv as any).router.handle('interop.extra', 'twice', (s: string) => (ran++, s + s));
+    (srv as any).router.handle('interop.extra', 'fail', (s: string) => {
+      ran++;
+      throw new SparrowError('extra_failed', s, { type: 'string', value: 'why' });
+    });
+    const upd = srv.updateSchema(makeSchema('interop.server', '1.1.0', [f.server, b.build()]));
+    await eventually(() => cli.peerEpoch === 1, 'the client to apply the update');
+    // The client calls the new facet before it acks (its hook has not returned).
+    let twice: unknown;
+    let failed: SparrowError | undefined;
+    void cli.call('interop.extra', 'twice', 'ab').then((v) => (twice = v));
+    void errOf(cli.call('interop.extra', 'fail', 'no')).then((e) => (failed = e));
+    await eventually(() => ran === 2, 'both handlers to run');
+    await never(() => twice !== undefined || failed !== undefined, 'an answer before SchemaAck');
+    release();
+    await upd;
+    await eventually(() => twice !== undefined && failed !== undefined, 'the held answers');
+    expect(twice).toBe('abab');
+    expect([failed!.code, failed!.rawMessage, (failed!.details as { value: unknown }).value]).toEqual(['extra_failed', 'no', 'why']);
     await cli.close();
   });
 

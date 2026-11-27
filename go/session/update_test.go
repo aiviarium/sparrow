@@ -2,6 +2,8 @@ package session
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -106,6 +108,55 @@ func TestSchemaUpdateAckGating(t *testing.T) {
 		}
 		_ = c16.Cancel(status.Cancelled)
 		_ = c17.Cancel(status.Cancelled)
+	})
+}
+
+// TestSchemaUpdateHoldsAnswersToNewIDs: 6.6 rule 1 holds for responses
+// and errors too, even on a call whose request already used the new IDs.
+// The client applies the update and calls the facet it adds before it
+// acks (its hook blocks the ack); the server holds the Response and the
+// Error with details until the ack arrives.
+func TestSchemaUpdateHoldsAnswersToNewIDs(t *testing.T) {
+	t.Parallel()
+	forBindings(t, func(t *testing.T, b binding) {
+		h := newTestHandlers()
+		m := h.mux(tFacet)
+		h.register(m, 18)
+		allow := make(chan struct{})
+		ccfg := Config{OnPeerSchemaUpdate: func(ctx context.Context, s *Session, u *PeerSchemaUpdate) error {
+			<-allow
+			return nil
+		}}
+		cli, srv := pair(t, b, ccfg, Config{Schema: testSchema("server"), Handler: m})
+		ctx := tctx(t)
+		upd, err := srv.UpdateSchema(testSchema("server", testFacet(tFacet, "test"), testFacet(18, "added")), SchemaUpdateOptions{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		testutil.Eventually(t, 5*time.Second, func() bool { return cli.PeerSchema().Epoch() == 1 }, "update not applied")
+		var echoed, failed atomic.Value
+		go func() {
+			out, err := cli.Unary(ctx, 18, mEcho, "held", nil)
+			echoed.Store(fmt.Sprint(out, err))
+		}()
+		go func() {
+			_, err := cli.Unary(ctx, 18, mFail, "held", nil)
+			failed.Store(fmt.Sprint(err))
+		}()
+		// Both requests reach the server and run; their answers wait.
+		testutil.Eventually(t, 5*time.Second, func() bool { return srv.Stats().IncomingCalls == 2 }, "calls not received")
+		testutil.Never(t, 50*time.Millisecond, func() bool { return echoed.Load() != nil || failed.Load() != nil }, "an answer was sent before SchemaAck")
+		close(allow)
+		if err := upd.Wait(ctx); err != nil {
+			t.Fatal(err)
+		}
+		testutil.Eventually(t, 5*time.Second, func() bool { return echoed.Load() != nil && failed.Load() != nil }, "answers not released")
+		if e := echoed.Load().(string); e != "held<nil>" {
+			t.Fatalf("echo: %s", e)
+		}
+		if e := failed.Load().(string); !strings.Contains(e, "held") {
+			t.Fatalf("fail: %s", e)
+		}
 	})
 }
 
