@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aiviarium/sparrow-rpc/go/admin"
+	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
 	"github.com/aiviarium/sparrow-rpc/go/session"
 	"github.com/aiviarium/sparrow-rpc/go/status"
 	"github.com/aiviarium/sparrow-rpc/go/transport"
@@ -85,5 +87,38 @@ func TestCloseWaitsForTransports(t *testing.T) {
 				t.Fatalf("Close returned before the client had GoAway: %v", g)
 			}
 		})
+	}
+}
+
+// TestEndLoginSessionDuringHandshake: logging out ends a session of that
+// login session even while the hub has not yet processed its Ready (the
+// client already considers it open).
+func TestEndLoginSessionDuringHandshake(t *testing.T) {
+	clk := testutil.NewFakeClock()
+	f := newFixture(t, func(o *Options) {
+		o.Clock = clk
+		o.Authenticate = ticketAuth
+	})
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{}})
+	var ended atomic.Bool
+	cc, sc := mem.Pipe(mem.Options{})
+	go f.h.ServeConn(context.Background(), &readyGate{Conn: sc, release: ended.Load})
+	ctx := tctx(t)
+	cli, err := session.NewClient(ctx, cc, session.Config{Auth: testTicket("user:alice", "sid-9", clk.Now().Add(5*time.Minute))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cli.Close(status.OK, "test done")
+	if n := f.h.EndLoginSession("sid-9"); n != 1 {
+		t.Fatalf("EndLoginSession found %d sessions", n)
+	}
+	ended.Store(true)
+	select {
+	case <-cli.Done():
+	case <-time.After(5 * time.Second):
+		t.Fatal("client session not ended")
+	}
+	if g := cli.GoAwayReceived(); g == nil || status.Code(g.Status) != status.Unauthenticated {
+		t.Fatalf("client got %v", g)
 	}
 }

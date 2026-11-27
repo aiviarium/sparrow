@@ -520,19 +520,40 @@ func (h *Hub) EndLoginSession(sid string) int {
 	}
 	h.mu.Lock()
 	var ss []*session.Session
+	var pending []*viewer
 	for v := range h.viewers {
 		v.smu.Lock()
 		match := v.kind == viewClient && v.actor.LoginSession == sid
 		v.smu.Unlock()
-		if s := v.session(); match && s != nil {
-			ss = append(ss, s)
+		if !match {
+			continue
+		}
+		switch s := v.session(); {
+		case s != nil:
+			select {
+			case <-s.Done(): // already ended
+			default:
+				ss = append(ss, s)
+			}
+		case v.hsDone != nil:
+			// Still in the handshake: the client may already consider
+			// the session open, so it is ended as soon as it is set up.
+			pending = append(pending, v)
 		}
 	}
 	h.mu.Unlock()
 	for _, s := range ss {
 		s.GoAway(status.Unauthenticated, "logged out", nil)
 	}
-	return len(ss)
+	for _, v := range pending {
+		go func(v *viewer) {
+			<-v.hsDone
+			if s := v.session(); s != nil {
+				s.GoAway(status.Unauthenticated, "logged out", nil)
+			}
+		}(v)
+	}
+	return len(ss) + len(pending)
 }
 
 // authenticate maps Hello.auth to a client actor or a dial-in node.
