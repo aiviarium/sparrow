@@ -279,7 +279,14 @@ func (o *opts) connect(ctx context.Context) (*admin.Client, func(), error) {
 		n.Close()
 		return nil, nil, err
 	}
-	return c, n.Close, nil
+	// GoAway and the transport's close reach the hub before the program
+	// exits; otherwise the hub sees the connection go only at its idle
+	// timeout.
+	return c, func() {
+		sctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		n.Shutdown(sctx)
+	}, nil
 }
 
 // readDoc reads a document in the JSON form, with the "policy" shorthand.
