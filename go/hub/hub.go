@@ -134,6 +134,7 @@ type Hub struct {
 	adminID    uint64
 	rejections int
 	closed     bool
+	conns      map[transport.Conn]struct{} // connections ServeConn runs
 	wg         sync.WaitGroup
 	reconcile  sync.Mutex // serializes Apply
 }
@@ -173,7 +174,7 @@ func New(o Options) (*Hub, error) {
 	if o.PeerRelayAckTimeout <= 0 {
 		o.PeerRelayAckTimeout = DefaultPeerRelayAckTimeout
 	}
-	h := &Hub{o: o, log: o.Logger, clock: o.Clock, nodes: map[string]*node{}, viewers: map[*viewer]struct{}{},
+	h := &Hub{o: o, log: o.Logger, clock: o.Clock, nodes: map[string]*node{}, viewers: map[*viewer]struct{}{}, conns: map[transport.Conn]struct{}{},
 		ifaces: map[string]*schema.Interface{}, calls: map[*activeCall]struct{}{},
 		contexts: map[string]*callContext{}}
 	if h.log == nil {
@@ -251,6 +252,10 @@ func (h *Hub) Close(timeout time.Duration) {
 	}
 	h.closed = true
 	vs := h.viewerListLocked()
+	conns := make([]transport.Conn, 0, len(h.conns))
+	for c := range h.conns {
+		conns = append(conns, c)
+	}
 	nodes := make([]*node, 0, len(h.nodes))
 	for _, n := range h.nodes {
 		nodes = append(nodes, n)
@@ -269,12 +274,42 @@ func (h *Hub) Close(timeout time.Duration) {
 	}
 	deadline := time.Now().Add(timeout)
 	for _, v := range vs {
-		if s := v.session(); s != nil {
+		s := v.session()
+		if s == nil && v.hsDone != nil {
+			// A client whose handshake is still running (its Ready not yet
+			// processed) may already consider the session open: wait for
+			// the handshake, then send it GoAway too (5.6).
+			select {
+			case <-v.hsDone:
+			case <-time.After(time.Until(deadline)):
+			}
+			if s = v.session(); s != nil {
+				s.GoAway(status.GoingAway, "hub shutting down", nil)
+			}
+		}
+		if s != nil {
 			select {
 			case <-s.Done():
 			case <-time.After(time.Until(deadline)):
 				s.Close(status.GoingAway, "hub shut down")
 			}
+		}
+	}
+	// A session is done before its transport has finished closing: the
+	// WebTransport binding still finishes the shared lane and waits for the
+	// peer's finish (up to its linger time) so that GoAway, written just
+	// before, reaches the peer. Returning earlier lets the program exit
+	// with GoAway unsent and the peer left waiting for its idle timeout.
+	connWait := time.Until(deadline)
+	if connWait < 0 {
+		connWait = 0
+	}
+	connWait += webtransport.DefaultLinger + time.Second
+	connDeadline := time.After(connWait)
+	for _, c := range conns {
+		select {
+		case <-c.Done():
+		case <-connDeadline:
 		}
 	}
 	for _, s := range sups {
@@ -305,11 +340,27 @@ func (h *Hub) sessionConfig(cfg *session.Config) {
 // binding) until its session ends: a client, or a node or peer hub that
 // dials in with ["link", credential].
 func (h *Hub) ServeConn(ctx context.Context, conn transport.Conn) {
-	if h.closing() {
+	h.mu.Lock()
+	if h.closed {
+		h.mu.Unlock()
 		_ = conn.Close(status.GoingAway, "hub shutting down")
 		return
 	}
-	v := &viewer{h: h}
+	h.conns[conn] = struct{}{}
+	h.mu.Unlock()
+	defer func() {
+		// Until the transport has closed (Close waits for it).
+		t := time.NewTimer(webtransport.DefaultLinger + time.Second)
+		select {
+		case <-conn.Done():
+		case <-t.C:
+		}
+		t.Stop()
+		h.mu.Lock()
+		delete(h.conns, conn)
+		h.mu.Unlock()
+	}()
+	v := &viewer{h: h, hsDone: make(chan struct{})}
 	var dialIn *node
 	var dialCred []byte
 	cfg := session.Config{
@@ -338,7 +389,9 @@ func (h *Hub) ServeConn(ctx context.Context, conn transport.Conn) {
 			return 0
 		},
 		SchemaFor: func(ctx context.Context, principal string, hello *wire.Hello) (*schema.Schema, error) {
-			h.addViewer(v)
+			if !h.addOpenViewer(v) {
+				return nil, &session.Error{Code: status.GoingAway, Message: "hub shutting down"}
+			}
 			return h.viewFor(v), nil
 		},
 		AcceptClientSchema: func(ctx context.Context, principal string, s *schema.Schema) error {
@@ -361,11 +414,17 @@ func (h *Hub) ServeConn(ctx context.Context, conn transport.Conn) {
 	h.sessionConfig(&cfg)
 	s, err := session.NewServer(ctx, conn, cfg)
 	if err != nil {
+		close(v.hsDone)
 		h.removeViewer(v)
 		h.log.Debug("handshake failed", "err", err)
 		return
 	}
 	v.setSession(s)
+	close(v.hsDone)
+	if h.closing() {
+		// Close began while the handshake ran (it waits for this session).
+		s.GoAway(status.GoingAway, "hub shutting down", nil)
+	}
 	if dialIn != nil {
 		l := &link{n: dialIn, sess: s, v: v, kind: linkDialIn, cred: dialCred, credName: dialIn.credentialName()}
 		h.attach(dialIn, l)

@@ -36,6 +36,9 @@ type viewer struct {
 	smu    sync.Mutex
 	sess   *session.Session
 	expiry []session.Timer // the AuthStatus warning and the end (5.5)
+	// hsDone, for a session ServeConn accepts, is closed once its
+	// handshake has finished (sess is set if it succeeded).
+	hsDone chan struct{}
 }
 
 func (v *viewer) stopExpiry() {
@@ -87,6 +90,18 @@ func (h *Hub) addViewer(v *viewer) {
 	h.mu.Lock()
 	h.viewers[v] = struct{}{}
 	h.mu.Unlock()
+}
+
+// addOpenViewer adds v unless the hub is shutting down: Close then sees
+// every session whose handshake got this far.
+func (h *Hub) addOpenViewer(v *viewer) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.closed {
+		return false
+	}
+	h.viewers[v] = struct{}{}
+	return true
 }
 
 func (h *Hub) removeViewer(v *viewer) {
