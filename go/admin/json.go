@@ -27,16 +27,19 @@ import (
 
 type jsonConfig struct {
 	Nodes      map[string]*jsonNode `json:"nodes"`
-	Defaults   map[string]string    `json:"defaults,omitempty"`
-	Extensions map[string]string    `json:"extensions,omitempty"`
+	Defaults   *map[string]string   `json:"defaults,omitempty"`
+	Extensions *map[string]string   `json:"extensions,omitempty"`
 }
 
 type jsonNode struct {
-	Link       *jsonLink         `json:"link"`
-	Peer       *bool             `json:"peer,omitempty"`
-	Enabled    *bool             `json:"enabled,omitempty"`
-	Extensions map[string]string `json:"extensions,omitempty"`
+	Link       *jsonLink          `json:"link"`
+	Peer       *bool              `json:"peer,omitempty"`
+	Enabled    *bool              `json:"enabled,omitempty"`
+	Extensions *map[string]string `json:"extensions,omitempty"`
 }
+
+// The optional maps are pointers: an absent key is null in the document
+// and {} an empty map, two different documents.
 
 type jsonLink struct {
 	Dial       *jsonDial `json:"dial,omitempty"`
@@ -49,7 +52,7 @@ type jsonDial struct {
 	Credential string `json:"credential"`
 }
 
-func hexMap(m map[string][]byte) map[string]string {
+func hexMap(m map[string][]byte) *map[string]string {
 	if m == nil {
 		return nil
 	}
@@ -57,13 +60,14 @@ func hexMap(m map[string][]byte) map[string]string {
 	for k, v := range m {
 		out[k] = hex.EncodeToString(v)
 	}
-	return out
+	return &out
 }
 
-func unhexMap(m map[string]string, what string) (map[string][]byte, error) {
-	if m == nil {
+func unhexMap(pm *map[string]string, what string) (map[string][]byte, error) {
+	if pm == nil || *pm == nil {
 		return nil, nil
 	}
+	m := *pm
 	out := make(map[string][]byte, len(m))
 	for k, v := range m {
 		b, err := hex.DecodeString(v)
@@ -79,10 +83,11 @@ func unhexMap(m map[string]string, what string) (map[string][]byte, error) {
 func (c *Config) MarshalJSON() ([]byte, error) {
 	j := jsonConfig{Nodes: map[string]*jsonNode{}, Extensions: hexMap(c.Extensions)}
 	if c.Defaults != nil {
-		j.Defaults = map[string]string{}
+		d := map[string]string{}
 		for k, v := range c.Defaults {
-			j.Defaults[hex.EncodeToString([]byte(k))] = v
+			d[hex.EncodeToString([]byte(k))] = v
 		}
+		j.Defaults = &d
 	}
 	for id, n := range c.Nodes {
 		jn := &jsonNode{Link: &jsonLink{Credential: n.Link.Credential}, Peer: n.Peer, Enabled: n.Enabled, Extensions: hexMap(n.Extensions)}
@@ -110,9 +115,9 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 	if out.Extensions, err = unhexMap(j.Extensions, "extension"); err != nil {
 		return err
 	}
-	if j.Defaults != nil {
+	if j.Defaults != nil && *j.Defaults != nil {
 		out.Defaults = map[string]string{}
-		for k, v := range j.Defaults {
+		for k, v := range *j.Defaults {
 			h, err := hex.DecodeString(k)
 			if err != nil {
 				return fmt.Errorf("defaults key %q: %v", k, err)

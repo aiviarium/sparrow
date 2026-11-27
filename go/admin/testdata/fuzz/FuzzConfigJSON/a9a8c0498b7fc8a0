@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"nodes\": {\"000000\": {\"link\": {\"diAl\": {\"url\": \"0000000000000\", \"pin\": \"0000\", \"CredentiAl\": \"00\"}}},   \"0000\": {\"link\": {\"CredentiAl\": \"00\"}, \"peer\": false, \"enABled\": true, \"eXtensions\": {}}}}")

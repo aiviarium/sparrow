@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/aiviarium/sparrow-rpc/go/cbor"
+	"github.com/aiviarium/sparrow-rpc/go/internal/fuzzseed"
 )
 
 // TestCompatible walks the table of section 6.7 row by row.
@@ -361,6 +362,9 @@ func FuzzSchema(f *testing.F) {
 	f.Add(ib)
 	db, _ := Delta{{Op: OpPut, Facet: base()}, {Op: OpRemove, FacetID: 16}, {Op: OpVersion, Version: "x"}}.Encode()
 	f.Add(db)
+	for _, b := range fuzzseed.Hex("schema.json", "admin.json") {
+		f.Add(b)
+	}
 	f.Fuzz(func(t *testing.T, b []byte) {
 		if s, err := DecodeSchema(b); err == nil {
 			verr := s.Validate()

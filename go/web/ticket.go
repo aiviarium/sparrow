@@ -194,7 +194,8 @@ func (t *Tickets) Parse(ticket string) (*Claims, error) {
 		return nil, refuse("issued for another edge (aud %q)", c.Audience)
 	case c.Expires <= now:
 		return nil, refuse("expired")
-	case c.IssuedAt == 0 || c.Expires-c.IssuedAt > int64(MaxTicketLifetime/time.Second):
+	case c.IssuedAt == 0 || c.IssuedAt > c.Expires ||
+		uint64(c.Expires)-uint64(c.IssuedAt) > uint64(MaxTicketLifetime/time.Second): // no overflow
 		return nil, refuse("exp is more than 60 s after iat")
 	case c.SessionExpires <= now:
 		return nil, refuse("the login session has ended")

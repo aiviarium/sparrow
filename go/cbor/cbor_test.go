@@ -396,6 +396,7 @@ func FuzzValidate(f *testing.F) {
 		"fb3fb999999999999a", "a201011801 02", "7bffffffffffffffff"} {
 		f.Add(unhex(s))
 	}
+	seedVectors(f)
 	f.Fuzz(func(t *testing.T, b []byte) {
 		err := Validate(b, Options{})
 		c, cerr := Canonical(b, Options{})
@@ -417,6 +418,24 @@ func FuzzValidate(f *testing.F) {
 		e, err := EncodeCanonical(v, Options{})
 		if err != nil || !bytes.Equal(e, c) {
 			t.Fatalf("tree round trip %x != %x (%v)", e, c, err)
+		}
+		if IsCanonical(b, Options{}) != bytes.Equal(b, c) {
+			t.Fatal("IsCanonical disagrees with Canonical")
+		}
+		// Preferred-form input is accepted with RequirePreferred, and its
+		// canonical form only reorders map keys: same length.
+		if Validate(c, Options{RequirePreferred: true}) != nil {
+			t.Fatalf("canonical form %x not preferred", c)
+		}
+		if Validate(b, Options{RequirePreferred: true}) == nil && len(b) != len(c) {
+			t.Fatalf("preferred input %x changed length in canonical form %x", b, c)
+		}
+		// Tighter limits only reject more.
+		if Validate(b, Options{MaxDepth: 2}) == nil && Validate(b, Options{MaxDepth: 3}) != nil {
+			t.Fatal("depth limit not monotonic")
+		}
+		if Validate(b, Options{NoFloats: true}) == nil && ContainsFloat(b) {
+			t.Fatal("NoFloats accepted a float")
 		}
 	})
 }

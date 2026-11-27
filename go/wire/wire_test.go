@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/aiviarium/sparrow-rpc/go/cbor"
+	"github.com/aiviarium/sparrow-rpc/go/internal/fuzzseed"
 )
 
 func unhex(s string) []byte {
@@ -556,6 +557,9 @@ func FuzzDecode(f *testing.F) {
 	}
 	f.Add(unhex("86100210190412a0826873657474696e6773f5"))
 	f.Add(unhex("831102f6"))
+	for _, b := range fuzzseed.Hex("framing.json", "handshake.json", "calls.json", "credit.json", "hub.json") {
+		f.Add(b)
+	}
 	f.Fuzz(func(t *testing.T, b []byte) {
 		_, _, _ = PeekCall(b)
 		_, _ = CountedBytesRaw(b)
@@ -576,6 +580,7 @@ func FuzzDecode(f *testing.F) {
 		if e2 := Encode(m2); !bytes.Equal(e1, e2) {
 			t.Fatalf("encoding not stable: %x vs %x", e1, e2)
 		}
+		checkFields(t, m)
 		if cm, ok := m.(CallMessage); ok {
 			if n, err := CountedBytesRaw(b); err != nil || n != CountedBytes(m, len(b)) {
 				t.Fatalf("CountedBytesRaw %d %v", n, err)

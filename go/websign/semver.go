@@ -118,9 +118,13 @@ func (v Version) Compare(o Version) int {
 		an, bn := isNumeric(a), isNumeric(b)
 		switch {
 		case an && bn:
-			x, _ := strconv.ParseUint(a, 10, 64)
-			y, _ := strconv.ParseUint(b, 10, 64)
-			if c := cmpU(x, y); c != 0 {
+			// Numeric identifiers have no leading zeros and no size limit
+			// (semver 2.0 item 11): the longer one is larger, and equal
+			// lengths compare digit by digit.
+			if c := cmpU(uint64(len(a)), uint64(len(b))); c != 0 {
+				return c
+			}
+			if c := strings.Compare(a, b); c != 0 {
 				return c
 			}
 		case an:

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math"
 	"path"
 	"strconv"
 	"strings"
@@ -382,14 +383,17 @@ func partial(s string) (websign.Version, int, error) {
 	return v, given, nil
 }
 
-func bump(v websign.Version, part int) websign.Version {
+// bump returns the lowest version above every version that keeps the
+// parts before part: 3.1 bumped at part 1 is 3.2.0. ok is false when that
+// part is already the largest number, and no version is above them.
+func bump(v websign.Version, part int) (_ websign.Version, ok bool) {
 	switch part {
 	case 0:
-		return websign.Version{Major: v.Major + 1}
+		return websign.Version{Major: v.Major + 1}, v.Major != math.MaxUint64
 	case 1:
-		return websign.Version{Major: v.Major, Minor: v.Minor + 1}
+		return websign.Version{Major: v.Major, Minor: v.Minor + 1}, v.Minor != math.MaxUint64
 	}
-	return websign.Version{Major: v.Major, Minor: v.Minor, Patch: v.Patch + 1}
+	return websign.Version{Major: v.Major, Minor: v.Minor, Patch: v.Patch + 1}, v.Patch != math.MaxUint64
 }
 
 func parseComparator(f string) ([]comparator, error) {
@@ -405,7 +409,14 @@ func parseComparator(f string) ([]comparator, error) {
 		return nil, err
 	}
 	lower := func(v websign.Version) comparator { return comparator{">=", v} }
-	upper := func(v websign.Version) comparator { return comparator{"<", v} }
+	// between is v up to (not including) v bumped at part: no upper bound
+	// when the bump overflows.
+	between := func(v websign.Version, part int) []comparator {
+		if u, ok := bump(v, part); ok {
+			return []comparator{lower(v), {"<", u}}
+		}
+		return []comparator{lower(v)}
+	}
 	switch op {
 	case "", "=":
 		if given == 0 {
@@ -414,7 +425,7 @@ func parseComparator(f string) ([]comparator, error) {
 		if given == 3 {
 			return []comparator{{"=", v}}, nil
 		}
-		return []comparator{lower(v), upper(bump(v, given-1))}, nil
+		return between(v, given-1), nil
 	case "^":
 		if given == 0 {
 			return []comparator{{">=", websign.Version{}}}, nil
@@ -422,29 +433,36 @@ func parseComparator(f string) ([]comparator, error) {
 		// The first non-zero part given is fixed.
 		switch {
 		case v.Major > 0 || given == 1:
-			return []comparator{lower(v), upper(bump(v, 0))}, nil
+			return between(v, 0), nil
 		case v.Minor > 0 || given == 2:
-			return []comparator{lower(v), upper(bump(v, 1))}, nil
+			return between(v, 1), nil
 		}
-		return []comparator{lower(v), upper(bump(v, 2))}, nil
+		return between(v, 2), nil
 	case "~":
 		if given == 0 {
 			return []comparator{{">=", websign.Version{}}}, nil
 		}
 		if given == 1 {
-			return []comparator{lower(v), upper(bump(v, 0))}, nil
+			return between(v, 0), nil
 		}
-		return []comparator{lower(v), upper(bump(v, 1))}, nil
+		return between(v, 1), nil
 	case ">=", "<":
 		return []comparator{{op, v}}, nil
 	case ">":
 		if given < 3 && given > 0 {
-			return []comparator{{">=", bump(v, given-1)}}, nil
+			if u, ok := bump(v, given-1); ok {
+				return []comparator{{">=", u}}, nil
+			}
+			max := websign.Version{Major: math.MaxUint64, Minor: math.MaxUint64, Patch: math.MaxUint64}
+			return []comparator{{">", max}}, nil // nothing is above
 		}
 		return []comparator{{">", v}}, nil
 	case "<=":
 		if given < 3 && given > 0 {
-			return []comparator{{"<", bump(v, given-1)}}, nil
+			if u, ok := bump(v, given-1); ok {
+				return []comparator{{"<", u}}, nil
+			}
+			return []comparator{{">=", websign.Version{}}}, nil // everything is below
 		}
 		return []comparator{{"<=", v}}, nil
 	}

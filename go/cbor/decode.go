@@ -252,6 +252,7 @@ func (d *Decoder) Text() (string, error) {
 		return "", err
 	}
 	if !utf8.Valid(b) {
+		d.off = start
 		return "", errAt(start, "invalid UTF-8 in text string")
 	}
 	return string(b), nil
@@ -337,8 +338,15 @@ func (d *Decoder) Float() (float64, error) {
 // skipLimit bounds recursion in Skip; Validate enforces the real limit.
 const skipLimit = 512
 
-// Skip consumes one complete item.
-func (d *Decoder) Skip() error { return d.skip(0) }
+// Skip consumes one complete item. On error it consumes nothing.
+func (d *Decoder) Skip() error {
+	start := d.off
+	err := d.skip(0)
+	if err != nil {
+		d.off = start
+	}
+	return err
+}
 
 func (d *Decoder) skip(depth int) error {
 	if depth > skipLimit {
@@ -446,8 +454,14 @@ func (d *Decoder) Time() (Time, error) {
 	}
 	if d.IsFloat() {
 		f, err := d.Float()
+		if err != nil {
+			d.off = start
+		}
 		return Time{Float: f, IsFloat: true}, err
 	}
 	s, err := d.Int()
+	if err != nil {
+		d.off = start
+	}
 	return Time{Sec: s}, err
 }

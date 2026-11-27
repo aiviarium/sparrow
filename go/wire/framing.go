@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 )
 
 // MaxVarint is the largest value a QUIC variable-length integer holds.
@@ -152,15 +153,29 @@ func (fr *FrameReader) ReadFrame() ([]byte, error) {
 	if n > fr.Max {
 		return nil, &TooLargeError{Size: n, Max: fr.Max}
 	}
-	buf := make([]byte, n)
-	if _, err := io.ReadFull(fr.r, buf); err != nil {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
+	// The buffer grows with the bytes that arrive, so a length prefix
+	// alone (a few bytes) cannot make the reader allocate up to the limit.
+	buf := make([]byte, 0, min(n, frameChunk))
+	for uint64(len(buf)) < n {
+		if len(buf) == cap(buf) {
+			buf = slices.Grow(buf, int(min(n-uint64(len(buf)), uint64(cap(buf)))))
 		}
-		return nil, err
+		end := min(uint64(cap(buf)), n)
+		k, err := io.ReadFull(fr.r, buf[len(buf):end])
+		buf = buf[:len(buf)+k]
+		if err != nil {
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
+			}
+			return nil, err
+		}
 	}
 	return buf, nil
 }
+
+// frameChunk is the first buffer size for a frame; it doubles as the bytes
+// arrive.
+const frameChunk = 64 << 10
 
 // FrameWriter writes length-prefixed messages.
 type FrameWriter struct {

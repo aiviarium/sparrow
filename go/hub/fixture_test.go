@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log/slog"
@@ -33,6 +34,10 @@ import (
 var echoBin string
 
 func TestMain(m *testing.M) {
+	flag.Parse()
+	if fuzzing() {
+		os.Exit(m.Run()) // fuzz targets need no echo-node binary
+	}
 	dir, err := os.MkdirTemp("", "hubtest")
 	if err != nil {
 		panic(err)
@@ -45,6 +50,17 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 	os.RemoveAll(dir)
 	os.Exit(code)
+}
+
+// fuzzing reports whether this process fuzzes (go test -fuzz, or one of
+// its workers) rather than runs tests.
+func fuzzing() bool {
+	for _, name := range []string{"test.fuzz", "test.fuzzworker"} {
+		if f := flag.Lookup(name); f != nil && f.Value.String() != "" && f.Value.String() != "false" {
+			return true
+		}
+	}
+	return false
 }
 
 const (
