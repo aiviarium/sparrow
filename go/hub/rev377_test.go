@@ -65,7 +65,7 @@ func TestReconfigurationEndsSessionAtOnce(t *testing.T) {
 	grants := policy(grant("user:alice", "remote", "use"))
 	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"remote": dialConfig(ln.url, ln.pin, "cred-old")}, Extensions: grants})
 	waitNode(t, f.h, "remote", true)
-	first := n.Session()
+	first := nodeSession(t, n)
 	cli := f.client("websocket", aliceToken)
 	waitFacet(t, cli, "remote")
 	call := runningCall(t, cli, "remote", started)

@@ -89,6 +89,16 @@ func serveNode(t *testing.T, binding string, n *nd.Node, cred string) *listening
 	return ln
 }
 
+// nodeSession returns the session of a node the hub dialed. The hub counts
+// the node connected once it has sent Ready; the node has its session only
+// once it has received it.
+func nodeSession(t *testing.T, n *nd.Node) *session.Session {
+	t.Helper()
+	var s *session.Session
+	testutil.Eventually(t, 10*time.Second, func() bool { s = n.Session(); return s != nil }, "the node has no session")
+	return s
+}
+
 func nilSafe(a *wire.Auth) []byte {
 	if a == nil {
 		return nil
@@ -122,7 +132,7 @@ func TestHubDialsNode(t *testing.T) {
 			// The node calls a hub facet back over the same link (the hub is
 			// the Sparrow client there): sparrow.hub.admin is not visible to
 			// node:remote, so it is not in the node's view.
-			if n.Session().PeerFacet("sparrow.hub.admin") != nil {
+			if nodeSession(t, n).PeerFacet("sparrow.hub.admin") != nil {
 				t.Fatal("the node sees the admin facet")
 			}
 
