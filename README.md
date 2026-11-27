@@ -13,8 +13,8 @@ Dual-licensed under MIT (`LICENSE-MIT`) or Apache-2.0 (`LICENSE-APACHE`), at you
 ## Repository layout
 
 ```
-spec/core.md               Core protocol specification with the Web and Hub profiles (snapshot of draft revision 347)
-spec/hub-admin.md          Sparrow Hub Administration: the sparrow.hub.admin v1 interface (companion, revision 35)
+spec/core.md               Core protocol specification with the Web and Hub profiles (snapshot of draft revision 377)
+spec/hub-admin.md          Sparrow Hub Administration: the sparrow.hub.admin v1 interface (companion, revision 38)
 spec/reference-server.md   Design note for the Go reference server (not part of the spec)
 SPEC-ISSUES.md             Resolution log of spec questions raised while writing the test vectors
 test-vectors/              Test vectors, one JSON file per area, and their format (README.md)
@@ -36,7 +36,7 @@ still interoperate.
 
 Section 6.6 of the spec requires reference implementations to publish test vectors for facets,
 interfaces, schemas, deltas and their hashes, so Go and JavaScript can confirm they agree. The vectors
-cover encoding (including the nesting limit), framing (including the pipe binding), the handshake and
+cover encoding (including the nesting limit), framing, the handshake and
 `params`, call and control messages, credit accounting, facets, interfaces, schemas, their hashes and
 deltas, module signing, status codes, Hub Profile forwarding and the `sparrow.hub.admin` interface.
 Behaviour scenarios in `test-vectors/scenarios/` script whole message sequences for session tests. See [`test-vectors/README.md`](test-vectors/README.md) for the file format and the

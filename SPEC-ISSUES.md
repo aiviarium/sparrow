@@ -1,8 +1,9 @@
 # Spec issues: resolution log
 
 Questions raised while writing the test vectors and the Go reference implementation, and how the
-spec author resolved them. The current spec is `spec/core.md`, revision 347, with the companion
-`spec/hub-admin.md`, revision 35; the scope change S1–S7 below came with them. Items P1–P16, raised by the Go hub (phase 3), were decided in core
+spec author resolved them. The current spec is `spec/core.md`, revision 377, with the companion
+`spec/hub-admin.md`, revision 38; the scope change S1–S7 below came with core 347 and hub-admin 35,
+and its follow-ups S8–S16 with core 360–377 and hub-admin 36–38. Items P1–P16, raised by the Go hub (phase 3), were decided in core
 revision 324 and hub-admin revision 25; items 26–36 are decisions taken since revision 183, and
 items O1–O5, raised while applying them, were decided in core revision 305 and hub-admin revision 18.
 Every item is **resolved**; the vectors, the JavaScript verifier and the Go library follow each
@@ -33,6 +34,20 @@ of a spawned node, `ref.lazy`) is superseded by it.
 | S5 | Validation: exactly one of `dial` or `credential`; no `Dial.credential` with the same value as a `NodeConfig.credential`; the `Spawn` and `Other.kind` rules are gone | hub-admin 3 | `TestValidate` (`replayable credential value`) |
 | S6 | Problem paths use the field names of section 3 (`["nodes", "acme.notes", "dial", "pin"]`) | hub-admin 5.1 | `admin/value/problems`; the JSON form writes `{"dial": ...}` and refuses `start` |
 | S7 | Call counting: "The caller counts a call until it has both sent its own last message and seen the callee's; the callee counts it only until it has sent its own final message"; a callee "MAY close a session that keeps more than twice `maxConcurrentCalls` calls with the caller's half still open with `GoAway(resource_exhausted)`" | core 7.6 | `session`: the callee uncounts at its final message also while the caller's half is open; the 2× bound; `TestCalleeUncountsAtItsFinalMessage`, `TestCallerCountsUntilCalleesFinal`, `TestCallerHalfOpenBound` |
+
+Follow-ups in core revisions 360–377 and hub-admin revisions 36–38 (S7's 2× bound is withdrawn by S9):
+
+| # | Change | Spec | Go / vectors |
+| --- | --- | --- | --- |
+| S8 | The pipe binding is deleted; transport selection is now 4.7 | core 4 | `transport/pipe`, `node.RunStdio` and echo-node's stdio mode removed; the vector `pipe/node-hello` removed, `hello/node-pipe` and `welcome/node-pipe` became `hello/node-dial-in` (presenting `["link", credential]`) and `welcome/node-dial-in` |
+| S9 | "The callee counts a call from its `Request` until it has sent its own final message or ended its direction of the call's stream, and then forgets it"; a callee that finished first "forgets the call ID, ignores that input and grants no more credit for it; on a leased stream it still notes when the caller's half finishes … one flag per stream"; the 2× close rule is gone | core 7.1, 7.6 | `session`: forgetting at the final message, the per-stream flag; `TestCalleeForgetsAtItsFinalMessage`, `TestForgottenCallKeepsStreamUntilCallerEnd`; scenario `callee-error-while-streaming` reworded |
+| S10 | After resetting a leased stream on an unanswered Cancel, the caller "counts the call as long as it counts the stream" | core 7.5 | `TestCallerKeepsResetCallCounted` |
+| S11 | Identity: every link opener presents `["link", credential]`; a credential that is not a dial-in node's, "or one of a disabled node", gets `GoAway(unauthenticated)`; the pin "replaces certificate-chain validation"; no mutual-TLS option; the 60 s re-validation is gone | core 10.2 | the hub's credential loop removed; `TestDisableDialInNode` |
+| S12 | New sessions, dialed or dial-in, are relayed and acknowledged before they take calls; refused facets keep any old session. A configuration change (remove, disable, credential, link, `peer`) ends the session at once "without the grace period of section 5.6": running calls end with `Error(unavailable)`, then `GoAway(unauthenticated)`; dialed nodes are no longer superseded. At the node's `maxConcurrentCalls` the hub refuses with `resource_exhausted` | core 10.2, hub-admin 2.2 | `TestReconfigurationEndsSessionAtOnce`, `TestRefusedFacetsKeepOldSession`, `TestNodeAtConcurrencyLimit`; `session.CallOptions.NoWait` |
+| S13 | "When the node's final message arrives, the hub forwards it and, if the caller's half is still open, sends `End` to the node itself" | core 10.5 | done by the session on the hub's caller side |
+| S14 | Last known facets only for enabled nodes, none for a node never seen, discarded on removal; a call to a removed or disabled node's facet ID gets `unimplemented`, as do calls waiting for it; dial when configured or enabled, redial "with exponential backoff and jitter, as a client reconnects" | core 10.7 | `TestNeverSeenNodeHasNoFacets`, `TestRemovedNodeDiscardsFacets`, `TestWaitingCallsForRemovedNode` |
+| S15 | Stored facets removed (putFacet, deleteFacet, listFacets, `NodeConfig.facets`, `Hashes`, the stored-facet key); `NodeConfig.link` is the union `Link` = `[0, Dial] / [1, secret-name]`; types 64–79 renumbered, methods 0–8, details `[72, problems]`; every secret a link names is named once and all their values are pairwise distinct | hub-admin 2, 3, 5 | `adminiface`, `admin`; `admin.json` regenerated (new interface hash), `admin/stored-facet-key` removed |
+| S16 | Watch: a NodeEvent's revision "is the revision applied when it was sent"; every configured node is reported after each revision; a disabled node is reported `disabled` until enabled; a removed node once; an offline message is the last connection failure | hub-admin 4 | `admin.Manager.NodeEvent`, `hub` |
 
 ## Raised against core revision 316 and hub-admin revision 18 (resolved in core revision 324, hub-admin revision 25)
 

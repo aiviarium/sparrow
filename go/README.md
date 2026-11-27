@@ -1,7 +1,7 @@
 # Sparrow RPC: Go reference implementation
 
-Module `github.com/aiviarium/sparrow-rpc/go`, Go 1.24, following core spec revision 347
-(`../spec/core.md`) and hub-admin revision 35 (`../spec/hub-admin.md`). Phase 1 is the encoding,
+Module `github.com/aiviarium/sparrow-rpc/go`, Go 1.24, following core spec revision 377
+(`../spec/core.md`) and hub-admin revision 38 (`../spec/hub-admin.md`). Phase 1 is the encoding,
 wire format, schema model and web-profile signing (below); phase 2 the sessions, transports and the
 node library (`session/README.md`); phase 3 the hub, `sparrow.hub.admin` and the `sparrow-hub`
 program (section "Hub" below); phase 4 the Web Profile server (section "Web Profile" below).
@@ -15,9 +15,9 @@ program (section "Hub" below); phase 4 the Web Profile server (section "Web Prof
 | `value` | Schema-driven payload encoder/decoder: positional structs with trailing-null omission, sparse structs, enums, unions, `dynamic`, `symbol`, byte-stream tokens. |
 | `websign` | Module signing (9.5): key IDs, signature inputs, certificates, revocation lists, web-module entries, the acceptance verdict, semver precedence and rollback records. |
 | `names` | Name grammars: facet names, node IDs, module ids, imported names, principals (6.1, 9.4, 10.2-10.8). |
-| `adminiface` | The `sparrow.hub.admin` v1 interface (`../spec/hub-admin.md`): `Interface()`, `Facet(id)`, `InterfaceHash()`, type, method and sigil IDs, and `StoredFacetKey`. |
+| `adminiface` | The `sparrow.hub.admin` v1 interface (`../spec/hub-admin.md`): `Interface()`, `Facet(id)`, `InterfaceHash()`, type, method and sigil IDs. |
 | `session`, `transport/...`, `node`, `examples/echo-node` | Phase 2: see `session/README.md`. `examples/echo-node` dials in to a hub (`-hub`) or waits to be dialed (`-listen`). |
-| `admin` | `sparrow.hub.admin` v1: the document (CBOR and JSON forms), validation, revisions, confirmation and rollback, stored secrets and facets, watch, persistence in a data directory, the facet handler and a client. |
+| `admin` | `sparrow.hub.admin` v1: the document (CBOR and JSON forms), validation, revisions, confirmation and rollback, stored secrets, watch, persistence in a data directory, the facet handler and a client. |
 | `hub` | The Hub Profile (core section 10): node links (nodes dial in, or the hub dials them; it never starts nodes), composition, authorization, forwarding, call contexts, offline nodes, federation. |
 | `web` | The Web Profile (core section 9): `/sparrow/connect`, tickets, schema and module resources, the `web.*` annotations, and a client that follows the browser rules (signatures, rollback, revocation, snapshots). |
 | `cmd/sparrow-hub` | The reference server program. |
@@ -80,8 +80,8 @@ $A set-secret notes-link hub-credential                     # what the hub prese
 bin/echo-node -id notes -listen 127.0.0.1:5533 -credential hub-credential -key-file notes.key &
 #   prints {"webtransport":"https://127.0.0.1:5533/sparrow/node","pin":"<hex>"}
 cat > doc.json <<'JSON'
-{ "nodes": {"echo":  {"credential": "echo-link"},
-            "notes": {"dial": {"url": "https://127.0.0.1:5533/sparrow/node", "pin": "<hex>", "credential": "notes-link"}}},
+{ "nodes": {"echo":  {"link": {"credential": "echo-link"}},
+            "notes": {"link": {"dial": {"url": "https://127.0.0.1:5533/sparrow/node", "pin": "<hex>", "credential": "notes-link"}}}},
   "policy": [["user:alice", "echo", "use"], ["user:alice", "notes", "use"]] }
 JSON
 $A commit -confirm-within 10000 -confirm doc.json
@@ -112,12 +112,16 @@ Choices worth knowing (details in `spec/reference-server.md`):
   by (node ID, facet name, major); a counter that only grows means retired IDs are never handed out
   again. The last definition of every ID is persisted too: a node reconnecting (or updating) with a
   facet that is not a compatible successor is refused with `schema_mismatch`, also across restarts.
-- A node's update, or the change a superseding session brings, is relayed to every session whose
+- A node's update, or the change any new session of a node brings (dialed or dial-in), is relayed to every session whose
   view changes; the node is acked only after each of them acked or was closed with
   `GoAway(schema_mismatch)` (5 s each, 2 s for an update from a peer hub; `Options.RelayAckTimeout`,
   `PeerRelayAckTimeout`). The node library gives its hub at least 10 s.
-- Dial-in: only a node configured to dial in has a dial-in credential; anything else is
-  `GoAway(unauthenticated)`. Calls from a peer hub never carry a `context` (one that does, or that names
+- Dial-in: only an enabled node configured to dial in has a dial-in credential; anything else is
+  `GoAway(unauthenticated)`. A node that is removed or disabled, or whose link or `peer` setting
+  changes, has its session ended at once: its running calls end with `unavailable`, then
+  `GoAway(unauthenticated)`; it is dialed anew or waited for while still configured and enabled.
+  A node that is not yet seen lists no facets. At a node's `maxConcurrentCalls` further calls get
+  `resource_exhausted` at once. Calls from a peer hub never carry a `context` (one that does, or that names
   a `peer:` principal, gets `permission_denied`), the hub sends none to a peer, and a call acting for
   a `peer:` principal is never forwarded to another peer.
 - Client sessions whose credential has a login session and an end (Web Profile tickets) get
@@ -130,17 +134,16 @@ Choices worth knowing (details in `spec/reference-server.md`):
   open and 2 s after (never after its deadline); when the grace period ends the hub ends nested calls
   still carrying it with `permission_denied` (Error to the node, Cancel to the callee).
 - Calls to a node that is not connected wait up to the connect timeout (`Options.ConnectTimeout`,
-  static key `connectTimeoutMs`, default 10 s) for it to connect, then fail with `unavailable`;
-  notifications to it are dropped.
+  static key `connectTimeoutMs`, default 10 s) for it to connect, then fail with `unavailable`
+  (`unimplemented` at once if the node is removed or disabled meanwhile); notifications to it are
+  dropped.
 - Dialed nodes: the TLS chain is not verified, only the SHA-256 of the leaf's SubjectPublicKeyInfo
   (the pin); `https` dials WebTransport, `wss` WebSocket. The hub redials with backoff (about
-  125 ms doubling to 30 s), at once and then every 250 ms or sooner while a call waits for the node.
-  A changed Dial ends the old session when the new one is ready or the first new attempt fails.
+  500 ms doubling to 30 s), at once and then every 250 ms or sooner while a call waits for the node.
 - With `selfSigned`, the certificate's key is kept in the data directory, so the SPKI pin that
   dial-in nodes may check (`echo-node -hub-pin`) survives restarts.
-- Call counting (7.6): as callee a session stops counting a call at its own final message; one whose
-  peer keeps more than twice `maxConcurrentCalls` calls with the caller's half open is closed with
-  `GoAway(resource_exhausted)`.
+- Calls (7.1, 7.6): as callee a session stops counting and forgets a call at its own final message,
+  also while the caller's half is still open; the caller counts it until it has seen that message.
 
 Limitations: the hub presents only `["link", credential]` when dialing (no mutual TLS); the hub never
 calls a client's own facets (they are scoped to the client's session).

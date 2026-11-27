@@ -74,8 +74,7 @@ type Conn interface {
 	SetReadLimit(n uint64)
 	// Close ends the connection. On WebTransport the code and reason
 	// travel in the session close; on WebSocket in the close frame (1000
-	// or 4000+code); on a pipe they are not sent (only GoAway carries
-	// them). Close is idempotent.
+	// or 4000+code). Close is idempotent.
 	Close(code status.Code, reason string) error
 	// Done is closed when the connection has ended, by either side.
 	Done() <-chan struct{}

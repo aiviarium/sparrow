@@ -2,3 +2,5 @@ node_modules/
 *.log
 .DS_Store
 go/echo-node
+go/sparrow-hub
+go/sparrow-admin

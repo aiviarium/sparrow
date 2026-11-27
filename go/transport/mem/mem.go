@@ -20,7 +20,7 @@ import (
 
 // Options tune a pair.
 type Options struct {
-	// NoLeases makes the pair behave like a WebSocket or pipe: shared lane
+	// NoLeases makes the pair behave like a WebSocket: shared lane
 	// only.
 	NoLeases bool
 }

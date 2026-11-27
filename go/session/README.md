@@ -9,11 +9,10 @@ the raw API described below.
 | `transport` | The `Conn` / `Stream` abstraction (4.1, 4.4): whole messages per stream, stream headers, read limit, resets with core status codes, close with code and reason. |
 | `transport/webtransport` | WebTransport over HTTP/3 (4.5) on quic-go and webtransport-go: shared lane (header `0x00`), leased streams (`0x01`) in both directions, header rules, resets and session close carrying core codes, a server you mount on an `http3.Server`, a dialer with `serverCertificateHashes`-style pinning, `SelfSigned` certificates. |
 | `transport/websocket` | WebSocket (4.6) on coder/websocket: subprotocol `sparrow.v1`, one binary message per Sparrow message, Origin check hook, close codes 1000 / 4000+code with the reason cut to 123 bytes. |
-| `transport/pipe` | The pipe binding (4.7): any byte stream, varint length prefixes, no header; `Stdio()` for a started process, `Spawn(cmd)` for the side that starts it (generic: a hub never starts nodes). |
 | `transport/mem` | In-memory binding with leased streams, for tests. |
 | `session` | One session in either role: handshake, control messages, schemas, calls, credit, leases. |
-| `node` | Facet builder, node runtime (stdio, dial, serve, reconnect), calls by name, runtime publishing. |
-| `examples/echo-node` | An example node that dials in to a hub (`-hub URL -credential ...`), waits to be dialed (`-listen ADDR`, printing its URL and SPKI pin), or speaks the pipe binding on stdio. |
+| `node` | Facet builder, node runtime (dial, serve, reconnect, `Shutdown`), calls by name, runtime publishing. |
+| `examples/echo-node` | An example node that dials in to a hub (`-hub URL -credential ...`) or waits to be dialed (`-listen ADDR`, printing its URL and SPKI pin). |
 
 ## Session API
 
@@ -92,8 +91,10 @@ most its credit plus one message.
 - **Halves** follow the method flags captured at the start of the call. For a `Request` naming a
   method the callee does not have, the callee uses the flags of the method if this side ever
   published it in the session (flags 0x2/0x8/0x10 never change), else none; a later `End` is
-  ignored as a message for an ended call. When the callee finishes first, the session discards
-  further input (returning its credit) and, as caller, sends `End` on the application's behalf.
+  ignored as a message for an ended call. When the callee finishes first, it forgets the call (7.1):
+  later input is ignored and earns no credit, and a leased stream keeps one flag until the caller's
+  `End` or `Cancel` arrives (a `Request` before it is a protocol error); as caller the session sends
+  `End` on the application's behalf.
 - **Cancel** may arrive after the caller's half is finished (a unary call). After 5 s without a final
   message the caller resets a leased stream, or keeps the shared-lane call counted and closes the
   session with `GoAway(protocol_error)` at 30 s.
@@ -108,9 +109,9 @@ most its credit plus one message.
   toward `maxConcurrentCalls` before its final message goes out, even while the caller's half is
   still open, so the peer's next stream or call, started the moment it sees that end, is never
   refused (7.6). A caller counts a call until it has both sent its own last message and seen the
-  callee's (a cancelled call stays counted until the callee answers). A callee closes a session
-  that keeps more than twice `maxConcurrentCalls` calls with the caller's half open (refused ones
-  included) with `GoAway(resource_exhausted)`; `Stats().CallerHalfOpen` counts them.
+  callee's final one (a cancelled call stays counted until the callee answers), and a call on a
+  stream it reset as long as it counts the stream (7.5). `CallOptions.NoWait` refuses a call with
+  `resource_exhausted` instead of waiting for a slot.
 - **Schema gating** (6.6 rule 1): after `UpdateSchema`, every later callee message of a call to a facet
   the delta adds or replaces waits for `SchemaAck`; calls to other facets are not held. Core `Error`s
   without details never wait.
@@ -147,8 +148,7 @@ go test -race -count=3 ./session/                     # flakiness check
 go test ./session -run '^$' -fuzz FuzzServerMessages -fuzztime 60s -fuzzminimizetime 3s
 ```
 
-The session tests run real sessions over the mem, pipe (`net.Pipe`), WebSocket (`httptest`) and
+The session tests run real sessions over the mem, WebSocket (`httptest`) and
 WebTransport (QUIC on localhost, self-signed certificate) bindings, a fake clock for the timers, raw
 scripted peers for protocol violations, and every behaviour scenario in `../../test-vectors/scenarios`
-(`TestScenarios`; set `SPARROW_VECTORS` to use another vector directory). The node tests build
-`examples/echo-node` and drive it over its standard input and output as a hub would.
+(`TestScenarios`; set `SPARROW_VECTORS` to use another vector directory).

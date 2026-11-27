@@ -72,8 +72,8 @@ Every scenario uses the schema of vector `schema/scenario-host` in `schema.json`
 | `crossed` | `true` when the message was already in flight when the previous message from the other peer arrived (it "crosses" it). A runner sends it before reading that message. |
 | `note` | Explanation. |
 
-Bindings: on WebTransport each `lease:<n>` is a WebTransport bidirectional stream. On the WebSocket and
-pipe bindings there is only a shared lane: a runner sends `lease:<n>` messages on the shared lane
+Bindings: on WebTransport each `lease:<n>` is a WebTransport bidirectional stream. On the WebSocket
+binding there is only a shared lane: a runner sends `lease:<n>` messages on the shared lane
 without a header, and `stream_idle` / `streams_open` expectations do not apply. The credit scenarios set
 `sharedCredit` and `leaseCredit` alike where it matters, so their numbers hold on every binding.
 
