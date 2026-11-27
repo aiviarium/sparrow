@@ -257,7 +257,10 @@ func (s *stream) WriteMessage(msg []byte) error {
 			return transport.ErrClosed
 		default:
 		}
-		return err
+		// A failed write leaves the WebSocket unusable: the connection is
+		// gone (closed by the peer, locally or by the network), even if the
+		// reader has not seen the close yet.
+		return fmt.Errorf("%w: %v", transport.ErrClosed, err)
 	}
 	return nil
 }
