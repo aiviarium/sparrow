@@ -90,7 +90,8 @@ choices (policy grants, extensions, crash policy, persistence files).
 API: `hub.New(hub.Options{Store, Bootstrap, ...})` opens the state and applies the persisted document;
 `Hub.ServeConn(ctx, conn)` runs any accepted connection (a client, a dial-in node or peer hub);
 `WebTransportHandler` / `WebSocketHandler` mount it on listeners; `Close(grace)` sends `GoAway(going_away)`
-to every session and stops the nodes. `hub.Policy` is pluggable (`Options.Policy`, then
+to every session (also those still in the handshake), stops the nodes and returns once the connections
+have finished closing. `hub.Policy` is pluggable (`Options.Policy`, then
 `Hub.PolicyChanged`); the built-in one reads `ref.policy` grants from the document.
 
 Choices worth knowing (details in `spec/reference-server.md`):

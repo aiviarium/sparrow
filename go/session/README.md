@@ -104,6 +104,9 @@ most its credit plus one message.
   direction, where the binding allows) stays counted until
   the peer has ended its own direction too (it does so as soon as it sees the reset), up to
   `ResetWait` (5 s), so a replacement never reaches a peer that still counts the old stream (4.2 rule 5).
+  An acceptor stops counting a stream before it sends its end, and a callee stops counting a call
+  toward `maxConcurrentCalls` before its final message goes out, so the peer's next stream or call,
+  started the moment it sees that end, is never refused.
 - **Schema gating** (6.6 rule 1): after `UpdateSchema`, every later callee message of a call to a facet
   the delta adds or replaces waits for `SchemaAck`; calls to other facets are not held. Core `Error`s
   without details never wait.
