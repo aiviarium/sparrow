@@ -199,8 +199,14 @@ func (s *Session) open(ctx context.Context, r RawRequest, o *CallOptions, def *s
 	for {
 		s.mu.Lock()
 		if s.closed {
+			g := s.goAwayRecv
 			s.mu.Unlock()
 			e := s.closedError().(*Error)
+			if g != nil {
+				// Report why the peer closed (for example a rejected
+				// optimistic start, 5.3), not just that it did.
+				e = &Error{Code: status.Code(g.Status), Message: g.Reason, Remote: true}
+			}
 			e.NotDispatched = true
 			return nil, e
 		}

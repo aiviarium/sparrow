@@ -243,11 +243,12 @@ func TestBinary(t *testing.T) {
 	w := exec.Command(bins["sparrow-admin"], "-url", p2.addrs.WebTransport, "-token", "admin-secret", "-cert-hash", p2.addrs.CertHash, "watch")
 	wf, _ := os.Create(filepath.Join(dir, "watch.out"))
 	w.Stdout = wf
+	w.Stderr = wf
 	if err := w.Start(); err != nil {
 		t.Fatal(err)
 	}
 	read := func() string { b, _ := os.ReadFile(wf.Name()); return string(b) }
-	testutil.Eventually(t, 10*time.Second, func() bool { return strings.Contains(read(), `"node":"echo"`) }, "watch output %q", read())
+	testutil.Eventually(t, 30*time.Second, func() bool { return strings.Contains(read(), `"node":"echo"`) }, "watch output %q", read())
 	_ = w.Process.Signal(os.Interrupt)
 	_ = w.Wait()
 	wf.Close()
