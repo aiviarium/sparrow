@@ -68,7 +68,7 @@ The hub serves `POST /sparrow/connect` (tickets are EdDSA-signed JWTs bound to t
 
 ## 6. Testing
 
-*(implementation)* Everything below exists for phase 3 except fuzzing of the hub itself (its decoders are those of `wire`, `schema` and `admin`, whose CBOR decoding goes through `cbor.Validate` first); see `go/README.md`.
+*(implementation)* Everything below exists for phase 3; the hub decodes only with `wire`, `schema` and `admin`, whose decoders are fuzzed (`admin.FuzzDecode` covers the document types). See `go/README.md`.
 
 - Unit tests in every package, and conformance tests against the published test vectors.
 - Behaviour scenarios: scripted message sequences with expected outcomes, run against the real server over each binding.

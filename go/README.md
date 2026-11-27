@@ -37,6 +37,7 @@ go test ./cbor   -run '^$' -fuzz FuzzValidate -fuzztime 20s
 go test ./wire   -run '^$' -fuzz FuzzDecode   -fuzztime 20s
 go test ./schema -run '^$' -fuzz FuzzSchema   -fuzztime 20s
 go test ./value  -run '^$' -fuzz FuzzDecode   -fuzztime 20s
+go test ./admin  -run '^$' -fuzz FuzzDecode   -fuzztime 20s
 ```
 
 The conformance suite fails if any vector is left unchecked. Set `SPARROW_VECTORS` to test against
