@@ -342,6 +342,19 @@ func callVectors() O {
 	add("control/ping", "Ping with nonce 42.", "5.5", []any{7, 42})
 	add("control/pong", "Pong echoing nonce 42.", "5.5", []any{8, 42})
 	add("control/goaway", "GoAway(protocol_error) outside any call.", "5.5, 8", []any{9, 17, "unknown message kind 26", nil, nil})
+	msg := func(m []any) O { b := enc(m); return o("message", tj(m), "diag", diag(b), "cbor", hx(b)) }
+	for _, u := range []struct {
+		name, desc string
+		req, err   []any
+	}{
+		{"unimplemented/unknown-method", "A Request naming method 99, which part 16 of the callee's schema does not have, is answered with Error(unimplemented) (7.1).",
+			[]any{16, 16, partNotes, 99, map[string]any{}, nil}, []any{20, 16, 12, "unknown method 99 in part 16", nil}},
+		{"unimplemented/unknown-part", "A Request naming part 40, which the callee's schema does not have, is answered with Error(unimplemented) (7.1).",
+			[]any{16, 18, 40, 0, map[string]any{}, nil}, []any{20, 18, 12, "unknown part 40", nil}},
+	} {
+		vs = append(vs, o("name", u.name, "description", u.desc, "spec", "7.1, 8", "type", "unimplemented",
+			"schema", "schema/server-base", "request", msg(u.req), "error", msg(u.err)))
+	}
 	return o("area", "calls", "vectors", vs)
 }
 

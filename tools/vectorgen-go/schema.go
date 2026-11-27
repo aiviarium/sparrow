@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -248,20 +249,25 @@ func blankType(td []any) []any {
 			fd := f.([]any)
 			fd[1] = ""
 			fd[4] = map[string]any{}
+			if num(c[0]) == 0 {
+				fd[3] = num(fd[3]) &^ ffDeprecated // hint flag
+			}
 		}
 	}
 	return c
 }
 
+// blankService: a service's wire shape leaves out its method list (6.5).
 func blankService(sd []any) []any {
-	c := deepCopy(sd).([]any)
+	return []any{sd[0], "", map[string]any{}}
+}
+
+// blankMethod clears the name, the annotations and the hint flags 0x1, 0x4.
+func blankMethod(md []any) []any {
+	c := deepCopy(md).([]any)
 	c[1] = ""
-	c[3] = map[string]any{}
-	for _, m := range c[2].([]any) {
-		md := m.([]any)
-		md[1] = ""
-		md[6] = map[string]any{}
-	}
+	c[5] = num(c[5]) &^ (fIdempotent | fShared)
+	c[6] = map[string]any{}
 	return c
 }
 
@@ -295,6 +301,18 @@ func conforms(part, iface []any) []any {
 			j := indexByID(g.pDef, g.idPos, id)
 			if j < 0 || !bytes.Equal(enc(g.blank(dd)), enc(g.blank(g.pDef[j].([]any)))) {
 				return []any{g.space, id}
+			}
+			if g.space != spService {
+				continue
+			}
+			pMethods := g.pDef[j].([]any)[2].([]any)
+			for _, m := range dd[2].([]any) {
+				md := m.([]any)
+				mid := num(md[0])
+				k := indexByID(pMethods, 0, mid)
+				if k < 0 || !bytes.Equal(enc(blankMethod(md)), enc(blankMethod(pMethods[k].([]any)))) {
+					return []any{spMethod, mid}
+				}
 			}
 		}
 	}
@@ -364,6 +382,9 @@ type defs struct {
 // End flags and stream placement (sections 6.1-6.6).
 func validateDefs(where string, types, services, sigils, ret []any) (*defs, *deltaError) {
 	d := &defs{map[int64][]any{}, map[int64]int64{}, map[int64][]any{}, map[int64][]any{}}
+	if e := checkASCIINames(where, types, services, sigils); e != nil {
+		return nil, e
+	}
 	retiredSet := map[[2]int64]bool{}
 	for _, r := range ret {
 		rp := r.([]any)
@@ -510,10 +531,62 @@ func validateDefs(where string, types, services, sigils, ret []any) (*defs, *del
 	return d, nil
 }
 
+var nameRe = regexp.MustCompile(`^([a-z0-9-]+(\.[a-z0-9-]+)*/)?[a-z0-9-]+(\.[a-z0-9-]+)*$`)
+
+func isASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] >= 0x80 {
+			return false
+		}
+	}
+	return true
+}
+
+// checkASCIINames: names of types, services, methods, fields and sigils are
+// ASCII (6.1). Variant names are not listed in 6.1 and are not checked.
+func checkASCIINames(where string, types, services, sigils []any) *deltaError {
+	bad := func(kind, n string) *deltaError {
+		return derr("invalid_name", "%s: %s name %q is not ASCII", where, kind, n)
+	}
+	for _, t := range types {
+		td := t.([]any)
+		if !isASCII(td[2].(string)) {
+			return bad("type", td[2].(string))
+		}
+		if num(td[0]) == 0 {
+			for _, f := range td[3].([]any) {
+				if n := f.([]any)[1].(string); !isASCII(n) {
+					return bad("field", n)
+				}
+			}
+		}
+	}
+	for _, sv := range services {
+		sd := sv.([]any)
+		if !isASCII(sd[1].(string)) {
+			return bad("service", sd[1].(string))
+		}
+		for _, m := range sd[2].([]any) {
+			if n := m.([]any)[1].(string); !isASCII(n) {
+				return bad("method", n)
+			}
+		}
+	}
+	for _, sg := range sigils {
+		if n := sg.([]any)[1].(string); !isASCII(n) {
+			return bad("sigil", n)
+		}
+	}
+	return nil
+}
+
 func validatePart(p []any) (*defs, *deltaError) {
 	where := fmt.Sprintf("part %d", num(p[pID]))
 	if containsFloat(p) {
 		return nil, derr("float_in_canonical_data", "%s contains a float", where)
+	}
+	if n := p[pName].(string); !nameRe.MatchString(n) {
+		return nil, derr("invalid_name", "%s: part name %q does not match the part-name grammar", where, n)
 	}
 	return validateDefs(where, p[pTypes].([]any), p[pServices].([]any), p[pSigils].([]any), p[pRetired].([]any))
 }
@@ -596,14 +669,29 @@ func validateSchema(doc []any) *deltaError {
 			return derr("duplicate_part_name", "%q", name)
 		}
 		ids[id], names[name] = true, true
-		if id < 16 && !(id == 1 && name == "sparrow.web") {
-			return derr("reserved_part_id", "part %d (%q): IDs 0-15 are reserved for parts this spec defines", id, name)
+		if id < 16 && id != 1 {
+			return derr("reserved_part_id", "part %d (%q): IDs 0 and 2-15 MUST NOT appear", id, name)
+		}
+		if id == 1 && !bytes.Equal(partHash(p), partHash(webPart())) {
+			return derr("part1_mismatch", "part 1 does not match the spec's definition of sparrow.web by part hash")
 		}
 		if _, e := validatePart(p); e != nil {
 			return e
 		}
 	}
 	return nil
+}
+
+// validateSentSchema additionally checks that a schema document as sent
+// lists its parts sorted by ID (6.1).
+func validateSentSchema(doc []any) *deltaError {
+	parts := doc[3].([]any)
+	for i := 1; i < len(parts); i++ {
+		if num(parts[i-1].([]any)[pID]) >= num(parts[i].([]any)[pID]) {
+			return derr("parts_not_sorted", "part %d listed after part %d", num(parts[i].([]any)[pID]), num(parts[i-1].([]any)[pID]))
+		}
+	}
+	return validateSchema(doc)
 }
 
 func needsEnd(ref any, types map[int64][]any) bool {

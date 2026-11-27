@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev164 (draft)",
+  "spec_revision": "core rev180 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "signing",
   "test_only_keys": "Every key in this file is derived from a trivial TEST-ONLY seed. Never use these keys outside tests.",
@@ -100,17 +100,6 @@
       "public_key": "1398f62c6d1a457c51ba6a4b5f3dbd2f69fca93216218dc8997e416bd17d93ca",
       "sha256_public_key": "5c29b78f10a35a49a6231d08ee840a04bcc3a37a4f9d46df327dec56b8a9b7c9",
       "key_id": "5c29b78f10a35a49a6231d08ee840a04"
-    },
-    {
-      "name": "key/publisher-09",
-      "description": "TEST-ONLY publisher key 'cafe', non-ASCII namespace (seed 32 x 0x09). key_id = first 16 bytes of SHA-256 of the raw 32-byte public key.",
-      "spec": "9.5",
-      "type": "key",
-      "test_only": true,
-      "seed": "0909090909090909090909090909090909090909090909090909090909090909",
-      "public_key": "fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f618",
-      "sha256_public_key": "dbc298251c51321b7266e78d1c151c2b62aff8cb95b293096d3463018544face",
-      "key_id": "dbc298251c51321b7266e78d1c151c2b"
     },
     {
       "name": "cert/acme",
@@ -455,63 +444,6 @@
       "certificate_cbor": "8558201398f62c6d1a457c51ba6a4b5f3dbd2f69fca93216218dc8997e416bd17d93ca68657073696c6f6e2ec11a6b08c8005034750f98bd59fcfc946da45aaabe933b5840809b0c2a21aedf5947ceb365afa7f522e421b7e6bc98b423b029326374976c97b8ba7a8408f4defcdfd6c0897c98dc31c1cc617939a6d29daa15735d48269a03"
     },
     {
-      "name": "cert/cafe-utf8",
-      "description": "Certificate with a non-ASCII namespace 'café.' (NFC, U+00E9). Coverage is a UTF-8 byte-prefix match.",
-      "spec": "9.5",
-      "type": "certificate",
-      "signer_seed": "0101010101010101010101010101010101010101010101010101010101010101",
-      "domain": "sparrow-cert-v1",
-      "unsigned": [
-        {
-          "$bytes": "fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f618"
-        },
-        "café.",
-        {
-          "$tag": 1,
-          "value": 1798761600
-        },
-        {
-          "$bytes": "34750f98bd59fcfc946da45aaabe933b"
-        }
-      ],
-      "signed_value": [
-        "sparrow-cert-v1",
-        [
-          {
-            "$bytes": "fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f618"
-          },
-          "café.",
-          {
-            "$tag": 1,
-            "value": 1798761600
-          },
-          {
-            "$bytes": "34750f98bd59fcfc946da45aaabe933b"
-          }
-        ]
-      ],
-      "signed_diag": "[\"sparrow-cert-v1\", [h'fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f618', \"caf\\u00e9.\", 1(1798761600), h'34750f98bd59fcfc946da45aaabe933b']]",
-      "signed_bytes": "826f73706172726f772d636572742d7631845820fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f61866636166c3a92ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b",
-      "signature": "5e456e9d69d64e5ea075f748ac36d50f1f1e45ab2510e0741ffe3c4377c9ba7523fd1afbb51d13f4dfc5dadf7a6900446ea8646cfbca3937e5ed921084ab7d05",
-      "certificate": [
-        {
-          "$bytes": "fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f618"
-        },
-        "café.",
-        {
-          "$tag": 1,
-          "value": 1798761600
-        },
-        {
-          "$bytes": "34750f98bd59fcfc946da45aaabe933b"
-        },
-        {
-          "$bytes": "5e456e9d69d64e5ea075f748ac36d50f1f1e45ab2510e0741ffe3c4377c9ba7523fd1afbb51d13f4dfc5dadf7a6900446ea8646cfbca3937e5ed921084ab7d05"
-        }
-      ],
-      "certificate_cbor": "855820fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f61866636166c3a92ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58405e456e9d69d64e5ea075f748ac36d50f1f1e45ab2510e0741ffe3c4377c9ba7523fd1afbb51d13f4dfc5dadf7a6900446ea8646cfbca3937e5ed921084ab7d05"
-    },
-    {
       "name": "revocation/list-3",
       "description": "Revocation list seq 3 revoking key 'beta', signed by the root key. Used by the default verification context.",
       "spec": "9.5",
@@ -564,7 +496,7 @@
     },
     {
       "name": "revocation/lists-root",
-      "description": "Root-signed list (seq 4) that also lists the root key's own key_id. Root keys cannot be revoked this way, so the root key stays trusted.",
+      "description": "Root-signed list (seq 4) naming the root key's own key_id and publisher key 'beta'. The entry naming a root key is ignored and the rest of the list applies (9.5): the root stays trusted, 'beta' is revoked.",
       "spec": "9.5",
       "type": "revocation",
       "signer_seed": "0101010101010101010101010101010101010101010101010101010101010101",
@@ -1310,114 +1242,6 @@
       "entry_cbor": "a76269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba472925840762c8db7c4e33447d9895ca30390412deebb72b6f59e8f83c234357cd185d501723d8744d4ea56e6c012926aad5e0f6d76ca3d0a0e0b799fa1fd6c4ded1d2c046375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef2767686f7374417069645e332e316776657273696f6e65312e342e33"
     },
     {
-      "name": "module/utf8-namespace",
-      "description": "Id 'café.menu' (NFC) under namespace 'café.' (NFC): the UTF-8 bytes match.",
-      "spec": "9.4, 9.5",
-      "type": "module",
-      "file_utf8": "// café.menu@1.0.0 (test fixture)\nexport default function register(host) {\n  return { id: 'café.menu' };\n}\n",
-      "file_hash": "01275aa1591ca993d9ec10b61bf3dade270844b131f7ce6e89532d26e0f9560a89",
-      "signer_seed": "0909090909090909090909090909090909090909090909090909090909090909",
-      "domain": "sparrow-module-v1",
-      "unsigned": {
-        "id": "café.menu",
-        "url": "/sparrow/mods/ASdaoVkcqZPZ7BC2G_Pa3icIRLEx985uiVMtJuD5VgqJ.js",
-        "deps": [],
-        "hash": {
-          "$bytes": "01275aa1591ca993d9ec10b61bf3dade270844b131f7ce6e89532d26e0f9560a89"
-        },
-        "hostApi": "^3.1",
-        "version": "1.0.0"
-      },
-      "signed_value": [
-        "sparrow-module-v1",
-        {
-          "id": "café.menu",
-          "url": "/sparrow/mods/ASdaoVkcqZPZ7BC2G_Pa3icIRLEx985uiVMtJuD5VgqJ.js",
-          "deps": [],
-          "hash": {
-            "$bytes": "01275aa1591ca993d9ec10b61bf3dade270844b131f7ce6e89532d26e0f9560a89"
-          },
-          "hostApi": "^3.1",
-          "version": "1.0.0"
-        }
-      ],
-      "signed_bytes": "827173706172726f772d6d6f64756c652d7631a66269646a636166c3a92e6d656e756375726c783d2f73706172726f772f6d6f64732f415364616f566b63715a505a37424332475f506133696349524c45783938357569564d744a7544355667714a2e6a736464657073806468617368582101275aa1591ca993d9ec10b61bf3dade270844b131f7ce6e89532d26e0f9560a8967686f7374417069645e332e316776657273696f6e65312e302e30",
-      "signature": "ac5cb312ba2800d5461245acdb3000e0bdd0945e617344741baecfe136fc174d051cc2ae3102cdbd34b2e785d60d83853eaaeced844973604f09c4398f327e08",
-      "entry": {
-        "id": "café.menu",
-        "sig": [
-          {
-            "$bytes": "dbc298251c51321b7266e78d1c151c2b"
-          },
-          {
-            "$bytes": "ac5cb312ba2800d5461245acdb3000e0bdd0945e617344741baecfe136fc174d051cc2ae3102cdbd34b2e785d60d83853eaaeced844973604f09c4398f327e08"
-          }
-        ],
-        "url": "/sparrow/mods/ASdaoVkcqZPZ7BC2G_Pa3icIRLEx985uiVMtJuD5VgqJ.js",
-        "deps": [],
-        "hash": {
-          "$bytes": "01275aa1591ca993d9ec10b61bf3dade270844b131f7ce6e89532d26e0f9560a89"
-        },
-        "hostApi": "^3.1",
-        "version": "1.0.0"
-      },
-      "entry_cbor": "a76269646a636166c3a92e6d656e75637369678250dbc298251c51321b7266e78d1c151c2b5840ac5cb312ba2800d5461245acdb3000e0bdd0945e617344741baecfe136fc174d051cc2ae3102cdbd34b2e785d60d83853eaaeced844973604f09c4398f327e086375726c783d2f73706172726f772f6d6f64732f415364616f566b63715a505a37424332475f506133696349524c45783938357569564d744a7544355667714a2e6a736464657073806468617368582101275aa1591ca993d9ec10b61bf3dade270844b131f7ce6e89532d26e0f9560a8967686f7374417069645e332e316776657273696f6e65312e302e30"
-    },
-    {
-      "name": "module/utf8-nfd",
-      "description": "Id 'café.menu' in NFD (e + U+0301) looks the same as the namespace 'café.' (NFC) but its bytes differ, so it is not covered (no normalization).",
-      "spec": "9.4, 9.5",
-      "type": "module",
-      "file_utf8": "// café.menu@1.0.0 (test fixture)\nexport default function register(host) {\n  return { id: 'café.menu' };\n}\n",
-      "file_hash": "0161285d626f037879626d5efbebec6284d5ed707dbdf0be2f580c5be1216f9e00",
-      "signer_seed": "0909090909090909090909090909090909090909090909090909090909090909",
-      "domain": "sparrow-module-v1",
-      "unsigned": {
-        "id": "café.menu",
-        "url": "/sparrow/mods/AWEoXWJvA3h5Ym1e--vsYoTV7XB9vfC-L1gMW-Ehb54A.js",
-        "deps": [],
-        "hash": {
-          "$bytes": "0161285d626f037879626d5efbebec6284d5ed707dbdf0be2f580c5be1216f9e00"
-        },
-        "hostApi": "^3.1",
-        "version": "1.0.0"
-      },
-      "signed_value": [
-        "sparrow-module-v1",
-        {
-          "id": "café.menu",
-          "url": "/sparrow/mods/AWEoXWJvA3h5Ym1e--vsYoTV7XB9vfC-L1gMW-Ehb54A.js",
-          "deps": [],
-          "hash": {
-            "$bytes": "0161285d626f037879626d5efbebec6284d5ed707dbdf0be2f580c5be1216f9e00"
-          },
-          "hostApi": "^3.1",
-          "version": "1.0.0"
-        }
-      ],
-      "signed_bytes": "827173706172726f772d6d6f64756c652d7631a66269646b63616665cc812e6d656e756375726c783d2f73706172726f772f6d6f64732f4157456f58574a7641336835596d31652d2d7673596f5456375842397666432d4c31674d572d4568623534412e6a73646465707380646861736858210161285d626f037879626d5efbebec6284d5ed707dbdf0be2f580c5be1216f9e0067686f7374417069645e332e316776657273696f6e65312e302e30",
-      "signature": "04ed074b4437cff9d81f278ba1abf23ce20fce397c33f606aea91af150d7b954699fa50763b7237af3f885a04984ccc46b4d34139215e574eb15fb51a67a4509",
-      "entry": {
-        "id": "café.menu",
-        "sig": [
-          {
-            "$bytes": "dbc298251c51321b7266e78d1c151c2b"
-          },
-          {
-            "$bytes": "04ed074b4437cff9d81f278ba1abf23ce20fce397c33f606aea91af150d7b954699fa50763b7237af3f885a04984ccc46b4d34139215e574eb15fb51a67a4509"
-          }
-        ],
-        "url": "/sparrow/mods/AWEoXWJvA3h5Ym1e--vsYoTV7XB9vfC-L1gMW-Ehb54A.js",
-        "deps": [],
-        "hash": {
-          "$bytes": "0161285d626f037879626d5efbebec6284d5ed707dbdf0be2f580c5be1216f9e00"
-        },
-        "hostApi": "^3.1",
-        "version": "1.0.0"
-      },
-      "entry_cbor": "a76269646b63616665cc812e6d656e75637369678250dbc298251c51321b7266e78d1c151c2b584004ed074b4437cff9d81f278ba1abf23ce20fce397c33f606aea91af150d7b954699fa50763b7237af3f885a04984ccc46b4d34139215e574eb15fb51a67a45096375726c783d2f73706172726f772f6d6f64732f4157456f58574a7641336835596d31652d2d7673596f5456375842397666432d4c31674d572d4568623534412e6a73646465707380646861736858210161285d626f037879626d5efbebec6284d5ed707dbdf0be2f580c5be1216f9e0067686f7374417069645e332e316776657273696f6e65312e302e30"
-    },
-    {
       "name": "file-hash/charts-css",
       "description": "Asset file hash in schema-hash format: 0x01 || SHA-256(file bytes).",
       "spec": "9.4",
@@ -1547,28 +1371,6 @@
       "expected_reason": "bad_module_signature"
     },
     {
-      "name": "verify/utf8-namespace",
-      "description": "Accept or reject module/utf8-namespace. Id 'café.menu' (NFC) under namespace 'café.' (NFC): the UTF-8 bytes match.",
-      "spec": "9.5",
-      "type": "verify",
-      "context": "verification_context",
-      "module": "module/utf8-namespace",
-      "revocation": "revocation/list-3",
-      "expected_valid": true,
-      "expected_reason": "ok"
-    },
-    {
-      "name": "verify/utf8-nfd",
-      "description": "Accept or reject module/utf8-nfd. Id 'café.menu' in NFD (e + U+0301) looks the same as the namespace 'café.' (NFC) but its bytes differ, so it is not covered (no normalization).",
-      "spec": "9.5",
-      "type": "verify",
-      "context": "verification_context",
-      "module": "module/utf8-nfd",
-      "revocation": "revocation/list-3",
-      "expected_valid": false,
-      "expected_reason": "namespace_not_covered"
-    },
-    {
       "name": "verify/root-not-revocable",
       "description": "module/acme-core (root-signed) with revocation/lists-root in effect: root keys cannot be revoked, so the module is accepted.",
       "spec": "9.5",
@@ -1578,6 +1380,17 @@
       "revocation": "revocation/lists-root",
       "expected_valid": true,
       "expected_reason": "ok"
+    },
+    {
+      "name": "verify/publisher-revoked-by-list-naming-root",
+      "description": "module/revoked-key (signed by 'beta') with revocation/lists-root in effect: the list also names the root key, whose entry is ignored, but the rest applies, so 'beta' is revoked.",
+      "spec": "9.5",
+      "type": "verify",
+      "context": "verification_context",
+      "module": "module/revoked-key",
+      "revocation": "revocation/lists-root",
+      "expected_valid": false,
+      "expected_reason": "key_revoked"
     },
     {
       "name": "verify/forged-revocation-ignored",
@@ -1610,12 +1423,12 @@
     },
     {
       "name": "module-scope/acme.charts/acme.charts",
-      "description": "Equal to the part name, with no dot after it. Rejected under a literal reading of 9.4 (see SPEC-ISSUES).",
+      "description": "Equal to the part name: allowed (9.4).",
       "spec": "9.4, 10.8",
       "type": "module_scope",
       "part_name": "acme.charts",
       "module_id": "acme.charts",
-      "expected_valid": false
+      "expected_valid": true
     },
     {
       "name": "module-scope/acme.charts/acme.chartsx.ui",
@@ -1636,8 +1449,26 @@
       "expected_valid": false
     },
     {
+      "name": "module-scope/acme.charts/acme.charts.Ui",
+      "description": "Upper case: module ids follow the ASCII part-name grammar.",
+      "spec": "9.4, 10.8",
+      "type": "module_scope",
+      "part_name": "acme.charts",
+      "module_id": "acme.charts.Ui",
+      "expected_valid": false
+    },
+    {
+      "name": "module-scope/acme.charts/acme.charts.café",
+      "description": "Non-ASCII: module ids follow the ASCII part-name grammar.",
+      "spec": "9.4, 10.8",
+      "type": "module_scope",
+      "part_name": "acme.charts",
+      "module_id": "acme.charts.café",
+      "expected_valid": false
+    },
+    {
       "name": "module-scope/hub-b_acme.charts/acme.charts.ui",
-      "description": "Imported part: the '<hub-id>/' prefix a hub added is ignored.",
+      "description": "Imported part: the '<peer-id>/' prefix a hub added is ignored.",
       "spec": "9.4, 10.8",
       "type": "module_scope",
       "part_name": "hub-b/acme.charts",
@@ -1645,8 +1476,17 @@
       "expected_valid": true
     },
     {
+      "name": "module-scope/hub-b_acme.charts/acme.charts",
+      "description": "Imported part, id equal to the unprefixed name.",
+      "spec": "9.4, 10.8",
+      "type": "module_scope",
+      "part_name": "hub-b/acme.charts",
+      "module_id": "acme.charts",
+      "expected_valid": true
+    },
+    {
       "name": "module-scope/hub-b_acme.charts/hub-b/acme.charts.ui",
-      "description": "Module ids do not carry the hub prefix (assumption, see README).",
+      "description": "Module ids never carry the prefix ('/' is outside the grammar).",
       "spec": "9.4, 10.8",
       "type": "module_scope",
       "part_name": "hub-b/acme.charts",
@@ -1664,11 +1504,12 @@
     },
     {
       "name": "module-scope/part-web-keys",
-      "description": "A part's own annotations may carry only web.modules; a client ignores any other web.* key in a part (section 9.4). Non-web keys are untouched.",
+      "description": "A part's own annotations may carry only web.modules; a client ignores any other web.* key in a part, and reads web.keys, web.revoked and client configuration from top-level schema annotations only (section 9.4). Non-web keys are untouched.",
       "spec": "9.4",
       "type": "part_web_keys",
       "part_annotations": {
         "doc": "A part's annotations.",
+        "web.keys": [],
         "web.apply": "hot",
         "web.title": "Hijacked",
         "web.modules": []
@@ -1678,6 +1519,7 @@
       ],
       "ignored_web_keys": [
         "web.apply",
+        "web.keys",
         "web.title"
       ]
     }

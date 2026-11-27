@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev164 (draft)",
+  "spec_revision": "core rev180 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "status",
   "vectors": [
@@ -184,55 +184,79 @@
           "status": 23,
           "name": "(reserved)",
           "websocket_close_code": 4023,
-          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
+          "note": "Reserved for later core versions; the WebSocket mapping covers all core codes 0-31 (section 8)."
         },
         {
           "status": 24,
           "name": "(reserved)",
           "websocket_close_code": 4024,
-          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
+          "note": "Reserved for later core versions; the WebSocket mapping covers all core codes 0-31 (section 8)."
         },
         {
           "status": 25,
           "name": "(reserved)",
           "websocket_close_code": 4025,
-          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
+          "note": "Reserved for later core versions; the WebSocket mapping covers all core codes 0-31 (section 8)."
         },
         {
           "status": 26,
           "name": "(reserved)",
           "websocket_close_code": 4026,
-          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
+          "note": "Reserved for later core versions; the WebSocket mapping covers all core codes 0-31 (section 8)."
         },
         {
           "status": 27,
           "name": "(reserved)",
           "websocket_close_code": 4027,
-          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
+          "note": "Reserved for later core versions; the WebSocket mapping covers all core codes 0-31 (section 8)."
         },
         {
           "status": 28,
           "name": "(reserved)",
           "websocket_close_code": 4028,
-          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
+          "note": "Reserved for later core versions; the WebSocket mapping covers all core codes 0-31 (section 8)."
         },
         {
           "status": 29,
           "name": "(reserved)",
           "websocket_close_code": 4029,
-          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
+          "note": "Reserved for later core versions; the WebSocket mapping covers all core codes 0-31 (section 8)."
         },
         {
           "status": 30,
           "name": "(reserved)",
           "websocket_close_code": 4030,
-          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
+          "note": "Reserved for later core versions; the WebSocket mapping covers all core codes 0-31 (section 8)."
         },
         {
           "status": 31,
           "name": "(reserved)",
           "websocket_close_code": 4031,
-          "note": "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."
+          "note": "Reserved for later core versions; the WebSocket mapping covers all core codes 0-31 (section 8)."
+        }
+      ]
+    },
+    {
+      "name": "status/close-reason-truncation",
+      "description": "A sender shortens a close reason that is too long at a character boundary (section 8): the longest UTF-8 prefix that fits and ends on a character boundary. The reason here mixes 1-, 2- and 3-byte characters.",
+      "spec": "8",
+      "type": "reason_truncation",
+      "cases": [
+        {
+          "binding": "websocket",
+          "max_bytes": 123,
+          "reason_utf8": "xWartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart ",
+          "reason_length": 1261,
+          "truncated_utf8": "xWartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung l",
+          "truncated_length": 122
+        },
+        {
+          "binding": "webtransport",
+          "max_bytes": 1024,
+          "reason_utf8": "Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart ",
+          "reason_length": 1260,
+          "truncated_utf8": "Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft – Neustart Wartung läuft ",
+          "truncated_length": 1023
         }
       ]
     },

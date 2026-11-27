@@ -1,5 +1,7 @@
 package main
 
+import "strings"
+
 var statusNames = []string{
 	"ok", "cancelled", "unknown", "invalid_argument", "deadline_exceeded", "not_found",
 	"already_exists", "permission_denied", "resource_exhausted", "failed_precondition", "aborted",
@@ -27,7 +29,7 @@ func statusVectors() O {
 	var reserved []any
 	for i := 23; i <= 31; i++ {
 		reserved = append(reserved, o("status", i, "name", "(reserved)", "websocket_close_code", wsClose(i),
-			"note", "Reserved for later core versions. Mapped by the same rule if a later version defines it; a peer of this revision never sends it."))
+			"note", "Reserved for later core versions; the WebSocket mapping covers all core codes 0-31 (section 8)."))
 	}
 	return o("area", "status", "vectors", []any{
 		o(
@@ -47,6 +49,16 @@ func statusVectors() O {
 			"entries", reserved,
 		),
 		o(
+			"name", "status/close-reason-truncation",
+			"description", "A sender shortens a close reason that is too long at a character boundary (section 8): the longest UTF-8 prefix that fits and ends on a character boundary. The reason here mixes 1-, 2- and 3-byte characters.",
+			"spec", "8",
+			"type", "reason_truncation",
+			"cases", []any{
+				truncCase("websocket", 123, "x"+longReason),
+				truncCase("webtransport", 1024, longReason),
+			},
+		),
+		o(
 			"name", "status/application-error-not-transport",
 			"description", "An application error sigil (here conflict, 65, of part 16) travels only in an Error message; stream resets and transport closes carry core codes only, and Cancel, GoAway and AuthStatus carry core codes only.",
 			"spec", "8",
@@ -56,4 +68,27 @@ func statusVectors() O {
 			"not_allowed_in", []any{"Cancel", "GoAway", "AuthStatus", "webtransport_stream_reset", "webtransport_session_close", "websocket_close"},
 		),
 	})
+}
+
+var longReason = strings.Repeat("Wartung läuft – Neustart ", 45)
+
+// truncUTF8 returns the longest prefix of s of at most n bytes that ends on
+// a character boundary.
+func truncUTF8(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	for n > 0 && s[n]&0xc0 == 0x80 {
+		n--
+	}
+	return s[:n]
+}
+
+func truncCase(where string, max int, reason string) O {
+	t := truncUTF8(reason, max)
+	if len(t) == max {
+		panic("truncation case does not cut inside a character")
+	}
+	return o("binding", where, "max_bytes", max, "reason_utf8", reason, "reason_length", len(reason),
+		"truncated_utf8", t, "truncated_length", len(t))
 }

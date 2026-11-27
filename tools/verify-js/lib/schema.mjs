@@ -71,14 +71,22 @@ function blankType(td) {
   const c = clone(td);
   c[2] = '';
   c[c.length - 1] = {};
-  if (c[0] === 0 || c[0] === 2) for (const f of c[3]) { f[1] = ''; f[4] = {}; }
+  if (c[0] === 0 || c[0] === 2) {
+    for (const f of c[3]) {
+      f[1] = '';
+      f[4] = {};
+      if (c[0] === 0) f[3] &= ~0x2; // hint flag: deprecated
+    }
+  }
   return c;
 }
-function blankService(sd) {
-  const c = clone(sd);
+// A service's wire shape leaves out its method list; methods are compared one by one.
+const blankService = (sd) => [sd[0], '', {}];
+function blankMethod(md) {
+  const c = clone(md);
   c[1] = '';
-  c[3] = {};
-  for (const m of c[2]) { m[1] = ''; m[6] = {}; }
+  c[5] &= ~(0x1 | 0x4); // hint flags: idempotent, shared
+  c[6] = {};
   return c;
 }
 function blankSigil(sg) {
@@ -102,6 +110,11 @@ export function conforms(part, iface) {
     for (const d of idefs) {
       const m = pdefs.find((x) => x[pos] === d[pos]);
       if (!m || !bytesEq(blank(d), blank(m))) return [space, d[pos]];
+      if (space !== SPACE.service) continue;
+      for (const im of d[2]) {
+        const pm = m[2].find((x) => x[0] === im[0]);
+        if (!pm || !bytesEq(blankMethod(im), blankMethod(pm))) return [SPACE.method, im[0]];
+      }
     }
   }
   return null;
@@ -128,7 +141,28 @@ export function containsFloat(t) {
 
 const LAST_BUILTIN = 11;
 
+const isAscii = (str) => /^[\x00-\x7f]*$/.test(str);
+export const NAME = /^([a-z0-9-]+(\.[a-z0-9-]+)*\/)?[a-z0-9-]+(\.[a-z0-9-]+)*$/;
+
+// Names of types, services, methods, fields and sigils are ASCII (6.1).
+function checkNames(where, types, services, sigils) {
+  const bad = (n) => { throw new DeltaError('invalid_name', `${where}: ${JSON.stringify(n)}`); };
+  for (const t of types) {
+    if (!isAscii(t[2])) bad(t[2]);
+    if (t[0] === 0) for (const f of t[3]) if (!isAscii(f[1])) bad(f[1]);
+  }
+  for (const s of services) {
+    if (!isAscii(s[1])) bad(s[1]);
+    for (const m of s[2]) if (!isAscii(m[1])) bad(m[1]);
+  }
+  for (const s of sigils) if (!isAscii(s[1])) bad(s[1]);
+}
+
+// Part 1 as section 9.4 defines it.
+export const WEB_PART = [1, 'sparrow.web', '1.0.0', [], [[0, 'Client', [[0, 'moduleRejected', [0, 6], 0, [], 0x2, {}]], {}]], [], null, [], {}];
+
 function validateDefs(where, types, services, sigils, retired) {
+  checkNames(where, types, services, sigils);
   const ret = new Set();
   for (const [sp, id] of retired) {
     if (sp < 0 || sp > 3) throw new DeltaError('bad_retired_entry', where);
@@ -193,6 +227,7 @@ function validateDefs(where, types, services, sigils, retired) {
 export function validatePart(p) {
   const where = `part ${p[P.id]}`;
   if (containsFloat(p)) throw new DeltaError('float_in_canonical_data', where);
+  if (!NAME.test(p[P.name])) throw new DeltaError('invalid_name', `${where}: ${JSON.stringify(p[P.name])}`);
   return validateDefs(where, p[P.types], p[P.services], p[P.sigils], p[P.retired]);
 }
 
@@ -224,9 +259,18 @@ export function validateSchema(doc) {
     if (names.has(p[P.name])) throw new DeltaError('duplicate_part_name', p[P.name]);
     ids.add(p[P.id]);
     names.add(p[P.name]);
-    if (p[P.id] < 16 && !(p[P.id] === 1 && p[P.name] === 'sparrow.web')) throw new DeltaError('reserved_part_id', String(p[P.id]));
+    if (p[P.id] < 16 && p[P.id] !== 1) throw new DeltaError('reserved_part_id', String(p[P.id]));
+    if (p[P.id] === 1 && hex(partHash(p)) !== hex(partHash(WEB_PART))) throw new DeltaError('part1_mismatch', 'part 1');
     validatePart(p);
   }
+}
+
+/** A schema document as sent must also list its parts sorted by ID (6.1). */
+export function validateSentSchema(doc) {
+  for (let i = 1; i < doc[3].length; i++) {
+    if (doc[3][i - 1][P.id] >= doc[3][i][P.id]) throw new DeltaError('parts_not_sorted', `part ${doc[3][i][P.id]}`);
+  }
+  validateSchema(doc);
 }
 
 function needsEnd(r, types) {

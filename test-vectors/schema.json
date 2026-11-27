@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev164 (draft)",
+  "spec_revision": "core rev180 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "schema",
   "vectors": [
@@ -1094,6 +1094,15 @@
                 [],
                 1,
                 {}
+              ],
+              [
+                3,
+                "setTheme",
+                6,
+                0,
+                [],
+                2,
+                {}
               ]
             ],
             {}
@@ -1306,6 +1315,15 @@
                 [],
                 1,
                 {}
+              ],
+              [
+                3,
+                "setTheme",
+                6,
+                0,
+                [],
+                2,
+                {}
               ]
             ],
             {}
@@ -1372,10 +1390,10 @@
           ]
         }
       ],
-      "canonical_cbor": "89116b61636d652e63686172747365312e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738187016a6c6973745468656d657300820018508001a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32",
-      "hash_input_diag": "[0, \"\", \"1.0.0\", [[0, 64, \"Chart\", [[0, \"type\", 65, 0, {}], [1, \"heading\", [2, 6], 1, {\"ui.placeholder\": \"Untitled\"}], [2, \"data\", [0, 66], 0, {}]], 0, {\"doc\": \"What to draw.\"}], [1, 65, \"Kind\", [64, 65], {}], [0, 66, \"DataSeries\", [[0, \"name\", 6, 0, {}], [1, \"values\", [0, 2], 0, {}]], 0, {}], [0, 80, \"Theme\", [[0, \"name\", 6, 0, {}], [1, \"dark\", [2, 1], 1, {}]], 0, {}]], [[0, \"ChartRenderer\", [[0, \"draw\", 64, 7, [66], 1, {\"doc\": \"Returns SVG bytes.\"}]], {\"auth.hint\": \"public\"}], [1, \"Themes\", [[1, \"listThemes\", 0, [0, 80], [], 1, {}]], {}]], [[64, \"line\", 0, {}], [65, \"bar\", 0, {}], [66, \"chart.unsupported\", 1, {\"http.status\": 422}]], h'016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b1', [], {\"doc\": \"Chart rendering.\", \"web.modules\": [{\"id\": \"acme.charts.ui\", \"sig\": [h'6a3803d5f059902a1c6dafbc9ba47292', h'0228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff03'], \"url\": \"/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js\", \"deps\": [\"acme.core.boot\"], \"hash\": h'017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27', \"load\": \"lazy\", \"assets\": [{\"hash\": h'014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db654987', \"path\": \"charts.css\"}], \"hostApi\": \"^3.1\", \"version\": \"1.4.2\"}]}]",
-      "hash_input_cbor": "89006065312e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738187016a6c6973745468656d657300820018508001a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32",
-      "part_hash": "01d4c62f8b9fda6c4fab89502f993f67a939508dc76600d7ec3256ba320ef6ba98"
+      "canonical_cbor": "89116b61636d652e63686172747365312e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738287016a6c6973745468656d657300820018508001a08703687365745468656d6506008002a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32",
+      "hash_input_diag": "[0, \"\", \"1.0.0\", [[0, 64, \"Chart\", [[0, \"type\", 65, 0, {}], [1, \"heading\", [2, 6], 1, {\"ui.placeholder\": \"Untitled\"}], [2, \"data\", [0, 66], 0, {}]], 0, {\"doc\": \"What to draw.\"}], [1, 65, \"Kind\", [64, 65], {}], [0, 66, \"DataSeries\", [[0, \"name\", 6, 0, {}], [1, \"values\", [0, 2], 0, {}]], 0, {}], [0, 80, \"Theme\", [[0, \"name\", 6, 0, {}], [1, \"dark\", [2, 1], 1, {}]], 0, {}]], [[0, \"ChartRenderer\", [[0, \"draw\", 64, 7, [66], 1, {\"doc\": \"Returns SVG bytes.\"}]], {\"auth.hint\": \"public\"}], [1, \"Themes\", [[1, \"listThemes\", 0, [0, 80], [], 1, {}], [3, \"setTheme\", 6, 0, [], 2, {}]], {}]], [[64, \"line\", 0, {}], [65, \"bar\", 0, {}], [66, \"chart.unsupported\", 1, {\"http.status\": 422}]], h'016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b1', [], {\"doc\": \"Chart rendering.\", \"web.modules\": [{\"id\": \"acme.charts.ui\", \"sig\": [h'6a3803d5f059902a1c6dafbc9ba47292', h'0228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff03'], \"url\": \"/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js\", \"deps\": [\"acme.core.boot\"], \"hash\": h'017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27', \"load\": \"lazy\", \"assets\": [{\"hash\": h'014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db654987', \"path\": \"charts.css\"}], \"hostApi\": \"^3.1\", \"version\": \"1.4.2\"}]}]",
+      "hash_input_cbor": "89006065312e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738287016a6c6973745468656d657300820018508001a08703687365745468656d6506008002a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32",
+      "part_hash": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
     },
     {
       "name": "interface/acme-charts-renderer",
@@ -1916,6 +1934,15 @@
                 [],
                 1,
                 {}
+              ],
+              [
+                3,
+                "setTheme",
+                6,
+                0,
+                [],
+                2,
+                {}
               ]
             ],
             {}
@@ -2280,6 +2307,15 @@
                 [],
                 1,
                 {}
+              ],
+              [
+                3,
+                "setTheme",
+                6,
+                0,
+                [],
+                2,
+                {}
               ]
             ],
             {}
@@ -2354,7 +2390,7 @@
     },
     {
       "name": "conformance/extra-method-in-service",
-      "description": "The part adds a method to the interface's service 0. The service's wire shape includes its method list, so service 0 does not conform (see SPEC-ISSUES).",
+      "description": "The part adds a method (2, drawPng) to the interface's service 0. A service's wire shape leaves out its method list and each interface method is compared on its own, so the part conforms.",
       "spec": "6.5",
       "type": "conformance",
       "interface": "interface/acme-charts-renderer",
@@ -2515,6 +2551,15 @@
                 [],
                 1,
                 {}
+              ],
+              [
+                3,
+                "setTheme",
+                6,
+                0,
+                [],
+                2,
+                {}
               ]
             ],
             {}
@@ -2581,15 +2626,12 @@
           ]
         }
       ],
-      "expected_conforms": false,
-      "first_mismatch": [
-        1,
-        0
-      ]
+      "expected_conforms": true,
+      "first_mismatch": null
     },
     {
-      "name": "conformance/method-flags-differ",
-      "description": "Method 0 is not flagged idempotent: service 0 does not conform.",
+      "name": "conformance/hint-flags-differ",
+      "description": "Method draw is not flagged idempotent (0x1) and field heading is flagged deprecated (0x2). Hint flags are cleared in wire shapes, so the part conforms.",
       "spec": "6.5",
       "type": "conformance",
       "interface": "interface/acme-charts-renderer",
@@ -2610,7 +2652,7 @@
                   2,
                   6
                 ],
-                1,
+                3,
                 {
                   "ui.placeholder": "Untitled"
                 }
@@ -2739,6 +2781,245 @@
                 [],
                 1,
                 {}
+              ],
+              [
+                3,
+                "setTheme",
+                6,
+                0,
+                [],
+                2,
+                {}
+              ]
+            ],
+            {}
+          ]
+        ],
+        [
+          [
+            66,
+            "chart.unsupported",
+            1,
+            {
+              "http.status": 422
+            }
+          ],
+          [
+            64,
+            "line",
+            0,
+            {}
+          ],
+          [
+            65,
+            "bar",
+            0,
+            {}
+          ]
+        ],
+        {
+          "$bytes": "016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b1"
+        },
+        [],
+        {
+          "doc": "Chart rendering.",
+          "web.modules": [
+            {
+              "id": "acme.charts.ui",
+              "sig": [
+                {
+                  "$bytes": "6a3803d5f059902a1c6dafbc9ba47292"
+                },
+                {
+                  "$bytes": "0228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff03"
+                }
+              ],
+              "url": "/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js",
+              "deps": [
+                "acme.core.boot"
+              ],
+              "hash": {
+                "$bytes": "017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27"
+              },
+              "load": "lazy",
+              "assets": [
+                {
+                  "hash": {
+                    "$bytes": "014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db654987"
+                  },
+                  "path": "charts.css"
+                }
+              ],
+              "hostApi": "^3.1",
+              "version": "1.4.2"
+            }
+          ]
+        }
+      ],
+      "expected_conforms": true,
+      "first_mismatch": null
+    },
+    {
+      "name": "conformance/method-output-differs",
+      "description": "Method draw returns string instead of bytes: method 0 does not conform.",
+      "spec": "6.5",
+      "type": "conformance",
+      "interface": "interface/acme-charts-renderer",
+      "part": [
+        21,
+        "acme.badcharts",
+        "1.0.0",
+        [
+          [
+            0,
+            64,
+            "Chart",
+            [
+              [
+                1,
+                "heading",
+                [
+                  2,
+                  6
+                ],
+                1,
+                {
+                  "ui.placeholder": "Untitled"
+                }
+              ],
+              [
+                0,
+                "type",
+                65,
+                0,
+                {}
+              ],
+              [
+                2,
+                "data",
+                [
+                  0,
+                  66
+                ],
+                0,
+                {}
+              ]
+            ],
+            0,
+            {
+              "doc": "What to draw."
+            }
+          ],
+          [
+            1,
+            65,
+            "Kind",
+            [
+              64,
+              65
+            ],
+            {}
+          ],
+          [
+            0,
+            66,
+            "DataSeries",
+            [
+              [
+                0,
+                "name",
+                6,
+                0,
+                {}
+              ],
+              [
+                1,
+                "values",
+                [
+                  0,
+                  2
+                ],
+                0,
+                {}
+              ]
+            ],
+            0,
+            {}
+          ],
+          [
+            0,
+            80,
+            "Theme",
+            [
+              [
+                1,
+                "dark",
+                [
+                  2,
+                  1
+                ],
+                1,
+                {}
+              ],
+              [
+                0,
+                "name",
+                6,
+                0,
+                {}
+              ]
+            ],
+            0,
+            {}
+          ]
+        ],
+        [
+          [
+            0,
+            "ChartRenderer",
+            [
+              [
+                0,
+                "draw",
+                64,
+                6,
+                [
+                  66
+                ],
+                1,
+                {
+                  "doc": "Returns SVG bytes."
+                }
+              ]
+            ],
+            {
+              "auth.hint": "public"
+            }
+          ],
+          [
+            1,
+            "Themes",
+            [
+              [
+                1,
+                "listThemes",
+                0,
+                [
+                  0,
+                  80
+                ],
+                [],
+                1,
+                {}
+              ],
+              [
+                3,
+                "setTheme",
+                6,
+                0,
+                [],
+                2,
+                {}
               ]
             ],
             {}
@@ -2807,13 +3088,245 @@
       ],
       "expected_conforms": false,
       "first_mismatch": [
-        1,
+        2,
+        0
+      ]
+    },
+    {
+      "name": "conformance/method-in-other-service",
+      "description": "Method draw sits in service 1 instead of the interface's service 0. Service 0 itself matches, but its method 0 is missing.",
+      "spec": "6.5",
+      "type": "conformance",
+      "interface": "interface/acme-charts-renderer",
+      "part": [
+        21,
+        "acme.badcharts",
+        "1.0.0",
+        [
+          [
+            0,
+            64,
+            "Chart",
+            [
+              [
+                1,
+                "heading",
+                [
+                  2,
+                  6
+                ],
+                1,
+                {
+                  "ui.placeholder": "Untitled"
+                }
+              ],
+              [
+                0,
+                "type",
+                65,
+                0,
+                {}
+              ],
+              [
+                2,
+                "data",
+                [
+                  0,
+                  66
+                ],
+                0,
+                {}
+              ]
+            ],
+            0,
+            {
+              "doc": "What to draw."
+            }
+          ],
+          [
+            1,
+            65,
+            "Kind",
+            [
+              64,
+              65
+            ],
+            {}
+          ],
+          [
+            0,
+            66,
+            "DataSeries",
+            [
+              [
+                0,
+                "name",
+                6,
+                0,
+                {}
+              ],
+              [
+                1,
+                "values",
+                [
+                  0,
+                  2
+                ],
+                0,
+                {}
+              ]
+            ],
+            0,
+            {}
+          ],
+          [
+            0,
+            80,
+            "Theme",
+            [
+              [
+                1,
+                "dark",
+                [
+                  2,
+                  1
+                ],
+                1,
+                {}
+              ],
+              [
+                0,
+                "name",
+                6,
+                0,
+                {}
+              ]
+            ],
+            0,
+            {}
+          ]
+        ],
+        [
+          [
+            0,
+            "ChartRenderer",
+            [],
+            {
+              "auth.hint": "public"
+            }
+          ],
+          [
+            1,
+            "Themes",
+            [
+              [
+                1,
+                "listThemes",
+                0,
+                [
+                  0,
+                  80
+                ],
+                [],
+                1,
+                {}
+              ],
+              [
+                3,
+                "setTheme",
+                6,
+                0,
+                [],
+                2,
+                {}
+              ],
+              [
+                0,
+                "draw",
+                64,
+                7,
+                [
+                  66
+                ],
+                1,
+                {
+                  "doc": "Returns SVG bytes."
+                }
+              ]
+            ],
+            {}
+          ]
+        ],
+        [
+          [
+            66,
+            "chart.unsupported",
+            1,
+            {
+              "http.status": 422
+            }
+          ],
+          [
+            64,
+            "line",
+            0,
+            {}
+          ],
+          [
+            65,
+            "bar",
+            0,
+            {}
+          ]
+        ],
+        {
+          "$bytes": "016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b1"
+        },
+        [],
+        {
+          "doc": "Chart rendering.",
+          "web.modules": [
+            {
+              "id": "acme.charts.ui",
+              "sig": [
+                {
+                  "$bytes": "6a3803d5f059902a1c6dafbc9ba47292"
+                },
+                {
+                  "$bytes": "0228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff03"
+                }
+              ],
+              "url": "/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js",
+              "deps": [
+                "acme.core.boot"
+              ],
+              "hash": {
+                "$bytes": "017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27"
+              },
+              "load": "lazy",
+              "assets": [
+                {
+                  "hash": {
+                    "$bytes": "014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db654987"
+                  },
+                  "path": "charts.css"
+                }
+              ],
+              "hostApi": "^3.1",
+              "version": "1.4.2"
+            }
+          ]
+        }
+      ],
+      "expected_conforms": false,
+      "first_mismatch": [
+        2,
         0
       ]
     },
     {
       "name": "schema/server-base",
-      "description": "Server schema 'acme.host' with parts 1 (sparrow.web), 16 (acme.notes) and 17 (acme.charts), unsorted, and top-level web.* annotations (web.apply, web.keys with the acme certificate, web.revoked). The schema hash covers [format, name, version, [* [part_id, part_name, part_hash]], annotations].",
+      "description": "Server schema 'acme.host' with parts 1 (sparrow.web), 16 (acme.notes) and 17 (acme.charts), listed by ID as 6.1 requires (their contents unsorted), and top-level web.* annotations (web.apply, web.keys with the acme certificate, web.revoked). The schema hash covers [format, name, version, [* [part_id, part_name, part_hash]], annotations].",
       "spec": "6.2, 6.6",
       "type": "schema",
       "input": [
@@ -2822,216 +3335,35 @@
         "2026.12.1",
         [
           [
-            17,
-            "acme.charts",
+            1,
+            "sparrow.web",
             "1.0.0",
+            [],
             [
               [
                 0,
-                64,
-                "Chart",
+                "Client",
                 [
                   [
-                    1,
-                    "heading",
+                    0,
+                    "moduleRejected",
                     [
-                      2,
+                      0,
                       6
                     ],
-                    1,
-                    {
-                      "ui.placeholder": "Untitled"
-                    }
-                  ],
-                  [
                     0,
-                    "type",
-                    65,
-                    0,
-                    {}
-                  ],
-                  [
-                    2,
-                    "data",
-                    [
-                      0,
-                      66
-                    ],
-                    0,
-                    {}
-                  ]
-                ],
-                0,
-                {
-                  "doc": "What to draw."
-                }
-              ],
-              [
-                1,
-                65,
-                "Kind",
-                [
-                  64,
-                  65
-                ],
-                {}
-              ],
-              [
-                0,
-                66,
-                "DataSeries",
-                [
-                  [
-                    0,
-                    "name",
-                    6,
-                    0,
-                    {}
-                  ],
-                  [
-                    1,
-                    "values",
-                    [
-                      0,
-                      2
-                    ],
-                    0,
-                    {}
-                  ]
-                ],
-                0,
-                {}
-              ],
-              [
-                0,
-                80,
-                "Theme",
-                [
-                  [
-                    1,
-                    "dark",
-                    [
-                      2,
-                      1
-                    ],
-                    1,
-                    {}
-                  ],
-                  [
-                    0,
-                    "name",
-                    6,
-                    0,
-                    {}
-                  ]
-                ],
-                0,
-                {}
-              ]
-            ],
-            [
-              [
-                0,
-                "ChartRenderer",
-                [
-                  [
-                    0,
-                    "draw",
-                    64,
-                    7,
-                    [
-                      66
-                    ],
-                    1,
-                    {
-                      "doc": "Returns SVG bytes."
-                    }
-                  ]
-                ],
-                {
-                  "auth.hint": "public"
-                }
-              ],
-              [
-                1,
-                "Themes",
-                [
-                  [
-                    1,
-                    "listThemes",
-                    0,
-                    [
-                      0,
-                      80
-                    ],
                     [],
-                    1,
+                    2,
                     {}
                   ]
                 ],
                 {}
               ]
             ],
-            [
-              [
-                66,
-                "chart.unsupported",
-                1,
-                {
-                  "http.status": 422
-                }
-              ],
-              [
-                64,
-                "line",
-                0,
-                {}
-              ],
-              [
-                65,
-                "bar",
-                0,
-                {}
-              ]
-            ],
-            {
-              "$bytes": "016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b1"
-            },
             [],
-            {
-              "doc": "Chart rendering.",
-              "web.modules": [
-                {
-                  "id": "acme.charts.ui",
-                  "sig": [
-                    {
-                      "$bytes": "6a3803d5f059902a1c6dafbc9ba47292"
-                    },
-                    {
-                      "$bytes": "0228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff03"
-                    }
-                  ],
-                  "url": "/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js",
-                  "deps": [
-                    "acme.core.boot"
-                  ],
-                  "hash": {
-                    "$bytes": "017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27"
-                  },
-                  "load": "lazy",
-                  "assets": [
-                    {
-                      "hash": {
-                        "$bytes": "014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db654987"
-                      },
-                      "path": "charts.css"
-                    }
-                  ],
-                  "hostApi": "^3.1",
-                  "version": "1.4.2"
-                }
-              ]
-            }
+            null,
+            [],
+            {}
           ],
           [
             16,
@@ -3463,22 +3795,156 @@
             }
           ],
           [
-            1,
-            "sparrow.web",
+            17,
+            "acme.charts",
             "1.0.0",
-            [],
             [
               [
                 0,
-                "Client",
+                64,
+                "Chart",
+                [
+                  [
+                    1,
+                    "heading",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {
+                      "ui.placeholder": "Untitled"
+                    }
+                  ],
+                  [
+                    0,
+                    "type",
+                    65,
+                    0,
+                    {}
+                  ],
+                  [
+                    2,
+                    "data",
+                    [
+                      0,
+                      66
+                    ],
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {
+                  "doc": "What to draw."
+                }
+              ],
+              [
+                1,
+                65,
+                "Kind",
+                [
+                  64,
+                  65
+                ],
+                {}
+              ],
+              [
+                0,
+                66,
+                "DataSeries",
                 [
                   [
                     0,
-                    "moduleRejected",
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    1,
+                    "values",
                     [
                       0,
-                      6
+                      2
                     ],
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ],
+              [
+                0,
+                80,
+                "Theme",
+                [
+                  [
+                    1,
+                    "dark",
+                    [
+                      2,
+                      1
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ]
+            ],
+            [
+              [
+                0,
+                "ChartRenderer",
+                [
+                  [
+                    0,
+                    "draw",
+                    64,
+                    7,
+                    [
+                      66
+                    ],
+                    1,
+                    {
+                      "doc": "Returns SVG bytes."
+                    }
+                  ]
+                ],
+                {
+                  "auth.hint": "public"
+                }
+              ],
+              [
+                1,
+                "Themes",
+                [
+                  [
+                    1,
+                    "listThemes",
+                    0,
+                    [
+                      0,
+                      80
+                    ],
+                    [],
+                    1,
+                    {}
+                  ],
+                  [
+                    3,
+                    "setTheme",
+                    6,
                     0,
                     [],
                     2,
@@ -3488,10 +3954,66 @@
                 {}
               ]
             ],
+            [
+              [
+                66,
+                "chart.unsupported",
+                1,
+                {
+                  "http.status": 422
+                }
+              ],
+              [
+                64,
+                "line",
+                0,
+                {}
+              ],
+              [
+                65,
+                "bar",
+                0,
+                {}
+              ]
+            ],
+            {
+              "$bytes": "016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b1"
+            },
             [],
-            null,
-            [],
-            {}
+            {
+              "doc": "Chart rendering.",
+              "web.modules": [
+                {
+                  "id": "acme.charts.ui",
+                  "sig": [
+                    {
+                      "$bytes": "6a3803d5f059902a1c6dafbc9ba47292"
+                    },
+                    {
+                      "$bytes": "0228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff03"
+                    }
+                  ],
+                  "url": "/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js",
+                  "deps": [
+                    "acme.core.boot"
+                  ],
+                  "hash": {
+                    "$bytes": "017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27"
+                  },
+                  "load": "lazy",
+                  "assets": [
+                    {
+                      "hash": {
+                        "$bytes": "014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db654987"
+                      },
+                      "path": "charts.css"
+                    }
+                  ],
+                  "hostApi": "^3.1",
+                  "version": "1.4.2"
+                }
+              ]
+            }
           ]
         ],
         {
@@ -4141,6 +4663,15 @@
                     [],
                     1,
                     {}
+                  ],
+                  [
+                    3,
+                    "setTheme",
+                    6,
+                    0,
+                    [],
+                    2,
+                    {}
                   ]
                 ],
                 {}
@@ -4244,8 +4775,8 @@
           ]
         }
       ],
-      "canonical_cbor": "85026961636d652e686f737469323032362e31322e318389016b73706172726f772e77656265312e302e308081840066436c69656e748187006e6d6f64756c6552656a6563746564820006008002a0a080f680a089106a61636d652e6e6f74657365312e302e308686001840644e6f7465888500626964184400a08501657469746c650600a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58503647461677382000600a0850467757064617465640800a085056b6c65676163794c6162656c0605a0850665636f6c6f728202184201a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f7200a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018416a4e6f746546696c74657285850065717565727982020601a0850165636f6c6f728202184201a08502656c696d697482020301a085036573696e636582020801a085046474616773820282000601a001a08501184265436f6c6f7283184618471848a085021843664368616e6765838500687570736572746564184000a085016764656c65746564184400a0850267636c65617265640000a0a085031844664e6f7465496409a0860018456a4174746163686d656e74838500646e616d650600a08501646d696d6582020601a085026464617461810400a000a0828400654e6f7465738587186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718656370757418401844821840184100a08718666577617463681841820318438014a08718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a6970a163646f636f506572736f6e616c206e6f7465732e84016541646d696e8487186e66696d706f7274820318400381184008a087186f6473796e6382031843820318438118411818a087187067726573746f72658104038008a169617574682e726f6c656561646d696e87187165746f75636800008002a0a169617574682e726f6c656561646d696e878418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad84184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418476b436f6c6f722e677265656e00a08418486a436f6c6f722e626c756500a08418506c6e6f74652e7570646174656402a08418516c6e6f74652e64656c6574656402a0f6828200184682031852a16a61636d652e6f776e65726a6e6f7465732d7465616d89116b61636d652e63686172747365312e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738187016a6c6973745468656d657300820018508001a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32a3687765622e6b657973818558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909697765622e6170706c796672656c6f61646b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d",
-      "canonical_length": 2111,
+      "canonical_cbor": "85026961636d652e686f737469323032362e31322e318389016b73706172726f772e77656265312e302e308081840066436c69656e748187006e6d6f64756c6552656a6563746564820006008002a0a080f680a089106a61636d652e6e6f74657365312e302e308686001840644e6f7465888500626964184400a08501657469746c650600a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58503647461677382000600a0850467757064617465640800a085056b6c65676163794c6162656c0605a0850665636f6c6f728202184201a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f7200a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018416a4e6f746546696c74657285850065717565727982020601a0850165636f6c6f728202184201a08502656c696d697482020301a085036573696e636582020801a085046474616773820282000601a001a08501184265436f6c6f7283184618471848a085021843664368616e6765838500687570736572746564184000a085016764656c65746564184400a0850267636c65617265640000a0a085031844664e6f7465496409a0860018456a4174746163686d656e74838500646e616d650600a08501646d696d6582020601a085026464617461810400a000a0828400654e6f7465738587186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718656370757418401844821840184100a08718666577617463681841820318438014a08718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a6970a163646f636f506572736f6e616c206e6f7465732e84016541646d696e8487186e66696d706f7274820318400381184008a087186f6473796e6382031843820318438118411818a087187067726573746f72658104038008a169617574682e726f6c656561646d696e87187165746f75636800008002a0a169617574682e726f6c656561646d696e878418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad84184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418476b436f6c6f722e677265656e00a08418486a436f6c6f722e626c756500a08418506c6e6f74652e7570646174656402a08418516c6e6f74652e64656c6574656402a0f6828200184682031852a16a61636d652e6f776e65726a6e6f7465732d7465616d89116b61636d652e63686172747365312e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738287016a6c6973745468656d657300820018508001a08703687365745468656d6506008002a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32a3687765622e6b657973818558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909697765622e6170706c796672656c6f61646b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d",
+      "canonical_length": 2127,
       "part_hashes": [
         {
           "part_id": 1,
@@ -4260,7 +4791,7 @@
         {
           "part_id": 17,
           "part_name": "acme.charts",
-          "part_hash": "01d4c62f8b9fda6c4fab89502f993f67a939508dc76600d7ec3256ba320ef6ba98"
+          "part_hash": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
         }
       ],
       "hash_input": [
@@ -4286,7 +4817,7 @@
             17,
             "acme.charts",
             {
-              "$bytes": "01d4c62f8b9fda6c4fab89502f993f67a939508dc76600d7ec3256ba320ef6ba98"
+              "$bytes": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
             }
           ]
         ],
@@ -4326,9 +4857,9 @@
           ]
         }
       ],
-      "hash_input_diag": "[2, \"acme.host\", \"2026.12.1\", [[1, \"sparrow.web\", h'01e85d06f6da94d5dbf3e1a36b217f94aee8c187967b5732e91d72a444c0248bbf'], [16, \"acme.notes\", h'013e36a508a2987b02940e9efd890312c7db7d840acf5e8427c55e32547ccc2f46'], [17, \"acme.charts\", h'01d4c62f8b9fda6c4fab89502f993f67a939508dc76600d7ec3256ba320ef6ba98']], {\"web.keys\": [[h'8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394', \"acme.\", 1(1798761600), h'34750f98bd59fcfc946da45aaabe933b', h'8b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909']], \"web.apply\": \"reload\", \"web.revoked\": [3, [h'b62e867fa2f33afe62d5d6b1642e1621'], h'34750f98bd59fcfc946da45aaabe933b', h'c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d']}]",
-      "hash_input_cbor": "85026961636d652e686f737469323032362e31322e318383016b73706172726f772e776562582101e85d06f6da94d5dbf3e1a36b217f94aee8c187967b5732e91d72a444c0248bbf83106a61636d652e6e6f7465735821013e36a508a2987b02940e9efd890312c7db7d840acf5e8427c55e32547ccc2f4683116b61636d652e636861727473582101d4c62f8b9fda6c4fab89502f993f67a939508dc76600d7ec3256ba320ef6ba98a3687765622e6b657973818558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909697765622e6170706c796672656c6f61646b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d",
-      "hash": "010ae0dc66babef09670b6fe3857afbc70b3b5e800810cc14fad60bec2922bb35a"
+      "hash_input_diag": "[2, \"acme.host\", \"2026.12.1\", [[1, \"sparrow.web\", h'01e85d06f6da94d5dbf3e1a36b217f94aee8c187967b5732e91d72a444c0248bbf'], [16, \"acme.notes\", h'013e36a508a2987b02940e9efd890312c7db7d840acf5e8427c55e32547ccc2f46'], [17, \"acme.charts\", h'014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd']], {\"web.keys\": [[h'8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394', \"acme.\", 1(1798761600), h'34750f98bd59fcfc946da45aaabe933b', h'8b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909']], \"web.apply\": \"reload\", \"web.revoked\": [3, [h'b62e867fa2f33afe62d5d6b1642e1621'], h'34750f98bd59fcfc946da45aaabe933b', h'c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d']}]",
+      "hash_input_cbor": "85026961636d652e686f737469323032362e31322e318383016b73706172726f772e776562582101e85d06f6da94d5dbf3e1a36b217f94aee8c187967b5732e91d72a444c0248bbf83106a61636d652e6e6f7465735821013e36a508a2987b02940e9efd890312c7db7d840acf5e8427c55e32547ccc2f4683116b61636d652e6368617274735821014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bda3687765622e6b657973818558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909697765622e6170706c796672656c6f61646b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d",
+      "hash": "01f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3"
     },
     {
       "name": "schema/client",
@@ -4609,6 +5140,15 @@
                     [],
                     1,
                     {}
+                  ],
+                  [
+                    3,
+                    "setTheme",
+                    6,
+                    0,
+                    [],
+                    2,
+                    {}
                   ]
                 ],
                 {}
@@ -4829,6 +5369,15 @@
                     [],
                     1,
                     {}
+                  ],
+                  [
+                    3,
+                    "setTheme",
+                    6,
+                    0,
+                    [],
+                    2,
+                    {}
                   ]
                 ],
                 {}
@@ -4898,13 +5447,13 @@
         ],
         {}
       ],
-      "canonical_cbor": "85026b61636d652e63686172747365312e302e308189106b61636d652e63686172747365312e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738187016a6c6973745468656d657300820018508001a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32a0",
-      "canonical_length": 801,
+      "canonical_cbor": "85026b61636d652e63686172747365312e302e308189106b61636d652e63686172747365312e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738287016a6c6973745468656d657300820018508001a08703687365745468656d6506008002a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32a0",
+      "canonical_length": 817,
       "part_hashes": [
         {
           "part_id": 16,
           "part_name": "acme.charts",
-          "part_hash": "01d4c62f8b9fda6c4fab89502f993f67a939508dc76600d7ec3256ba320ef6ba98"
+          "part_hash": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
         }
       ],
       "hash_input": [
@@ -4916,15 +5465,747 @@
             16,
             "acme.charts",
             {
-              "$bytes": "01d4c62f8b9fda6c4fab89502f993f67a939508dc76600d7ec3256ba320ef6ba98"
+              "$bytes": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
             }
           ]
         ],
         {}
       ],
-      "hash_input_diag": "[2, \"acme.charts\", \"1.0.0\", [[16, \"acme.charts\", h'01d4c62f8b9fda6c4fab89502f993f67a939508dc76600d7ec3256ba320ef6ba98']], {}]",
-      "hash_input_cbor": "85026b61636d652e63686172747365312e302e308183106b61636d652e636861727473582101d4c62f8b9fda6c4fab89502f993f67a939508dc76600d7ec3256ba320ef6ba98a0",
-      "hash": "018c4f3929ee3d8f2eda627249cc3ed785e2a6217dc2c77eed2183b339af88c799"
+      "hash_input_diag": "[2, \"acme.charts\", \"1.0.0\", [[16, \"acme.charts\", h'014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd']], {}]",
+      "hash_input_cbor": "85026b61636d652e63686172747365312e302e308183106b61636d652e6368617274735821014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bda0",
+      "hash": "0156bb0a8d51ef257b8adc794435645dd3c92b769e50861fa5f5c6545b1e5180e5"
+    },
+    {
+      "name": "schema/sent-parts-out-of-order",
+      "description": "schema/server-base with its parts listed as 17, 16, 1. A schema lists its parts sorted by ID (6.1), and a receiver checks the rules of 6.1 (6.6 rule 3), so as a received document it is invalid. Its contents are otherwise valid, and canonicalisation for hashing would sort it (the hash equals schema/server-base's).",
+      "spec": "6.1, 6.6",
+      "type": "schema_sent",
+      "input": [
+        2,
+        "acme.host",
+        "2026.12.1",
+        [
+          [
+            17,
+            "acme.charts",
+            "1.0.0",
+            [
+              [
+                0,
+                64,
+                "Chart",
+                [
+                  [
+                    1,
+                    "heading",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {
+                      "ui.placeholder": "Untitled"
+                    }
+                  ],
+                  [
+                    0,
+                    "type",
+                    65,
+                    0,
+                    {}
+                  ],
+                  [
+                    2,
+                    "data",
+                    [
+                      0,
+                      66
+                    ],
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {
+                  "doc": "What to draw."
+                }
+              ],
+              [
+                1,
+                65,
+                "Kind",
+                [
+                  64,
+                  65
+                ],
+                {}
+              ],
+              [
+                0,
+                66,
+                "DataSeries",
+                [
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    1,
+                    "values",
+                    [
+                      0,
+                      2
+                    ],
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ],
+              [
+                0,
+                80,
+                "Theme",
+                [
+                  [
+                    1,
+                    "dark",
+                    [
+                      2,
+                      1
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ]
+            ],
+            [
+              [
+                0,
+                "ChartRenderer",
+                [
+                  [
+                    0,
+                    "draw",
+                    64,
+                    7,
+                    [
+                      66
+                    ],
+                    1,
+                    {
+                      "doc": "Returns SVG bytes."
+                    }
+                  ]
+                ],
+                {
+                  "auth.hint": "public"
+                }
+              ],
+              [
+                1,
+                "Themes",
+                [
+                  [
+                    1,
+                    "listThemes",
+                    0,
+                    [
+                      0,
+                      80
+                    ],
+                    [],
+                    1,
+                    {}
+                  ],
+                  [
+                    3,
+                    "setTheme",
+                    6,
+                    0,
+                    [],
+                    2,
+                    {}
+                  ]
+                ],
+                {}
+              ]
+            ],
+            [
+              [
+                66,
+                "chart.unsupported",
+                1,
+                {
+                  "http.status": 422
+                }
+              ],
+              [
+                64,
+                "line",
+                0,
+                {}
+              ],
+              [
+                65,
+                "bar",
+                0,
+                {}
+              ]
+            ],
+            {
+              "$bytes": "016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b1"
+            },
+            [],
+            {
+              "doc": "Chart rendering.",
+              "web.modules": [
+                {
+                  "id": "acme.charts.ui",
+                  "sig": [
+                    {
+                      "$bytes": "6a3803d5f059902a1c6dafbc9ba47292"
+                    },
+                    {
+                      "$bytes": "0228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff03"
+                    }
+                  ],
+                  "url": "/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js",
+                  "deps": [
+                    "acme.core.boot"
+                  ],
+                  "hash": {
+                    "$bytes": "017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27"
+                  },
+                  "load": "lazy",
+                  "assets": [
+                    {
+                      "hash": {
+                        "$bytes": "014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db654987"
+                      },
+                      "path": "charts.css"
+                    }
+                  ],
+                  "hostApi": "^3.1",
+                  "version": "1.4.2"
+                }
+              ]
+            }
+          ],
+          [
+            16,
+            "acme.notes",
+            "1.0.0",
+            [
+              [
+                1,
+                66,
+                "Color",
+                [
+                  72,
+                  70,
+                  71
+                ],
+                {}
+              ],
+              [
+                0,
+                64,
+                "Note",
+                [
+                  [
+                    3,
+                    "tags",
+                    [
+                      0,
+                      6
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "id",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    7,
+                    "pinned",
+                    1,
+                    3,
+                    {
+                      "deprecated.use": "color"
+                    }
+                  ],
+                  [
+                    5,
+                    "legacyLabel",
+                    6,
+                    5,
+                    {}
+                  ],
+                  [
+                    2,
+                    "body",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {
+                      "ui.maxLength": 20000,
+                      "ui.multiline": true
+                    }
+                  ],
+                  [
+                    1,
+                    "title",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    6,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    4,
+                    "updated",
+                    8,
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {
+                  "ui.icon": "sticky-note",
+                  "ui.label": "Note"
+                }
+              ],
+              [
+                0,
+                69,
+                "Attachment",
+                [
+                  [
+                    2,
+                    "data",
+                    [
+                      4
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "name",
+                    6,
+                    0,
+                    {}
+                  ],
+                  [
+                    1,
+                    "mime",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ],
+              [
+                2,
+                67,
+                "Change",
+                [
+                  [
+                    1,
+                    "deleted",
+                    68,
+                    0,
+                    {}
+                  ],
+                  [
+                    2,
+                    "cleared",
+                    0,
+                    0,
+                    {}
+                  ],
+                  [
+                    0,
+                    "upserted",
+                    64,
+                    0,
+                    {}
+                  ]
+                ],
+                {}
+              ],
+              [
+                0,
+                65,
+                "NoteFilter",
+                [
+                  [
+                    2,
+                    "limit",
+                    [
+                      2,
+                      3
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    0,
+                    "query",
+                    [
+                      2,
+                      6
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    4,
+                    "tags",
+                    [
+                      2,
+                      [
+                        0,
+                        6
+                      ]
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    1,
+                    "color",
+                    [
+                      2,
+                      66
+                    ],
+                    1,
+                    {}
+                  ],
+                  [
+                    3,
+                    "since",
+                    [
+                      2,
+                      8
+                    ],
+                    1,
+                    {}
+                  ]
+                ],
+                1,
+                {}
+              ],
+              [
+                3,
+                68,
+                "NoteId",
+                9,
+                {}
+              ]
+            ],
+            [
+              [
+                1,
+                "Admin",
+                [
+                  [
+                    113,
+                    "touch",
+                    0,
+                    0,
+                    [],
+                    2,
+                    {}
+                  ],
+                  [
+                    111,
+                    "sync",
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      3,
+                      67
+                    ],
+                    [
+                      65
+                    ],
+                    24,
+                    {}
+                  ],
+                  [
+                    110,
+                    "import",
+                    [
+                      3,
+                      64
+                    ],
+                    3,
+                    [
+                      64
+                    ],
+                    8,
+                    {}
+                  ],
+                  [
+                    112,
+                    "restore",
+                    [
+                      4
+                    ],
+                    3,
+                    [],
+                    8,
+                    {
+                      "auth.role": "admin"
+                    }
+                  ]
+                ],
+                {
+                  "auth.role": "admin"
+                }
+              ],
+              [
+                0,
+                "Notes",
+                [
+                  [
+                    103,
+                    "attach",
+                    69,
+                    0,
+                    [
+                      64
+                    ],
+                    8,
+                    {
+                      "doc": "Attach a file to a note; the data travels as a byte token."
+                    }
+                  ],
+                  [
+                    101,
+                    "put",
+                    64,
+                    68,
+                    [
+                      65,
+                      64
+                    ],
+                    0,
+                    {}
+                  ],
+                  [
+                    104,
+                    "export",
+                    65,
+                    [
+                      4
+                    ],
+                    [],
+                    17,
+                    {
+                      "http.contentType": "application/zip"
+                    }
+                  ],
+                  [
+                    100,
+                    "get",
+                    68,
+                    64,
+                    [],
+                    1,
+                    {
+                      "doc": "Fetch one note by id."
+                    }
+                  ],
+                  [
+                    102,
+                    "watch",
+                    65,
+                    [
+                      3,
+                      67
+                    ],
+                    [],
+                    20,
+                    {}
+                  ]
+                ],
+                {
+                  "doc": "Personal notes."
+                }
+              ]
+            ],
+            [
+              [
+                80,
+                "note.updated",
+                2,
+                {}
+              ],
+              [
+                71,
+                "Color.green",
+                0,
+                {}
+              ],
+              [
+                65,
+                "conflict",
+                1,
+                {
+                  "http.status": 409
+                }
+              ],
+              [
+                70,
+                "Color.red",
+                0,
+                {}
+              ],
+              [
+                64,
+                "quota_exceeded",
+                1,
+                {
+                  "http.status": 429
+                }
+              ],
+              [
+                72,
+                "Color.blue",
+                0,
+                {}
+              ],
+              [
+                81,
+                "note.deleted",
+                2,
+                {}
+              ]
+            ],
+            null,
+            [
+              [
+                3,
+                82
+              ],
+              [
+                0,
+                70
+              ]
+            ],
+            {
+              "acme.owner": "notes-team"
+            }
+          ],
+          [
+            1,
+            "sparrow.web",
+            "1.0.0",
+            [],
+            [
+              [
+                0,
+                "Client",
+                [
+                  [
+                    0,
+                    "moduleRejected",
+                    [
+                      0,
+                      6
+                    ],
+                    0,
+                    [],
+                    2,
+                    {}
+                  ]
+                ],
+                {}
+              ]
+            ],
+            [],
+            null,
+            [],
+            {}
+          ]
+        ],
+        {
+          "web.keys": [
+            [
+              {
+                "$bytes": "8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394"
+              },
+              "acme.",
+              {
+                "$tag": 1,
+                "value": 1798761600
+              },
+              {
+                "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+              },
+              {
+                "$bytes": "8b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909"
+              }
+            ]
+          ],
+          "web.apply": "reload",
+          "web.revoked": [
+            3,
+            [
+              {
+                "$bytes": "b62e867fa2f33afe62d5d6b1642e1621"
+              }
+            ],
+            {
+              "$bytes": "34750f98bd59fcfc946da45aaabe933b"
+            },
+            {
+              "$bytes": "c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d"
+            }
+          ]
+        }
+      ],
+      "expected_valid": false,
+      "expected_error": "parts_not_sorted",
+      "hash_if_canonicalised": "01f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3"
     },
     {
       "name": "schema/part-hash-invariance",
@@ -5815,7 +7096,7 @@
       "spec": "6.6",
       "type": "delta",
       "from": "schema/server-base",
-      "from_hash": "010ae0dc66babef09670b6fe3857afbc70b3b5e800810cc14fad60bec2922bb35a",
+      "from_hash": "01f5ac586a2c532848ea94124b50a85ac984faf266c374be4907a20865c1e6eed3",
       "epoch": 1,
       "delta": [
         [
@@ -6302,7 +7583,7 @@
       ],
       "expected_valid": true,
       "removed_part_ids_after": [],
-      "canonical_cbor": "85026961636d652e686f737469323032362e31322e328389016b73706172726f772e77656265312e302e308081840066436c69656e748187006e6d6f64756c6552656a6563746564820006008002a0a080f680a089106a61636d652e6e6f74657365312e312e308786001840644e6f7465898500626964184400a08501657469746c650600a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58503647461677382000600a0850467757064617465640800a085056b6c65676163794c6162656c0605a0850665636f6c6f728202184201a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f72850868617263686976656482020101a000a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018416a4e6f746546696c74657285850065717565727982020601a0850165636f6c6f728202184201a08502656c696d697482020301a085036573696e636582020801a085046474616773820282000601a001a08501184265436f6c6f72841846184718481849a085021843664368616e6765838500687570736572746564184000a085016764656c65746564184400a0850267636c65617265640004a0a085031844664e6f7465496409a0860018456a4174746163686d656e74838500646e616d650600a08501646d696d6582020601a085026464617461810400a000a08600184b68546167436f756e74828500637461670600a0850165636f756e740300a000a0828400654e6f7465738687186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718656370757418401844821840184100a08718666577617463681841820318438014a08718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a697087186969746167436f756e7473008200184b8001a0a163646f636f506572736f6e616c206e6f7465732e84016541646d696e8387186e66696d706f7274820318400381184008a087186f6473796e6382031843820318438118411818a087187067726573746f72658104038008a169617574682e726f6c656561646d696ea169617574682e726f6c656561646d696e878418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad84184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418476b436f6c6f722e677265656e00a08418486a436f6c6f722e626c756500a08418496c436f6c6f722e79656c6c6f7700a08418506c6e6f74652e7570646174656402a0f68482001846820218718203185182031852a16a61636d652e6f776e65726a6e6f7465732d7465616d89116b61636d652e63686172747365312e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738187016a6c6973745468656d657300820018508001a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32a3687765622e6b657973818558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909697765622e6170706c796672656c6f61646b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d",
+      "canonical_cbor": "85026961636d652e686f737469323032362e31322e328389016b73706172726f772e77656265312e302e308081840066436c69656e748187006e6d6f64756c6552656a6563746564820006008002a0a080f680a089106a61636d652e6e6f74657365312e312e308786001840644e6f7465898500626964184400a08501657469746c650600a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58503647461677382000600a0850467757064617465640800a085056b6c65676163794c6162656c0605a0850665636f6c6f728202184201a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f72850868617263686976656482020101a000a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018416a4e6f746546696c74657285850065717565727982020601a0850165636f6c6f728202184201a08502656c696d697482020301a085036573696e636582020801a085046474616773820282000601a001a08501184265436f6c6f72841846184718481849a085021843664368616e6765838500687570736572746564184000a085016764656c65746564184400a0850267636c65617265640004a0a085031844664e6f7465496409a0860018456a4174746163686d656e74838500646e616d650600a08501646d696d6582020601a085026464617461810400a000a08600184b68546167436f756e74828500637461670600a0850165636f756e740300a000a0828400654e6f7465738687186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718656370757418401844821840184100a08718666577617463681841820318438014a08718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a697087186969746167436f756e7473008200184b8001a0a163646f636f506572736f6e616c206e6f7465732e84016541646d696e8387186e66696d706f7274820318400381184008a087186f6473796e6382031843820318438118411818a087187067726573746f72658104038008a169617574682e726f6c656561646d696ea169617574682e726f6c656561646d696e878418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad84184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418476b436f6c6f722e677265656e00a08418486a436f6c6f722e626c756500a08418496c436f6c6f722e79656c6c6f7700a08418506c6e6f74652e7570646174656402a0f68482001846820218718203185182031852a16a61636d652e6f776e65726a6e6f7465732d7465616d89116b61636d652e63686172747365312e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738287016a6c6973745468656d657300820018508001a08703687365745468656d6506008002a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32a3687765622e6b657973818558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909697765622e6170706c796672656c6f61646b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d",
       "part_hashes": [
         {
           "part_id": 1,
@@ -6317,16 +7598,16 @@
         {
           "part_id": 17,
           "part_name": "acme.charts",
-          "part_hash": "01d4c62f8b9fda6c4fab89502f993f67a939508dc76600d7ec3256ba320ef6ba98"
+          "part_hash": "014dd6945147855687acaa58cf42f8d765021dd42fe3440b1660e0fc0a044d19bd"
         }
       ],
-      "hash": "01d52a44b9487cd3625784e06ac4806aaef989593bd580540155edbc6ac6ae9867",
+      "hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "schema_update": {
         "message": [
           3,
           1,
           {
-            "$bytes": "01d52a44b9487cd3625784e06ac4806aaef989593bd580540155edbc6ac6ae9867"
+            "$bytes": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa"
           },
           [
             [
@@ -6812,8 +8093,8 @@
             ]
           ]
         ],
-        "diag": "[3, 1, h'01d52a44b9487cd3625784e06ac4806aaef989593bd580540155edbc6ac6ae9867', [[0, [16, \"acme.notes\", \"1.1.0\", [[1, 66, \"Color\", [73, 72, 70, 71], {}], [0, 64, \"Note\", [[3, \"tags\", [0, 6], 0, {}], [0, \"id\", 68, 0, {}], [7, \"pinned\", 1, 3, {\"deprecated.use\": \"color\"}], [5, \"legacyLabel\", 6, 5, {}], [2, \"body\", [2, 6], 1, {\"ui.maxLength\": 20000, \"ui.multiline\": true}], [1, \"title\", 6, 0, {}], [6, \"color\", [2, 66], 1, {}], [4, \"updated\", 8, 0, {}], [8, \"archived\", [2, 1], 1, {}]], 0, {\"ui.icon\": \"sticky-note\", \"ui.label\": \"Note\"}], [0, 69, \"Attachment\", [[2, \"data\", [4], 0, {}], [0, \"name\", 6, 0, {}], [1, \"mime\", [2, 6], 1, {}]], 0, {}], [2, 67, \"Change\", [[1, \"deleted\", 68, 0, {}], [2, \"cleared\", 0, 4, {}], [0, \"upserted\", 64, 0, {}]], {}], [0, 65, \"NoteFilter\", [[2, \"limit\", [2, 3], 1, {}], [0, \"query\", [2, 6], 1, {}], [4, \"tags\", [2, [0, 6]], 1, {}], [1, \"color\", [2, 66], 1, {}], [3, \"since\", [2, 8], 1, {}]], 1, {}], [3, 68, \"NoteId\", 9, {}], [0, 75, \"TagCount\", [[1, \"count\", 3, 0, {}], [0, \"tag\", 6, 0, {}]], 0, {}]], [[1, \"Admin\", [[111, \"sync\", [3, 67], [3, 67], [65], 24, {}], [110, \"import\", [3, 64], 3, [64], 8, {}], [112, \"restore\", [4], 3, [], 8, {\"auth.role\": \"admin\"}]], {\"auth.role\": \"admin\"}], [0, \"Notes\", [[103, \"attach\", 69, 0, [64], 8, {\"doc\": \"Attach a file to a note; the data travels as a byte token.\"}], [101, \"put\", 64, 68, [65, 64], 0, {}], [104, \"export\", 65, [4], [], 17, {\"http.contentType\": \"application/zip\"}], [100, \"get\", 68, 64, [], 1, {\"doc\": \"Fetch one note by id.\"}], [102, \"watch\", 65, [3, 67], [], 20, {}], [105, \"tagCounts\", 0, [0, 75], [], 1, {}]], {\"doc\": \"Personal notes.\"}]], [[80, \"note.updated\", 2, {}], [71, \"Color.green\", 0, {}], [65, \"conflict\", 1, {\"http.status\": 409}], [70, \"Color.red\", 0, {}], [64, \"quota_exceeded\", 1, {\"http.status\": 429}], [72, \"Color.blue\", 0, {}], [73, \"Color.yellow\", 0, {}]], null, [[3, 82], [2, 113], [0, 70], [3, 81]], {\"acme.owner\": \"notes-team\"}]], [3, \"2026.12.2\"]]]",
-        "cbor": "840301582101d52a44b9487cd3625784e06ac4806aaef989593bd580540155edbc6ac6ae986782820089106a61636d652e6e6f74657365312e312e30878501184265436f6c6f72841849184818461847a086001840644e6f7465898503647461677382000600a08500626964184400a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f7285056b6c65676163794c6162656c0605a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58501657469746c650600a0850665636f6c6f728202184201a0850467757064617465640800a0850868617263686976656482020101a000a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018456a4174746163686d656e748385026464617461810400a08500646e616d650600a08501646d696d6582020601a000a085021843664368616e67658385016764656c65746564184400a0850267636c65617265640004a08500687570736572746564184000a0a0860018416a4e6f746546696c746572858502656c696d697482020301a0850065717565727982020601a085046474616773820282000601a0850165636f6c6f728202184201a085036573696e636582020801a001a085031844664e6f7465496409a08600184b68546167436f756e7482850165636f756e740300a08500637461670600a000a08284016541646d696e8387186f6473796e6382031843820318438118411818a087186e66696d706f7274820318400381184008a087187067726573746f72658104038008a169617574682e726f6c656561646d696ea169617574682e726f6c656561646d696e8400654e6f746573868718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e8718656370757418401844821841184000a0871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a697087186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718666577617463681841820318438014a087186969746167436f756e7473008200184b8001a0a163646f636f506572736f6e616c206e6f7465732e878418506c6e6f74652e7570646174656402a08418476b436f6c6f722e677265656e00a084184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad8418486a436f6c6f722e626c756500a08418496c436f6c6f722e79656c6c6f7700a0f68482031852820218718200184682031851a16a61636d652e6f776e65726a6e6f7465732d7465616d820369323032362e31322e32"
+        "diag": "[3, 1, h'01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa', [[0, [16, \"acme.notes\", \"1.1.0\", [[1, 66, \"Color\", [73, 72, 70, 71], {}], [0, 64, \"Note\", [[3, \"tags\", [0, 6], 0, {}], [0, \"id\", 68, 0, {}], [7, \"pinned\", 1, 3, {\"deprecated.use\": \"color\"}], [5, \"legacyLabel\", 6, 5, {}], [2, \"body\", [2, 6], 1, {\"ui.maxLength\": 20000, \"ui.multiline\": true}], [1, \"title\", 6, 0, {}], [6, \"color\", [2, 66], 1, {}], [4, \"updated\", 8, 0, {}], [8, \"archived\", [2, 1], 1, {}]], 0, {\"ui.icon\": \"sticky-note\", \"ui.label\": \"Note\"}], [0, 69, \"Attachment\", [[2, \"data\", [4], 0, {}], [0, \"name\", 6, 0, {}], [1, \"mime\", [2, 6], 1, {}]], 0, {}], [2, 67, \"Change\", [[1, \"deleted\", 68, 0, {}], [2, \"cleared\", 0, 4, {}], [0, \"upserted\", 64, 0, {}]], {}], [0, 65, \"NoteFilter\", [[2, \"limit\", [2, 3], 1, {}], [0, \"query\", [2, 6], 1, {}], [4, \"tags\", [2, [0, 6]], 1, {}], [1, \"color\", [2, 66], 1, {}], [3, \"since\", [2, 8], 1, {}]], 1, {}], [3, 68, \"NoteId\", 9, {}], [0, 75, \"TagCount\", [[1, \"count\", 3, 0, {}], [0, \"tag\", 6, 0, {}]], 0, {}]], [[1, \"Admin\", [[111, \"sync\", [3, 67], [3, 67], [65], 24, {}], [110, \"import\", [3, 64], 3, [64], 8, {}], [112, \"restore\", [4], 3, [], 8, {\"auth.role\": \"admin\"}]], {\"auth.role\": \"admin\"}], [0, \"Notes\", [[103, \"attach\", 69, 0, [64], 8, {\"doc\": \"Attach a file to a note; the data travels as a byte token.\"}], [101, \"put\", 64, 68, [65, 64], 0, {}], [104, \"export\", 65, [4], [], 17, {\"http.contentType\": \"application/zip\"}], [100, \"get\", 68, 64, [], 1, {\"doc\": \"Fetch one note by id.\"}], [102, \"watch\", 65, [3, 67], [], 20, {}], [105, \"tagCounts\", 0, [0, 75], [], 1, {}]], {\"doc\": \"Personal notes.\"}]], [[80, \"note.updated\", 2, {}], [71, \"Color.green\", 0, {}], [65, \"conflict\", 1, {\"http.status\": 409}], [70, \"Color.red\", 0, {}], [64, \"quota_exceeded\", 1, {\"http.status\": 429}], [72, \"Color.blue\", 0, {}], [73, \"Color.yellow\", 0, {}]], null, [[3, 82], [2, 113], [0, 70], [3, 81]], {\"acme.owner\": \"notes-team\"}]], [3, \"2026.12.2\"]]]",
+        "cbor": "840301582101a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa82820089106a61636d652e6e6f74657365312e312e30878501184265436f6c6f72841849184818461847a086001840644e6f7465898503647461677382000600a08500626964184400a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f7285056b6c65676163794c6162656c0605a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58501657469746c650600a0850665636f6c6f728202184201a0850467757064617465640800a0850868617263686976656482020101a000a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018456a4174746163686d656e748385026464617461810400a08500646e616d650600a08501646d696d6582020601a000a085021843664368616e67658385016764656c65746564184400a0850267636c65617265640004a08500687570736572746564184000a0a0860018416a4e6f746546696c746572858502656c696d697482020301a0850065717565727982020601a085046474616773820282000601a0850165636f6c6f728202184201a085036573696e636582020801a001a085031844664e6f7465496409a08600184b68546167436f756e7482850165636f756e740300a08500637461670600a000a08284016541646d696e8387186f6473796e6382031843820318438118411818a087186e66696d706f7274820318400381184008a087187067726573746f72658104038008a169617574682e726f6c656561646d696ea169617574682e726f6c656561646d696e8400654e6f746573868718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e8718656370757418401844821841184000a0871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a697087186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718666577617463681841820318438014a087186969746167436f756e7473008200184b8001a0a163646f636f506572736f6e616c206e6f7465732e878418506c6e6f74652e7570646174656402a08418476b436f6c6f722e677265656e00a084184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad8418486a436f6c6f722e626c756500a08418496c436f6c6f722e79656c6c6f7700a0f68482031852820218718200184682031851a16a61636d652e6f776e65726a6e6f7465732d7465616d820369323032362e31322e32"
       }
     },
     {
@@ -6822,7 +8103,7 @@
       "spec": "6.6",
       "type": "delta",
       "from": "schema/delta-1-replace-part",
-      "from_hash": "01d52a44b9487cd3625784e06ac4806aaef989593bd580540155edbc6ac6ae9867",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "epoch": 2,
       "delta": [
         [
@@ -6977,6 +8258,15 @@
                     [],
                     1,
                     {}
+                  ],
+                  [
+                    3,
+                    "setTheme",
+                    6,
+                    0,
+                    [],
+                    2,
+                    {}
                   ]
                 ],
                 {}
@@ -7085,7 +8375,7 @@
       "removed_part_ids_after": [
         17
       ],
-      "canonical_cbor": "85026961636d652e686f737469323032362e31322e328389016b73706172726f772e77656265312e302e308081840066436c69656e748187006e6d6f64756c6552656a6563746564820006008002a0a080f680a089106a61636d652e6e6f74657365312e312e308786001840644e6f7465898500626964184400a08501657469746c650600a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58503647461677382000600a0850467757064617465640800a085056b6c65676163794c6162656c0605a0850665636f6c6f728202184201a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f72850868617263686976656482020101a000a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018416a4e6f746546696c74657285850065717565727982020601a0850165636f6c6f728202184201a08502656c696d697482020301a085036573696e636582020801a085046474616773820282000601a001a08501184265436f6c6f72841846184718481849a085021843664368616e6765838500687570736572746564184000a085016764656c65746564184400a0850267636c65617265640004a0a085031844664e6f7465496409a0860018456a4174746163686d656e74838500646e616d650600a08501646d696d6582020601a085026464617461810400a000a08600184b68546167436f756e74828500637461670600a0850165636f756e740300a000a0828400654e6f7465738687186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718656370757418401844821840184100a08718666577617463681841820318438014a08718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a697087186969746167436f756e7473008200184b8001a0a163646f636f506572736f6e616c206e6f7465732e84016541646d696e8387186e66696d706f7274820318400381184008a087186f6473796e6382031843820318438118411818a087187067726573746f72658104038008a169617574682e726f6c656561646d696ea169617574682e726f6c656561646d696e878418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad84184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418476b436f6c6f722e677265656e00a08418486a436f6c6f722e626c756500a08418496c436f6c6f722e79656c6c6f7700a08418506c6e6f74652e7570646174656402a0f68482001846820218718203185182031852a16a61636d652e6f776e65726a6e6f7465732d7465616d89126b61636d652e63686172747365322e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000300a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738187016a6c6973745468656d657300820018508001a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a6f680a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32a3687765622e6b657973818558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909697765622e6170706c7963686f746b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d",
+      "canonical_cbor": "85026961636d652e686f737469323032362e31322e328389016b73706172726f772e77656265312e302e308081840066436c69656e748187006e6d6f64756c6552656a6563746564820006008002a0a080f680a089106a61636d652e6e6f74657365312e312e308786001840644e6f7465898500626964184400a08501657469746c650600a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58503647461677382000600a0850467757064617465640800a085056b6c65676163794c6162656c0605a0850665636f6c6f728202184201a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f72850868617263686976656482020101a000a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018416a4e6f746546696c74657285850065717565727982020601a0850165636f6c6f728202184201a08502656c696d697482020301a085036573696e636582020801a085046474616773820282000601a001a08501184265436f6c6f72841846184718481849a085021843664368616e6765838500687570736572746564184000a085016764656c65746564184400a0850267636c65617265640004a0a085031844664e6f7465496409a0860018456a4174746163686d656e74838500646e616d650600a08501646d696d6582020601a085026464617461810400a000a08600184b68546167436f756e74828500637461670600a0850165636f756e740300a000a0828400654e6f7465738687186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718656370757418401844821840184100a08718666577617463681841820318438014a08718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a697087186969746167436f756e7473008200184b8001a0a163646f636f506572736f6e616c206e6f7465732e84016541646d696e8387186e66696d706f7274820318400381184008a087186f6473796e6382031843820318438118411818a087187067726573746f72658104038008a169617574682e726f6c656561646d696ea169617574682e726f6c656561646d696e878418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad84184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418476b436f6c6f722e677265656e00a08418486a436f6c6f722e626c756500a08418496c436f6c6f722e79656c6c6f7700a08418506c6e6f74652e7570646174656402a0f68482001846820218718203185182031852a16a61636d652e6f776e65726a6e6f7465732d7465616d89126b61636d652e63686172747365322e302e3084860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000300a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738287016a6c6973745468656d657300820018508001a08703687365745468656d6506008002a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a6f680a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32a3687765622e6b657973818558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909697765622e6170706c7963686f746b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d",
       "part_hashes": [
         {
           "part_id": 1,
@@ -7100,16 +8390,16 @@
         {
           "part_id": 18,
           "part_name": "acme.charts",
-          "part_hash": "01f833daea35b70f7e40dfe8f66148b219919f404098ce1f1397434d85d8187d6a"
+          "part_hash": "01d7f4b6f3ea02f643e42eae564e44ca52898297be93f8dfe4ed1873d37c7c839c"
         }
       ],
-      "hash": "01e25a70c2a2a495318a0c19ce4b30fdff29168f64a7ecd46987b01a67fdf82b5e",
+      "hash": "01ddacfa540b100d084c0ebecb5a06d6d52ab4c3af060eefd103abd22684f4f212",
       "schema_update": {
         "message": [
           3,
           2,
           {
-            "$bytes": "01e25a70c2a2a495318a0c19ce4b30fdff29168f64a7ecd46987b01a67fdf82b5e"
+            "$bytes": "01ddacfa540b100d084c0ebecb5a06d6d52ab4c3af060eefd103abd22684f4f212"
           },
           [
             [
@@ -7264,6 +8554,15 @@
                         [],
                         1,
                         {}
+                      ],
+                      [
+                        3,
+                        "setTheme",
+                        6,
+                        0,
+                        [],
+                        2,
+                        {}
                       ]
                     ],
                     {}
@@ -7369,8 +8668,8 @@
             ]
           ]
         ],
-        "diag": "[3, 2, h'01e25a70c2a2a495318a0c19ce4b30fdff29168f64a7ecd46987b01a67fdf82b5e', [[1, 17], [0, [18, \"acme.charts\", \"2.0.0\", [[0, 64, \"Chart\", [[1, \"heading\", [2, 6], 1, {\"ui.placeholder\": \"Untitled\"}], [0, \"type\", 65, 0, {}], [2, \"data\", [0, 66], 0, {}]], 0, {\"doc\": \"What to draw.\"}], [1, 65, \"Kind\", [64, 65], {}], [0, 66, \"DataSeries\", [[0, \"name\", 6, 0, {}], [1, \"values\", [0, 3], 0, {}]], 0, {}], [0, 80, \"Theme\", [[1, \"dark\", [2, 1], 1, {}], [0, \"name\", 6, 0, {}]], 0, {}]], [[0, \"ChartRenderer\", [[0, \"draw\", 64, 7, [66], 1, {\"doc\": \"Returns SVG bytes.\"}]], {\"auth.hint\": \"public\"}], [1, \"Themes\", [[1, \"listThemes\", 0, [0, 80], [], 1, {}]], {}]], [[66, \"chart.unsupported\", 1, {\"http.status\": 422}], [64, \"line\", 0, {}], [65, \"bar\", 0, {}]], null, [], {\"doc\": \"Chart rendering.\", \"web.modules\": [{\"id\": \"acme.charts.ui\", \"sig\": [h'6a3803d5f059902a1c6dafbc9ba47292', h'0228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff03'], \"url\": \"/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js\", \"deps\": [\"acme.core.boot\"], \"hash\": h'017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27', \"load\": \"lazy\", \"assets\": [{\"hash\": h'014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db654987', \"path\": \"charts.css\"}], \"hostApi\": \"^3.1\", \"version\": \"1.4.2\"}]}]], [2, {\"web.keys\": [[h'8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394', \"acme.\", 1(1798761600), h'34750f98bd59fcfc946da45aaabe933b', h'8b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909']], \"web.apply\": \"hot\", \"web.revoked\": [3, [h'b62e867fa2f33afe62d5d6b1642e1621'], h'34750f98bd59fcfc946da45aaabe933b', h'c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d']}]]]",
-        "cbor": "840302582101e25a70c2a2a495318a0c19ce4b30fdff29168f64a7ecd46987b01a67fdf82b5e83820111820089126b61636d652e63686172747365322e302e3084860018406543686172748385016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c656485006474797065184100a0850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000300a000a086001850655468656d65828501646461726b82020101a08500646e616d650600a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738187016a6c6973745468656d657300820018508001a0a0838418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a6841840646c696e6500a08418416362617200a0f680a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e328202a3687765622e6b657973818558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909697765622e6170706c7963686f746b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d"
+        "diag": "[3, 2, h'01ddacfa540b100d084c0ebecb5a06d6d52ab4c3af060eefd103abd22684f4f212', [[1, 17], [0, [18, \"acme.charts\", \"2.0.0\", [[0, 64, \"Chart\", [[1, \"heading\", [2, 6], 1, {\"ui.placeholder\": \"Untitled\"}], [0, \"type\", 65, 0, {}], [2, \"data\", [0, 66], 0, {}]], 0, {\"doc\": \"What to draw.\"}], [1, 65, \"Kind\", [64, 65], {}], [0, 66, \"DataSeries\", [[0, \"name\", 6, 0, {}], [1, \"values\", [0, 3], 0, {}]], 0, {}], [0, 80, \"Theme\", [[1, \"dark\", [2, 1], 1, {}], [0, \"name\", 6, 0, {}]], 0, {}]], [[0, \"ChartRenderer\", [[0, \"draw\", 64, 7, [66], 1, {\"doc\": \"Returns SVG bytes.\"}]], {\"auth.hint\": \"public\"}], [1, \"Themes\", [[1, \"listThemes\", 0, [0, 80], [], 1, {}], [3, \"setTheme\", 6, 0, [], 2, {}]], {}]], [[66, \"chart.unsupported\", 1, {\"http.status\": 422}], [64, \"line\", 0, {}], [65, \"bar\", 0, {}]], null, [], {\"doc\": \"Chart rendering.\", \"web.modules\": [{\"id\": \"acme.charts.ui\", \"sig\": [h'6a3803d5f059902a1c6dafbc9ba47292', h'0228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff03'], \"url\": \"/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js\", \"deps\": [\"acme.core.boot\"], \"hash\": h'017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27', \"load\": \"lazy\", \"assets\": [{\"hash\": h'014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db654987', \"path\": \"charts.css\"}], \"hostApi\": \"^3.1\", \"version\": \"1.4.2\"}]}]], [2, {\"web.keys\": [[h'8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394', \"acme.\", 1(1798761600), h'34750f98bd59fcfc946da45aaabe933b', h'8b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909']], \"web.apply\": \"hot\", \"web.revoked\": [3, [h'b62e867fa2f33afe62d5d6b1642e1621'], h'34750f98bd59fcfc946da45aaabe933b', h'c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d']}]]]",
+        "cbor": "840302582101ddacfa540b100d084c0ebecb5a06d6d52ab4c3af060eefd103abd22684f4f21283820111820089126b61636d652e63686172747365322e302e3084860018406543686172748385016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c656485006474797065184100a0850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000300a000a086001850655468656d65828501646461726b82020101a08500646e616d650600a000a08284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738287016a6c6973745468656d657300820018508001a08703687365745468656d6506008002a0a0838418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a6841840646c696e6500a08418416362617200a0f680a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e328202a3687765622e6b657973818558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909697765622e6170706c7963686f746b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d"
       }
     },
     {
@@ -7379,7 +8678,7 @@
       "spec": "6.6",
       "type": "delta",
       "from": "schema/delta-2-new-major",
-      "from_hash": "01e25a70c2a2a495318a0c19ce4b30fdff29168f64a7ecd46987b01a67fdf82b5e",
+      "from_hash": "01ddacfa540b100d084c0ebecb5a06d6d52ab4c3af060eefd103abd22684f4f212",
       "epoch": 3,
       "delta": [
         [
@@ -7536,6 +8835,15 @@
                     [],
                     1,
                     {}
+                  ],
+                  [
+                    3,
+                    "setTheme",
+                    6,
+                    0,
+                    [],
+                    2,
+                    {}
                   ]
                 ],
                 {}
@@ -7612,7 +8920,7 @@
       "removed_part_ids_after": [
         18
       ],
-      "canonical_cbor": "85026961636d652e686f737469323032362e31322e338389016b73706172726f772e77656265312e302e308081840066436c69656e748187006e6d6f64756c6552656a6563746564820006008002a0a080f680a089106a61636d652e6e6f74657365312e312e308786001840644e6f7465898500626964184400a08501657469746c650600a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58503647461677382000600a0850467757064617465640800a085056b6c65676163794c6162656c0605a0850665636f6c6f728202184201a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f72850868617263686976656482020101a000a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018416a4e6f746546696c74657285850065717565727982020601a0850165636f6c6f728202184201a08502656c696d697482020301a085036573696e636582020801a085046474616773820282000601a001a08501184265436f6c6f72841846184718481849a085021843664368616e6765838500687570736572746564184000a085016764656c65746564184400a0850267636c65617265640004a0a085031844664e6f7465496409a0860018456a4174746163686d656e74838500646e616d650600a08501646d696d6582020601a085026464617461810400a000a08600184b68546167436f756e74828500637461670600a0850165636f756e740300a000a0828400654e6f7465738687186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718656370757418401844821840184100a08718666577617463681841820318438014a08718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a697087186969746167436f756e7473008200184b8001a0a163646f636f506572736f6e616c206e6f7465732e84016541646d696e8387186e66696d706f7274820318400381184008a087186f6473796e6382031843820318438118411818a087187067726573746f72658104038008a169617574682e726f6c656561646d696ea169617574682e726f6c656561646d696e878418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad84184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418476b436f6c6f722e677265656e00a08418486a436f6c6f722e626c756500a08418496c436f6c6f722e79656c6c6f7700a08418506c6e6f74652e7570646174656402a0f68482001846820218718203185182031852a16a61636d652e6f776e65726a6e6f7465732d7465616d89116b61636d652e63686172747365312e302e3184860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a163646f636f4120636f6c6f7572207468656d652e8284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738187016a6c6973745468656d657300820018508001a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32a3687765622e6b657973818558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909697765622e6170706c7963686f746b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d",
+      "canonical_cbor": "85026961636d652e686f737469323032362e31322e338389016b73706172726f772e77656265312e302e308081840066436c69656e748187006e6d6f64756c6552656a6563746564820006008002a0a080f680a089106a61636d652e6e6f74657365312e312e308786001840644e6f7465898500626964184400a08501657469746c650600a0850264626f647982020601a26c75692e6d61784c656e677468194e206c75692e6d756c74696c696e65f58503647461677382000600a0850467757064617465640800a085056b6c65676163794c6162656c0605a0850665636f6c6f728202184201a085076670696e6e65640103a16e646570726563617465642e75736565636f6c6f72850868617263686976656482020101a000a26775692e69636f6e6b737469636b792d6e6f74656875692e6c6162656c644e6f7465860018416a4e6f746546696c74657285850065717565727982020601a0850165636f6c6f728202184201a08502656c696d697482020301a085036573696e636582020801a085046474616773820282000601a001a08501184265436f6c6f72841846184718481849a085021843664368616e6765838500687570736572746564184000a085016764656c65746564184400a0850267636c65617265640004a0a085031844664e6f7465496409a0860018456a4174746163686d656e74838500646e616d650600a08501646d696d6582020601a085026464617461810400a000a08600184b68546167436f756e74828500637461670600a0850165636f756e740300a000a0828400654e6f7465738687186463676574184418408001a163646f63754665746368206f6e65206e6f74652062792069642e8718656370757418401844821840184100a08718666577617463681841820318438014a08718676661747461636818450081184008a163646f63783a41747461636820612066696c6520746f2061206e6f74653b2074686520646174612074726176656c732061732061206279746520746f6b656e2e871868666578706f7274184181048011a170687474702e636f6e74656e74547970656f6170706c69636174696f6e2f7a697087186969746167436f756e7473008200184b8001a0a163646f636f506572736f6e616c206e6f7465732e84016541646d696e8387186e66696d706f7274820318400381184008a087186f6473796e6382031843820318438118411818a087187067726573746f72658104038008a169617574682e726f6c656561646d696ea169617574682e726f6c656561646d696e878418406e71756f74615f657863656564656401a16b687474702e7374617475731901ad84184168636f6e666c69637401a16b687474702e73746174757319019984184669436f6c6f722e72656400a08418476b436f6c6f722e677265656e00a08418486a436f6c6f722e626c756500a08418496c436f6c6f722e79656c6c6f7700a08418506c6e6f74652e7570646174656402a0f68482001846820218718203185182031852a16a61636d652e6f776e65726a6e6f7465732d7465616d89116b61636d652e63686172747365312e302e3184860018406543686172748385006474797065184100a085016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c6564850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828500646e616d650600a08501646461726b82020101a000a163646f636f4120636f6c6f7572207468656d652e8284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738287016a6c6973745468656d657300820018508001a08703687365745468656d6506008002a0a083841840646c696e6500a08418416362617200a08418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a65821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32a3687765622e6b657973818558208139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3946561636d652ec11a6b36ec805034750f98bd59fcfc946da45aaabe933b58408b3f64c76be895f04d986dd0fb57bb475b9f4c1d1048a9e7d2b2695a8c0c99247c417713ad476cb07cce025c38c25544f769f8c2489c60434619b45858f16909697765622e6170706c7963686f746b7765622e7265766f6b656484038150b62e867fa2f33afe62d5d6b1642e16215034750f98bd59fcfc946da45aaabe933b5840c646f4fa052bd75920ed0fae861795309ecbe26440fdf7e3c73541cbca9785b908e6b8c82c54f04c88472f2a597e47d07d714a184cad2d0754d57e1f6368960d",
       "part_hashes": [
         {
           "part_id": 1,
@@ -7627,16 +8935,16 @@
         {
           "part_id": 17,
           "part_name": "acme.charts",
-          "part_hash": "01e30d0dff629475a36fbc599cd107e8d9aa61ae0a740e80ba0c4cc667b3f35d30"
+          "part_hash": "01907f9cc35873213b1ff197b28b36086753459d31dc7e801f6b2dc1a5075cd44b"
         }
       ],
-      "hash": "01cb994267fa30b790116f00163c1b90130631733c95b6000e4b8776022e9ca0ff",
+      "hash": "01c544e4d7e952d43c42d11ba8e601f5c61f2e9d3bc0fd1160bcb4c9d585acb33b",
       "schema_update": {
         "message": [
           3,
           3,
           {
-            "$bytes": "01cb994267fa30b790116f00163c1b90130631733c95b6000e4b8776022e9ca0ff"
+            "$bytes": "01c544e4d7e952d43c42d11ba8e601f5c61f2e9d3bc0fd1160bcb4c9d585acb33b"
           },
           [
             [
@@ -7793,6 +9101,15 @@
                         [],
                         1,
                         {}
+                      ],
+                      [
+                        3,
+                        "setTheme",
+                        6,
+                        0,
+                        [],
+                        2,
+                        {}
                       ]
                     ],
                     {}
@@ -7866,8 +9183,8 @@
             ]
           ]
         ],
-        "diag": "[3, 3, h'01cb994267fa30b790116f00163c1b90130631733c95b6000e4b8776022e9ca0ff', [[1, 18], [0, [17, \"acme.charts\", \"1.0.1\", [[0, 64, \"Chart\", [[1, \"heading\", [2, 6], 1, {\"ui.placeholder\": \"Untitled\"}], [0, \"type\", 65, 0, {}], [2, \"data\", [0, 66], 0, {}]], 0, {\"doc\": \"What to draw.\"}], [1, 65, \"Kind\", [64, 65], {}], [0, 66, \"DataSeries\", [[0, \"name\", 6, 0, {}], [1, \"values\", [0, 2], 0, {}]], 0, {}], [0, 80, \"Theme\", [[1, \"dark\", [2, 1], 1, {}], [0, \"name\", 6, 0, {}]], 0, {\"doc\": \"A colour theme.\"}]], [[0, \"ChartRenderer\", [[0, \"draw\", 64, 7, [66], 1, {\"doc\": \"Returns SVG bytes.\"}]], {\"auth.hint\": \"public\"}], [1, \"Themes\", [[1, \"listThemes\", 0, [0, 80], [], 1, {}]], {}]], [[66, \"chart.unsupported\", 1, {\"http.status\": 422}], [64, \"line\", 0, {}], [65, \"bar\", 0, {}]], h'016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b1', [], {\"doc\": \"Chart rendering.\", \"web.modules\": [{\"id\": \"acme.charts.ui\", \"sig\": [h'6a3803d5f059902a1c6dafbc9ba47292', h'0228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff03'], \"url\": \"/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js\", \"deps\": [\"acme.core.boot\"], \"hash\": h'017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27', \"load\": \"lazy\", \"assets\": [{\"hash\": h'014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db654987', \"path\": \"charts.css\"}], \"hostApi\": \"^3.1\", \"version\": \"1.4.2\"}]}]], [3, \"2026.12.3\"]]]",
-        "cbor": "840303582101cb994267fa30b790116f00163c1b90130631733c95b6000e4b8776022e9ca0ff83820112820089116b61636d652e63686172747365312e302e3184860018406543686172748385016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c656485006474797065184100a0850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828501646461726b82020101a08500646e616d650600a000a163646f636f4120636f6c6f7572207468656d652e8284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738187016a6c6973745468656d657300820018508001a0a0838418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a6841840646c696e6500a08418416362617200a05821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32820369323032362e31322e33"
+        "diag": "[3, 3, h'01c544e4d7e952d43c42d11ba8e601f5c61f2e9d3bc0fd1160bcb4c9d585acb33b', [[1, 18], [0, [17, \"acme.charts\", \"1.0.1\", [[0, 64, \"Chart\", [[1, \"heading\", [2, 6], 1, {\"ui.placeholder\": \"Untitled\"}], [0, \"type\", 65, 0, {}], [2, \"data\", [0, 66], 0, {}]], 0, {\"doc\": \"What to draw.\"}], [1, 65, \"Kind\", [64, 65], {}], [0, 66, \"DataSeries\", [[0, \"name\", 6, 0, {}], [1, \"values\", [0, 2], 0, {}]], 0, {}], [0, 80, \"Theme\", [[1, \"dark\", [2, 1], 1, {}], [0, \"name\", 6, 0, {}]], 0, {\"doc\": \"A colour theme.\"}]], [[0, \"ChartRenderer\", [[0, \"draw\", 64, 7, [66], 1, {\"doc\": \"Returns SVG bytes.\"}]], {\"auth.hint\": \"public\"}], [1, \"Themes\", [[1, \"listThemes\", 0, [0, 80], [], 1, {}], [3, \"setTheme\", 6, 0, [], 2, {}]], {}]], [[66, \"chart.unsupported\", 1, {\"http.status\": 422}], [64, \"line\", 0, {}], [65, \"bar\", 0, {}]], h'016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b1', [], {\"doc\": \"Chart rendering.\", \"web.modules\": [{\"id\": \"acme.charts.ui\", \"sig\": [h'6a3803d5f059902a1c6dafbc9ba47292', h'0228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff03'], \"url\": \"/sparrow/mods/AXADqH2w67LjHIoUylodCFVS8j1KTB4fR2U2bmx4i-8n.js\", \"deps\": [\"acme.core.boot\"], \"hash\": h'017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27', \"load\": \"lazy\", \"assets\": [{\"hash\": h'014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db654987', \"path\": \"charts.css\"}], \"hostApi\": \"^3.1\", \"version\": \"1.4.2\"}]}]], [3, \"2026.12.3\"]]]",
+        "cbor": "840303582101c544e4d7e952d43c42d11ba8e601f5c61f2e9d3bc0fd1160bcb4c9d585acb33b83820112820089116b61636d652e63686172747365312e302e3184860018406543686172748385016768656164696e6782020601a16e75692e706c616365686f6c64657268556e7469746c656485006474797065184100a0850264646174618200184200a000a163646f636d5768617420746f20647261772e85011841644b696e648218401841a0860018426a44617461536572696573828500646e616d650600a085016676616c75657382000200a000a086001850655468656d65828501646461726b82020101a08500646e616d650600a000a163646f636f4120636f6c6f7572207468656d652e8284006d436861727452656e6465726572818700646472617718400781184201a163646f637252657475726e73205356472062797465732ea169617574682e68696e74667075626c69638401665468656d65738287016a6c6973745468656d657300820018508001a08703687365745468656d6506008002a0a0838418427163686172742e756e737570706f7274656401a16b687474702e7374617475731901a6841840646c696e6500a08418416362617200a05821016da496791b88848dd066b1d09eb0ae9461e46d53fa64a3e4afba4abb16a9b2b180a263646f637043686172742072656e646572696e672e6b7765622e6d6f64756c657381a96269646e61636d652e6368617274732e75696373696782506a3803d5f059902a1c6dafbc9ba4729258400228c0761cc6b5d4d3f04bd50d119112c2c1dd7e1ae3b1e384505de9e2a4134ec6185b015a4a8af62d804c770cc95e408a0211ccc84fda89d5b098169a0dff036375726c783d2f73706172726f772f6d6f64732f415841447148327736374c6a48496f55796c6f6443465653386a314b5442346652325532626d7834692d386e2e6a736464657073816e61636d652e636f72652e626f6f7464686173685821017003a87db0ebb2e31c8a14ca5a1d085552f23d4a4c1e1f4765366e6c788bef27646c6f6164646c617a796661737365747381a264686173685821014445cd20605ecce32be04e34f556e88d3c97ea971bab1a4dcc3b9d69db65498764706174686a6368617274732e63737367686f7374417069645e332e316776657273696f6e65312e342e32820369323032362e31322e33"
       }
     },
     {
@@ -7876,7 +9193,7 @@
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
       "from": "schema/delta-1-replace-part",
-      "from_hash": "01d52a44b9487cd3625784e06ac4806aaef989593bd580540155edbc6ac6ae9867",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
           0,
@@ -8366,7 +9683,7 @@
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
       "from": "schema/delta-1-replace-part",
-      "from_hash": "01d52a44b9487cd3625784e06ac4806aaef989593bd580540155edbc6ac6ae9867",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
           0,
@@ -8865,7 +10182,7 @@
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
       "from": "schema/delta-1-replace-part",
-      "from_hash": "01d52a44b9487cd3625784e06ac4806aaef989593bd580540155edbc6ac6ae9867",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
           0,
@@ -9371,7 +10688,7 @@
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
       "from": "schema/delta-1-replace-part",
-      "from_hash": "01d52a44b9487cd3625784e06ac4806aaef989593bd580540155edbc6ac6ae9867",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
           0,
@@ -9849,7 +11166,7 @@
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
       "from": "schema/delta-1-replace-part",
-      "from_hash": "01d52a44b9487cd3625784e06ac4806aaef989593bd580540155edbc6ac6ae9867",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
           0,
@@ -10339,7 +11656,7 @@
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
       "from": "schema/delta-1-replace-part",
-      "from_hash": "01d52a44b9487cd3625784e06ac4806aaef989593bd580540155edbc6ac6ae9867",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
           0,
@@ -10829,7 +12146,7 @@
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
       "from": "schema/delta-1-replace-part",
-      "from_hash": "01d52a44b9487cd3625784e06ac4806aaef989593bd580540155edbc6ac6ae9867",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
           2,
@@ -10847,11 +12164,11 @@
     },
     {
       "name": "schema/delta-invalid-reserved-part-id",
-      "description": "Add a part with ID 5. Part IDs 0-15 are reserved for parts this spec defines.",
+      "description": "Add a part with ID 5. Part IDs 0 and 2-15 MUST NOT appear (6.1).",
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
       "from": "schema/delta-1-replace-part",
-      "from_hash": "01d52a44b9487cd3625784e06ac4806aaef989593bd580540155edbc6ac6ae9867",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
       "delta": [
         [
           0,
@@ -10870,7 +12187,152 @@
       ],
       "expected_valid": false,
       "expected_error": "reserved_part_id",
-      "error_detail": "part 5 (\"acme.extra\"): IDs 0-15 are reserved for parts this spec defines"
+      "error_detail": "part 5 (\"acme.extra\"): IDs 0 and 2-15 MUST NOT appear"
+    },
+    {
+      "name": "schema/delta-invalid-part-name-non-ascii",
+      "description": "Add a part named 'acme.café'. Part names match [a-z0-9-]+(\\.[a-z0-9-]+)*, ASCII only (6.1).",
+      "spec": "6.1, 6.6, 6.7",
+      "type": "delta",
+      "from": "schema/delta-1-replace-part",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
+      "delta": [
+        [
+          0,
+          [
+            19,
+            "acme.café",
+            "1.0.0",
+            [],
+            [],
+            [],
+            null,
+            [],
+            {}
+          ]
+        ]
+      ],
+      "expected_valid": false,
+      "expected_error": "invalid_name",
+      "error_detail": "part 19: part name \"acme.café\" does not match the part-name grammar"
+    },
+    {
+      "name": "schema/delta-invalid-part-name-uppercase",
+      "description": "Add a part named 'Acme.Tools': upper case is outside the part-name grammar.",
+      "spec": "6.1, 6.6, 6.7",
+      "type": "delta",
+      "from": "schema/delta-1-replace-part",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
+      "delta": [
+        [
+          0,
+          [
+            19,
+            "Acme.Tools",
+            "1.0.0",
+            [],
+            [],
+            [],
+            null,
+            [],
+            {}
+          ]
+        ]
+      ],
+      "expected_valid": false,
+      "expected_error": "invalid_name",
+      "error_detail": "part 19: part name \"Acme.Tools\" does not match the part-name grammar"
+    },
+    {
+      "name": "schema/delta-invalid-type-name-non-ascii",
+      "description": "Add a part whose struct is named 'Grüße'. Type names are ASCII (6.1).",
+      "spec": "6.1, 6.6, 6.7",
+      "type": "delta",
+      "from": "schema/delta-1-replace-part",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
+      "delta": [
+        [
+          0,
+          [
+            19,
+            "acme.greetings",
+            "1.0.0",
+            [
+              [
+                0,
+                64,
+                "Grüße",
+                [
+                  [
+                    0,
+                    "text",
+                    6,
+                    0,
+                    {}
+                  ]
+                ],
+                0,
+                {}
+              ]
+            ],
+            [],
+            [],
+            null,
+            [],
+            {}
+          ]
+        ]
+      ],
+      "expected_valid": false,
+      "expected_error": "invalid_name",
+      "error_detail": "part 19: type name \"Grüße\" is not ASCII"
+    },
+    {
+      "name": "schema/delta-invalid-part1-mismatch",
+      "description": "Replace part 1 with sparrow.web version 1.0.1. Part 1 MUST match its definition exactly, by part hash (6.1).",
+      "spec": "6.1, 6.6, 6.7",
+      "type": "delta",
+      "from": "schema/delta-1-replace-part",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
+      "delta": [
+        [
+          0,
+          [
+            1,
+            "sparrow.web",
+            "1.0.1",
+            [],
+            [
+              [
+                0,
+                "Client",
+                [
+                  [
+                    0,
+                    "moduleRejected",
+                    [
+                      0,
+                      6
+                    ],
+                    0,
+                    [],
+                    2,
+                    {}
+                  ]
+                ],
+                {}
+              ]
+            ],
+            [],
+            null,
+            [],
+            {}
+          ]
+        ]
+      ],
+      "expected_valid": false,
+      "expected_error": "part1_mismatch",
+      "error_detail": "part 1 does not match the spec's definition of sparrow.web by part hash"
     },
     {
       "name": "schema/delta-invalid-readd-renamed",
@@ -10878,7 +12340,7 @@
       "spec": "6.1, 6.6, 6.7",
       "type": "delta",
       "from": "schema/delta-2-new-major",
-      "from_hash": "01e25a70c2a2a495318a0c19ce4b30fdff29168f64a7ecd46987b01a67fdf82b5e",
+      "from_hash": "01ddacfa540b100d084c0ebecb5a06d6d52ab4c3af060eefd103abd22684f4f212",
       "delta": [
         [
           0,

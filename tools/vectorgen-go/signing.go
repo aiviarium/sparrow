@@ -65,8 +65,7 @@ var (
 	kDelta   = mkKey("TEST-ONLY publisher key 'delta', namespace without trailing dot (seed 32 x 0x06)", 0x06)
 	kOmega   = mkKey("TEST-ONLY publisher key 'omega', certificate signed with the wrong domain (seed 32 x 0x07)", 0x07)
 	kEpsilon = mkKey("TEST-ONLY publisher key 'epsilon', certificate expires exactly at the verification time (seed 32 x 0x08)", 0x08)
-	kCafe    = mkKey("TEST-ONLY publisher key 'cafe', non-ASCII namespace (seed 32 x 0x09)", 0x09)
-	allKeys  = []*testKey{kRoot, kAcme, kBeta, kNoCert, kGamma, kDelta, kOmega, kEpsilon, kCafe}
+	allKeys  = []*testKey{kRoot, kAcme, kBeta, kNoCert, kGamma, kDelta, kOmega, kEpsilon}
 	rootKeys = []*testKey{kRoot}
 )
 
@@ -91,8 +90,6 @@ func mkCert(name, desc string, k *testKey, ns string, expires uint64, domain str
 	return c
 }
 
-const nsCafe = "café." // NFC
-
 var certs = []*cert{
 	mkCert("cert/acme", "Publisher certificate: key 'acme' may sign modules whose id starts with 'acme.' until 2027-01-01.", kAcme, "acme.", tExpires, domainCert),
 	mkCert("cert/beta", "Publisher certificate for key 'beta' (namespace 'beta.'). The key is revoked by revocation/list-3.", kBeta, "beta.", tExpires, domainCert),
@@ -100,7 +97,6 @@ var certs = []*cert{
 	mkCert("cert/delta-no-dot", "INVALID: namespace 'delta' does not end with a dot. Correctly signed, but must be rejected.", kDelta, "delta", tExpires, domainCert),
 	mkCert("cert/omega-wrong-domain", "INVALID: signed over ['sparrow-module-v1', ...] instead of ['sparrow-cert-v1', ...].", kOmega, "omega.", tExpires, domainModule),
 	mkCert("cert/epsilon-boundary", "Certificate whose expires equals the verification time: not valid (valid only strictly before expires).", kEpsilon, "epsilon.", tNow, domainCert),
-	mkCert("cert/cafe-utf8", "Certificate with a non-ASCII namespace 'café.' (NFC, U+00E9). Coverage is a UTF-8 byte-prefix match.", kCafe, nsCafe, tExpires, domainCert),
 }
 
 func certByName(n string) *cert {
@@ -136,7 +132,7 @@ func mkRevocation(name, desc string, seq int, ids [][]byte, signer *testKey) *re
 
 var revocations = []*revocation{
 	mkRevocation("revocation/list-3", "Revocation list seq 3 revoking key 'beta', signed by the root key. Used by the default verification context.", 3, [][]byte{kBeta.id}, kRoot),
-	mkRevocation("revocation/lists-root", "Root-signed list (seq 4) that also lists the root key's own key_id. Root keys cannot be revoked this way, so the root key stays trusted.", 4, [][]byte{kRoot.id, kBeta.id}, kRoot),
+	mkRevocation("revocation/lists-root", "Root-signed list (seq 4) naming the root key's own key_id and publisher key 'beta'. The entry naming a root key is ignored and the rest of the list applies (9.5): the root stays trusted, 'beta' is revoked.", 4, [][]byte{kRoot.id, kBeta.id}, kRoot),
 	mkRevocation("revocation/forged", "List claiming root_key_id of the root key but signed by publisher key 'acme', revoking 'acme'. Only a list signed by a root key counts, so it is ignored.", 9, [][]byte{kAcme.id}, kAcme),
 }
 
@@ -206,8 +202,6 @@ var modules = []*module{
 	mkModule("module/uncertified-key", "Signed by a key that is neither a root key nor certified.", "acme.extra", "1.0.0", nil, kNoCert, domainModule, nil, nil, "unknown_key"),
 	mkModule("module/tampered", "Signed for version 1.4.2, then 'version' changed to 1.4.3 after signing.", "acme.charts.ui", "1.4.2", list("acme.core.boot"), kAcme, domainModule, nil,
 		func(m map[string]any) { m["version"] = "1.4.3" }, "bad_module_signature"),
-	mkModule("module/utf8-namespace", "Id 'café.menu' (NFC) under namespace 'café.' (NFC): the UTF-8 bytes match.", "café.menu", "1.0.0", nil, kCafe, domainModule, nil, nil, "ok"),
-	mkModule("module/utf8-nfd", "Id 'café.menu' in NFD (e + U+0301) looks the same as the namespace 'café.' (NFC) but its bytes differ, so it is not covered (no normalization).", "café.menu", "1.0.0", nil, kCafe, domainModule, nil, nil, "namespace_not_covered"),
 }
 
 func moduleByName(n string) *module {
@@ -284,12 +278,16 @@ func verifyModule(entry map[string]any, roots []*testKey, webKeys [][]any, revok
 }
 
 // moduleInPart implements the 9.4 rule: a module id in a part's web.modules
-// MUST start with the part's name (ignoring a "<hub-id>/" prefix) and a dot.
+// follows the part-name grammar and equals the part's name or starts with
+// it and a dot, ignoring a "<peer-id>/" prefix the hub added.
 func moduleInPart(partName, moduleID string) bool {
 	if i := strings.Index(partName, "/"); i >= 0 {
 		partName = partName[i+1:]
 	}
-	return strings.HasPrefix(moduleID, partName+".")
+	if !nodeIDRe.MatchString(moduleID) {
+		return false
+	}
+	return moduleID == partName || strings.HasPrefix(moduleID, partName+".")
 }
 
 func signingVectors() O {
@@ -356,7 +354,7 @@ func signingVectors() O {
 		m := moduleByName(mod)
 		got := verifyModule(m.full, rootKeys, webKeys, revByName(rev).full, tNow)
 		want := m.reason
-		if rev != "revocation/list-3" {
+		if rev == "revocation/forged" || (rev == "revocation/lists-root" && m.name == "module/acme-core") {
 			want = "ok"
 		}
 		if got != want {
@@ -372,6 +370,7 @@ func signingVectors() O {
 		addVerify("verify/"+strings.TrimPrefix(m.name, "module/"), "Accept or reject "+m.name+". "+m.desc, m.name, "revocation/list-3")
 	}
 	addVerify("verify/root-not-revocable", "module/acme-core (root-signed) with revocation/lists-root in effect: root keys cannot be revoked, so the module is accepted.", "module/acme-core", "revocation/lists-root")
+	addVerify("verify/publisher-revoked-by-list-naming-root", "module/revoked-key (signed by 'beta') with revocation/lists-root in effect: the list also names the root key, whose entry is ignored, but the rest applies, so 'beta' is revoked.", "module/revoked-key", "revocation/lists-root")
 	addVerify("verify/forged-revocation-ignored", "module/acme-charts with revocation/forged in effect: that list is not signed by a root key, so it does not count and 'acme' is not revoked.", "module/acme-charts", "revocation/forged")
 
 	// Module ids against part names (section 9.4).
@@ -380,11 +379,14 @@ func signingVectors() O {
 	}{
 		{"acme.charts", "acme.charts.ui", "Starts with the part name and a dot."},
 		{"acme.charts", "acme.charts.ui.extra", "Deeper ids are fine."},
-		{"acme.charts", "acme.charts", "Equal to the part name, with no dot after it. Rejected under a literal reading of 9.4 (see SPEC-ISSUES)."},
+		{"acme.charts", "acme.charts", "Equal to the part name: allowed (9.4)."},
 		{"acme.charts", "acme.chartsx.ui", "Shares a string prefix but not the part name followed by a dot."},
 		{"acme.charts", "acme.notes.ui", "Another part's name: a part cannot ship modules under another part's name."},
-		{"hub-b/acme.charts", "acme.charts.ui", "Imported part: the '<hub-id>/' prefix a hub added is ignored."},
-		{"hub-b/acme.charts", "hub-b/acme.charts.ui", "Module ids do not carry the hub prefix (assumption, see README)."},
+		{"acme.charts", "acme.charts.Ui", "Upper case: module ids follow the ASCII part-name grammar."},
+		{"acme.charts", "acme.charts.caf\u00e9", "Non-ASCII: module ids follow the ASCII part-name grammar."},
+		{"hub-b/acme.charts", "acme.charts.ui", "Imported part: the '<peer-id>/' prefix a hub added is ignored."},
+		{"hub-b/acme.charts", "acme.charts", "Imported part, id equal to the unprefixed name."},
+		{"hub-b/acme.charts", "hub-b/acme.charts.ui", "Module ids never carry the prefix ('/' is outside the grammar)."},
 		{"sparrow.web", "sparrow.web.core", "Part 1 may ship modules named after it."},
 	}
 	for _, s := range scope {
@@ -394,11 +396,11 @@ func signingVectors() O {
 			"part_name", s.part, "module_id", s.id, "expected_valid", moduleInPart(s.part, s.id),
 		))
 	}
-	partAnn := map[string]any{"web.modules": []any{}, "web.apply": "hot", "web.title": "Hijacked", "doc": "A part's annotations."}
+	partAnn := map[string]any{"web.modules": []any{}, "web.apply": "hot", "web.keys": []any{}, "web.title": "Hijacked", "doc": "A part's annotations."}
 	vs = append(vs, o(
-		"name", "module-scope/part-web-keys", "description", "A part's own annotations may carry only web.modules; a client ignores any other web.* key in a part (section 9.4). Non-web keys are untouched.",
+		"name", "module-scope/part-web-keys", "description", "A part's own annotations may carry only web.modules; a client ignores any other web.* key in a part, and reads web.keys, web.revoked and client configuration from top-level schema annotations only (section 9.4). Non-web keys are untouched.",
 		"spec", "9.4", "type", "part_web_keys",
-		"part_annotations", tj(partAnn), "honoured_web_keys", []any{"web.modules"}, "ignored_web_keys", []any{"web.apply", "web.title"},
+		"part_annotations", tj(partAnn), "honoured_web_keys", []any{"web.modules"}, "ignored_web_keys", []any{"web.apply", "web.keys", "web.title"},
 	))
 	return o("area", "signing",
 		"test_only_keys", "Every key in this file is derived from a trivial TEST-ONLY seed. Never use these keys outside tests.",

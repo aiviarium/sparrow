@@ -164,6 +164,9 @@ type chartsOpts struct {
 	pointsType  any
 	extraMethod bool
 	notIdem     bool
+	deprecate   bool // mark Chart.heading deprecated (hint flag 0x2)
+	drawOutput  any  // replace draw's output type
+	moveDraw    bool // move draw to service 1
 	noExtras    bool
 	themeNote   bool
 	implements  bool
@@ -180,16 +183,28 @@ func chartsPart(o chartsOpts) []any {
 	if o.name == "" {
 		o.name = "acme.charts"
 	}
+	headingFlags := ffOptional
+	if o.deprecate {
+		headingFlags |= ffDeprecated
+	}
+	drawOut := any(tBytes)
+	if o.drawOutput != nil {
+		drawOut = o.drawOutput
+	}
 	types := list(
 		structDef(64, "Chart", list(
-			field(1, "heading", tOpt(tString), ffOptional, ann{"ui.placeholder": "Untitled"}),
+			field(1, "heading", tOpt(tString), headingFlags, ann{"ui.placeholder": "Untitled"}),
 			field(0, "type", 65, 0, nil),
 			field(2, "data", tList(66), 0, nil),
 		), 0, ann{"doc": "What to draw."}),
 		enumDef(65, "Kind", list(64, 65), nil),
 		structDef(66, "DataSeries", list(field(0, "name", tString, 0, nil), field(1, "values", o.pointsType, 0, nil)), 0, nil),
 	)
-	renderMethods := list(method(0, "draw", 64, tBytes, list(66), renderFlags, ann{"doc": "Returns SVG bytes."}))
+	draw := method(0, "draw", 64, drawOut, list(66), renderFlags, ann{"doc": "Returns SVG bytes."})
+	renderMethods := list(draw)
+	if o.moveDraw {
+		renderMethods = list()
+	}
 	if o.extraMethod {
 		renderMethods = append(renderMethods, method(2, "drawPng", 64, tBytes, list(66), fIdempotent, nil))
 	}
@@ -202,7 +217,14 @@ func chartsPart(o chartsOpts) []any {
 			themeAnn = ann{"doc": "A colour theme."}
 		}
 		types = append(types, structDef(80, "Theme", list(field(1, "dark", tOpt(tBool), ffOptional, nil), field(0, "name", tString, 0, nil)), 0, themeAnn))
-		services = append(services, service(1, "Themes", list(method(1, "listThemes", tUnit, tList(80), nil, fIdempotent, nil)), nil))
+		themeMethods := list(
+			method(1, "listThemes", tUnit, tList(80), nil, fIdempotent, nil),
+			method(3, "setTheme", tString, tUnit, nil, fNotification, nil),
+		)
+		if o.moveDraw {
+			themeMethods = append(themeMethods, draw)
+		}
+		services = append(services, service(1, "Themes", themeMethods, nil))
 		an = ann{"doc": "Chart rendering.", "web.modules": []any{moduleByName("module/acme-charts").full}}
 	}
 	var impl []byte
@@ -219,7 +241,7 @@ func chartsV1() []any {
 // ---- schemas ----
 
 func serverSchemaInput() []any {
-	return schemaDoc("acme.host", "2026.12.1", list(chartsV1(), notesV1(), webPart()),
+	return schemaDoc("acme.host", "2026.12.1", list(webPart(), notesV1(), chartsV1()),
 		ann{"web.apply": "reload", "web.keys": []any{certByName("cert/acme").full}, "web.revoked": revList.full})
 }
 
@@ -393,10 +415,14 @@ func schemaVectors() O {
 		{"conformance/names-and-annotations-only", "A part that differs from the interface only in names and annotations conforms (byte comparison of wire shapes).", namesOnly(), nil},
 		{"conformance/field-type-differs", "DataSeries.values is [0, uint] instead of [0, int]: type 66 does not conform.",
 			chartsPart(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", pointsType: tList(tUint), implements: true}), []any{spType, 66}},
-		{"conformance/extra-method-in-service", "The part adds a method to the interface's service 0. The service's wire shape includes its method list, so service 0 does not conform (see SPEC-ISSUES).",
-			chartsPart(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", extraMethod: true, implements: true}), []any{spService, 0}},
-		{"conformance/method-flags-differ", "Method 0 is not flagged idempotent: service 0 does not conform.",
-			chartsPart(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", notIdem: true, implements: true}), []any{spService, 0}},
+		{"conformance/extra-method-in-service", "The part adds a method (2, drawPng) to the interface's service 0. A service's wire shape leaves out its method list and each interface method is compared on its own, so the part conforms.",
+			chartsPart(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", extraMethod: true, implements: true}), nil},
+		{"conformance/hint-flags-differ", "Method draw is not flagged idempotent (0x1) and field heading is flagged deprecated (0x2). Hint flags are cleared in wire shapes, so the part conforms.",
+			chartsPart(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", notIdem: true, deprecate: true, implements: true}), nil},
+		{"conformance/method-output-differs", "Method draw returns string instead of bytes: method 0 does not conform.",
+			chartsPart(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", drawOutput: tString, implements: true}), []any{spMethod, 0}},
+		{"conformance/method-in-other-service", "Method draw sits in service 1 instead of the interface's service 0. Service 0 itself matches, but its method 0 is missing.",
+			chartsPart(chartsOpts{id: 21, name: "acme.badcharts", version: "1.0.0", moveDraw: true, implements: true}), []any{spMethod, 0}},
 	}
 	for _, c := range conf {
 		if _, e := validatePart(c.part); e != nil {
@@ -416,6 +442,9 @@ func schemaVectors() O {
 	}
 
 	schemaVec := func(name, desc string, input []any) {
+		if e := validateSentSchema(input); e != nil {
+			panic(fmt.Sprint(name, ": ", e))
+		}
 		c := canonicalSchema(input)
 		hi := schemaHashInput(input)
 		hb := enc(hi)
@@ -424,9 +453,20 @@ func schemaVectors() O {
 			"part_hashes", partHashes(input),
 			"hash_input", tj(hi), "hash_input_diag", diag(hb), "hash_input_cbor", hx(hb), "hash", hx(schemaHash(input))))
 	}
-	schemaVec("schema/server-base", "Server schema 'acme.host' with parts 1 (sparrow.web), 16 (acme.notes) and 17 (acme.charts), unsorted, and top-level web.* annotations (web.apply, web.keys with the acme certificate, web.revoked). The schema hash covers [format, name, version, [* [part_id, part_name, part_hash]], annotations].", serverSchemaInput())
+	schemaVec("schema/server-base", "Server schema 'acme.host' with parts 1 (sparrow.web), 16 (acme.notes) and 17 (acme.charts), listed by ID as 6.1 requires (their contents unsorted), and top-level web.* annotations (web.apply, web.keys with the acme certificate, web.revoked). The schema hash covers [format, name, version, [* [part_id, part_name, part_hash]], annotations].", serverSchemaInput())
 	schemaVec("schema/client", "Client schema as sent in Hello.client_schema.", clientSchemaInput())
 	schemaVec("schema/node-acme-charts", "The schema node 'acme.charts' publishes on its own link: the acme.charts part under node-local part ID 16. Its part hash equals that of part 17 in schema/server-base.", nodeSchemaInput())
+
+	unsorted := serverSchemaInput()
+	ps := unsorted[3].([]any)
+	unsorted[3] = list(ps[2], ps[1], ps[0])
+	e := validateSentSchema(unsorted)
+	if e == nil || e.Code != "parts_not_sorted" || validateSchema(unsorted) != nil {
+		panic(fmt.Sprint("parts order: ", e))
+	}
+	add(o("name", "schema/sent-parts-out-of-order", "description", "schema/server-base with its parts listed as 17, 16, 1. A schema lists its parts sorted by ID (6.1), and a receiver checks the rules of 6.1 (6.6 rule 3), so as a received document it is invalid. Its contents are otherwise valid, and canonicalisation for hashing would sort it (the hash equals schema/server-base's).",
+		"spec", "6.1, 6.6", "type", "schema_sent", "input", tj(unsorted), "expected_valid", false, "expected_error", "parts_not_sorted",
+		"hash_if_canonicalised", hx(schemaHash(unsorted))))
 
 	// Part hash invariance under rename and re-id.
 	pa := notesV1()
@@ -531,8 +571,16 @@ func schemaVectors() O {
 			"schema/delta-1-replace-part", "major_version_changed", r.a, []any{[]any{0, mod(func(p []any) { p[pVersion] = "2.0.0" })}}},
 		{"schema/delta-invalid-float", "Top-level annotations containing a float. Canonical data MUST NOT contain floats (section 3.2).",
 			"schema/delta-1-replace-part", "float_in_canonical_data", r.a, []any{[]any{2, ann{"web.apply": "hot", "ui.scale": 1.5}}}},
-		{"schema/delta-invalid-reserved-part-id", "Add a part with ID 5. Part IDs 0-15 are reserved for parts this spec defines.",
+		{"schema/delta-invalid-reserved-part-id", "Add a part with ID 5. Part IDs 0 and 2-15 MUST NOT appear (6.1).",
 			"schema/delta-1-replace-part", "reserved_part_id", r.a, []any{[]any{0, partDoc(5, "acme.extra", "1.0.0", nil, nil, nil, nil, nil, nil)}}},
+		{"schema/delta-invalid-part-name-non-ascii", "Add a part named 'acme.caf\u00e9'. Part names match [a-z0-9-]+(\\.[a-z0-9-]+)*, ASCII only (6.1).",
+			"schema/delta-1-replace-part", "invalid_name", r.a, []any{[]any{0, partDoc(19, "acme.caf\u00e9", "1.0.0", nil, nil, nil, nil, nil, nil)}}},
+		{"schema/delta-invalid-part-name-uppercase", "Add a part named 'Acme.Tools': upper case is outside the part-name grammar.",
+			"schema/delta-1-replace-part", "invalid_name", r.a, []any{[]any{0, partDoc(19, "Acme.Tools", "1.0.0", nil, nil, nil, nil, nil, nil)}}},
+		{"schema/delta-invalid-type-name-non-ascii", "Add a part whose struct is named 'Gr\u00fc\u00dfe'. Type names are ASCII (6.1).",
+			"schema/delta-1-replace-part", "invalid_name", r.a, []any{[]any{0, partDoc(19, "acme.greetings", "1.0.0", list(structDef(64, "Gr\u00fc\u00dfe", list(field(0, "text", tString, 0, nil)), 0, nil)), nil, nil, nil, nil, nil)}}},
+		{"schema/delta-invalid-part1-mismatch", "Replace part 1 with sparrow.web version 1.0.1. Part 1 MUST match its definition exactly, by part hash (6.1).",
+			"schema/delta-1-replace-part", "part1_mismatch", r.a, []any{[]any{0, func() []any { p := webPart(); p[pVersion] = "1.0.1"; return p }()}}},
 		{"schema/delta-invalid-readd-renamed", "Part 17 was removed in epoch 2. Bringing ID 17 back with a different name ('acme.maps') is not allowed (section 6.1).",
 			"schema/delta-2-new-major", "removed_part_mismatch", r.b, []any{[]any{0, chartsPart(chartsOpts{id: partCharts, name: "acme.maps", version: "1.0.0", noExtras: true})}}},
 	}

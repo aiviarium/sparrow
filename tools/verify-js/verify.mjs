@@ -15,7 +15,7 @@ import {
 } from './lib/cbor.mjs';
 import {
   P, SchemaState, DeltaError, canonicalPart, canonicalIface, canonicalSchema, partHash, partHashInput, ifaceHash,
-  schemaHash, schemaHashInput, conforms, validatePart, validateIface, validateSchema,
+  schemaHash, schemaHashInput, conforms, validatePart, validateIface, validateSchema, validateSentSchema,
 } from './lib/schema.mjs';
 import {
   DOMAIN, ed25519Sign, ed25519Verify, fileHash, keyId, moduleInPart, privateKeyFromSeed, publicKeyRaw, sha256, signedBytes, verifyModule,
@@ -156,7 +156,7 @@ function checkOffer(v, offer) {
     }
     case 2:
       checkEq(hex(schemaHash(offer[2])), h, v, 'inline schema hash');
-      expectOk(() => validateSchema(offer[2]), v, 'inline schema invalid');
+      expectOk(() => validateSentSchema(offer[2]), v, 'inline schema invalid');
       break;
     case 3:
       checkEq(offer[2], `/sparrow/schema/${Buffer.from(unhex(h)).toString('base64url')}`, v, 'out-of-band location');
@@ -187,7 +187,7 @@ function checkMessage(v) {
     if (m[5] !== null) {
       checkEq(m[5][0], 2, v, 'client_schema tag');
       checkEq(hex(schemaHash(m[5][2])), m[5][1].$bytes, v, 'client_schema hash');
-      expectOk(() => validateSchema(m[5][2]), v, 'client schema invalid');
+      expectOk(() => validateSentSchema(m[5][2]), v, 'client schema invalid');
     }
     if (m[7] === true) checkEq(m[1].length, 1, v, 'optimistic Hello lists exactly one version');
   }
@@ -257,6 +257,19 @@ function checkFraming(v) {
       break;
     default: check(false, v, `unknown type ${v.type}`);
   }
+}
+
+function checkUnimplemented(v) {
+  for (const [k, m] of [['request', v.request], ['error', v.error]]) { roundTrip(v, m.message, m.cbor, k); checkMessageFields(v, m.message); }
+  const req = v.request.message;
+  const err = v.error.message;
+  const schema = canonicalSchema(byName.get(v.schema).input);
+  const part = schema[3].find((p) => p[P.id] === req[2]);
+  const has = part && part[P.services].some((s) => s[2].some((m) => m[0] === req[3]));
+  check(!has, v, 'request names a part or method the callee does not have');
+  checkEq(err[0], 20, v, 'answer is Error');
+  checkEq(err[1], req[1], v, 'same call ID');
+  checkEq(err[2], 12, v, 'status unimplemented');
 }
 
 // ---------------------------------------------------------------------------
@@ -331,7 +344,7 @@ function checkSchema(v) {
       break;
     }
     case 'schema': {
-      expectOk(() => validateSchema(v.input), v, 'JS schema validation');
+      expectOk(() => validateSentSchema(v.input), v, 'JS schema validation (as sent)');
       check(eqTJ(canonicalSchema(v.input), v.canonical), v, 'canonical schema');
       checkEq(hex(encTJ(canonicalSchema(v.input))), v.canonical_cbor, v, 'canonical schema bytes (JS canonicalised from unsorted input)');
       checkEq(unhex(v.canonical_cbor).length, v.canonical_length, v, 'canonical length');
@@ -343,6 +356,11 @@ function checkSchema(v) {
       roundTrip(v, v.canonical, v.canonical_cbor, 'canonical');
       break;
     }
+    case 'schema_sent':
+      expectOk(() => validateSchema(v.input), v, 'contents valid');
+      expectError(() => validateSentSchema(v.input), v.expected_error, v, 'sent schema');
+      checkEq(hex(schemaHash(v.input)), byName.get('schema/server-base').hash, v, 'canonicalised hash equals server-base');
+      break;
     case 'part_hash_invariance': {
       const [pa] = v.schema_a[3];
       const [pb] = v.schema_b[3];
@@ -488,6 +506,22 @@ function checkStatus(v) {
       check(e.status >= 23 && e.status <= 31, v, 'reserved range');
       checkEq(e.websocket_close_code, ws(e.status), v, `ws close for ${e.status}`);
     }
+  } else if (v.type === 'reason_truncation') {
+    const trunc = (str, n) => {
+      const b = Buffer.from(str, 'utf8');
+      if (b.length <= n) return str;
+      let k = n;
+      while (k > 0 && (b[k] & 0xc0) === 0x80) k--;
+      return b.subarray(0, k).toString('utf8');
+    };
+    checkEq(v.cases.map((c) => c.max_bytes).join(','), '123,1024', v, 'WebSocket and WebTransport limits');
+    for (const t of v.cases) {
+      checkEq(Buffer.byteLength(t.reason_utf8), t.reason_length, v, 'reason length');
+      const got = trunc(t.reason_utf8, t.max_bytes);
+      checkEq(got, t.truncated_utf8, v, `truncated to ${t.max_bytes}`);
+      checkEq(Buffer.byteLength(got), t.truncated_length, v, 'truncated length');
+      check(Buffer.byteLength(got) <= t.max_bytes && !got.includes('\ufffd') && t.reason_utf8.startsWith(got), v, 'fits and ends on a character boundary');
+    }
   } else if (v.type === 'status_scope') {
     check(v.status > 31, v, 'non-core status');
     check(eqTJ(v.allowed_in, ['Error']), v, 'only Error carries non-core statuses');
@@ -540,6 +574,9 @@ function checkHub(v) {
       // Metadata rules.
       checkEq(mdGet(fr[4], 32), mdGet(cr[4], 32) - v.elapsed_ms, v, 'deadline lowered by elapsed time');
       checkEq(mdGet(fr[4], 37), v.session_principal, v, 'principal set by the hub');
+      const cc = mdGet(cr[4], 35) ?? v.caller_default_credit;
+      checkEq(v.caller_default_credit, v.caller_stream === 'leased' ? 1048576 : 65536, v, 'default credit of the caller stream');
+      check(mdGet(fr[4], 35) === undefined || mdGet(fr[4], 35) <= cc, v, 'forwarded credit no higher than the caller\'s');
       check(mdGet(cr[4], 37) !== v.session_principal, v, 'caller-sent principal replaced');
       const ctx = mdGet(fr[4], 36);
       check(ctx && ctx.$bytes.length >= 32 && ctx.$bytes !== mdGet(cr[4], 36)?.$bytes, v, 'context: >= 128 bits, issued by the hub');
@@ -555,6 +592,23 @@ function checkHub(v) {
       const nodePart = byName.get('schema/node-acme-charts').input[3].find((p) => p[P.id] === v.part_map.node_part_id);
       checkEq(hex(partHash(hubPart)), v.part_map.part_hash, v, 'hub part hash');
       checkEq(hex(partHash(nodePart)), v.part_map.part_hash, v, 'node part hash (same part)');
+      break;
+    }
+    case 'forward_notification': {
+      msgOk(v.client_request, 'client notification');
+      msgOk(v.forwarded_request, 'forwarded notification');
+      const cr = v.client_request.message;
+      const fr = v.forwarded_request.message;
+      check(cr[1] === 0 && fr[1] === 0, v, 'call ID 0 on both hops');
+      checkEq(cr[2], v.part_map.hub_part_id, v, 'hub part id');
+      checkEq(fr[2], v.part_map.node_part_id, v, 'node part id');
+      checkEq(mdGet(fr[4], 36), undefined, v, 'no context on a forwarded notification');
+      checkEq(mdGet(fr[4], 37), v.session_principal, v, 'principal replaced');
+      checkEq(hex(encTJ(cr[5])), v.payload_cbor, v, 'payload');
+      check(msgTail(v.client_request.cbor, v.payload_cbor) && msgTail(v.forwarded_request.cbor, v.payload_cbor), v, 'payload identical');
+      const part = byName.get('schema/server-base').input[3].find((p) => p[P.id] === cr[2]);
+      const m = part[P.services].flatMap((s) => s[2]).find((x) => x[0] === cr[3]);
+      check(m && (m[5] & 0x2), v, 'method is a notification');
       break;
     }
     case 'relay': {
@@ -616,7 +670,7 @@ const dispatch = {
   'encoding.json': checkEncoding,
   'framing.json': checkFraming,
   'handshake.json': checkMessage,
-  'calls.json': checkMessage,
+  'calls.json': (v) => (v.type === 'unimplemented' ? checkUnimplemented(v) : checkMessage(v)),
   'credit.json': checkCredit,
   'schema.json': checkSchema,
   'signing.json': checkSigning,

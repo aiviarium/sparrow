@@ -66,7 +66,7 @@ func hubVectors() O {
 	// Forwarding a unary call: client -> hub -> node and back.
 	payload := chartValue()
 	clientReq := []any{16, 4, partCharts, 0, map[any]any{32: 5000, 36: unhex("deadbeef"), 37: "user:mallory", "x-tenant": "acme"}, payload}
-	fwdReq := []any{16, 1, 16, 0, map[any]any{32: 4950, 36: hubContext, 37: "user:alice", "x-tenant": "acme"}, payload}
+	fwdReq := []any{16, 1, 16, 0, map[any]any{32: 4950, 35: 65536, 36: hubContext, 37: "user:alice", "x-tenant": "acme"}, payload}
 	svg := []byte("<svg xmlns=\"http://www.w3.org/2000/svg\"/>")
 	nodeRsp := []any{17, 1, svg}
 	clientRsp := []any{17, 4, svg}
@@ -79,19 +79,34 @@ func hubVectors() O {
 	msg := func(m []any) O { b := enc(m); return o("message", tj(m), "diag", diag(b), "cbor", hx(b)) }
 	add(o(
 		"name", "forward/unary",
-		"description", "A client of session principal user:alice calls draw (method 0) of part 17, which belongs to node acme.charts. The hub authorizes it, then opens a call on the node's pipe link with a new call ID (1: the hub is the Sparrow server there, so odd), the node's own part ID (16), the same method ID and input bytes, deadline lowered by the 50 ms already spent, and context/principal set by the hub, replacing the values the caller sent. The node's Response is relayed with only the call ID changed.",
+		"description", "A client of session principal user:alice calls draw (method 0) of part 17, which belongs to node acme.charts. The hub authorizes it, then opens a call on the node's pipe link with a new call ID (1: the hub is the Sparrow server there, so odd), the node's own part ID (16), the same method ID and input bytes, deadline lowered by the 50 ms already spent, credit set to 64 KiB (no higher than the default for the caller's leased stream, 1 MiB, since the caller sent no credit), and context/principal set by the hub, replacing the values the caller sent. Every element except the call ID, the part ID and the Request's metadata is copied byte for byte. The node's Response is relayed with only the call ID changed.",
 		"spec", "10.4, 10.5, 10.6",
 		"type", "forward",
 		"session_principal", "user:alice",
 		"node_id", hubNodeID,
 		"part_map", o("hub_part_id", partCharts, "node_part_id", 16, "part_hash", hx(partHash(chartsV1()))),
 		"elapsed_ms", 50,
+		"caller_stream", "leased",
+		"caller_default_credit", 1048576,
 		"client_request", msg(clientReq),
 		"forwarded_request", msg(fwdReq),
 		"payload_cbor", hx(pb),
 		"node_response", msg(nodeRsp),
 		"relayed_response", msg(clientRsp),
 		"response_payload_cbor", hx(ob),
+	))
+	notifClient := []any{16, 0, partCharts, 3, map[any]any{36: unhex("deadbeef"), 37: "user:mallory"}, "dark"}
+	notifNode := []any{16, 0, 16, 3, map[any]any{37: "user:alice"}, "dark"}
+	add(o(
+		"name", "forward/notification",
+		"description", "A notification (setTheme, method 3, flag 0x2) is relayed with call ID 0 on both hops and no context (10.5); the caller's context and principal are dropped. The vector sets principal to the session principal, as step 2 of 10.5 still applies. The node handles it as itself.",
+		"spec", "10.5, 10.6",
+		"type", "forward_notification",
+		"session_principal", "user:alice",
+		"part_map", o("hub_part_id", partCharts, "node_part_id", 16),
+		"client_request", msg(notifClient),
+		"forwarded_request", msg(notifNode),
+		"payload_cbor", hx(enc("dark")),
 	))
 	errNode := []any{20, 1, 66, "unsupported chart kind", nil}
 	errClient := []any{20, 4, 66, "unsupported chart kind", nil}
@@ -141,10 +156,10 @@ func hubVectors() O {
 		"spec", "10.8", "type", "imported_name", "peer_id", "hub-b", "part_name", "acme.notes", "imported_name", "hub-b/acme.notes"))
 	var ps []any
 	for _, p := range []string{"user:alice", "group:admins", "node:acme.charts", "user:alice@example.com", "user:a_b-c.d", "peer:hub-b/user:alice",
-		"peer:hub-b/peer:hub-c/user:x", "admin:root", "user:", "user:a b", "peer:hub-b/", "peer:Hub/user:a", "peer:user:alice"} {
+		"peer:hub-b/peer:hub-c/user:x", "admin:root", "user:", "user:a b", "peer:hub-b/", "peer:Hub/user:a", "peer:user:alice", "user:j\u00fcrgen"} {
 		ps = append(ps, o("principal", p, "valid", validPrincipal(p)))
 	}
-	add(o("name", "hub/principals", "description", "Principal strings: kind:id with kind user, group or node and id of letters, digits and . _ - @; a peer principal is peer:<hub-id>/ followed by a non-peer principal (section 10.4).",
+	add(o("name", "hub/principals", "description", "Principal strings: kind:id with kind user, group or node and id of ASCII letters, digits and . _ - @; a peer principal is peer:<hub-id>/ followed by a non-peer principal, where <hub-id> follows the node-ID grammar (section 10.4).",
 		"spec", "10.4", "type", "principal_table", "entries", ps))
 	acting := []any{
 		o("from", "client_session", "session_principal", "user:alice", "acting", []any{"user:alice"}),

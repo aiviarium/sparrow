@@ -4,11 +4,14 @@
 import { createHash, createPrivateKey, createPublicKey, sign, verify } from 'node:crypto';
 import { concat, encTJ, hex, unhex, u8eq } from './cbor.mjs';
 
-/** 9.4: module id must start with the part name (minus any '<hub-id>/') and a dot. */
+const MODULE_ID = /^[a-z0-9-]+(\.[a-z0-9-]+)*$/;
+
+/** 9.4: module id follows the part-name grammar and equals the part name
+ * (minus any '<peer-id>/') or starts with it and a dot. */
 export function moduleInPart(partName, moduleId) {
   const i = partName.indexOf('/');
   const name = i >= 0 ? partName.slice(i + 1) : partName;
-  return moduleId.startsWith(`${name}.`);
+  return MODULE_ID.test(moduleId) && (moduleId === name || moduleId.startsWith(`${name}.`));
 }
 
 const PKCS8_ED25519_PREFIX = unhex('302e020100300506032b657004220420');
