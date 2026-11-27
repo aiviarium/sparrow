@@ -3,8 +3,9 @@
 Sparrow RPC is a binary, bidirectional, streaming RPC protocol. At session start the server sends a
 schema describing its services and types; after that, messages refer to methods, types and enum
 values by compact numeric IDs, so a client can call services it was never compiled against.
-Messages are CBOR, the primary transport is WebTransport (WebSocket as fallback), the reference
-server is Go and the primary client is a browser.
+Messages are CBOR, the primary transport is WebTransport (WebSocket as fallback, and a pipe binding
+for peers on one machine, such as a process and the extensions it starts), the reference server is
+Go and the primary client is a browser.
 
 **Status: draft.** The spec is a working draft and will change; so will the vectors.
 
@@ -13,21 +14,27 @@ Dual-licensed under MIT (`LICENSE-MIT`) or Apache-2.0 (`LICENSE-APACHE`), at you
 ## Repository layout
 
 ```
-spec/core.md               Core protocol specification with the Web and Hub profiles (snapshot of draft revision 377)
-spec/hub-admin.md          Sparrow Hub Administration: the sparrow.hub.admin v1 interface (companion, revision 38)
+spec/core.md               Core protocol specification with the Web and Hub profiles (snapshot of draft revision 394)
+spec/hub-admin.md          Sparrow Hub Administration: the sparrow.hub.admin v1 interface (companion, revision 41)
 spec/reference-server.md   Design note for the Go reference server (not part of the spec)
 SPEC-ISSUES.md             Resolution log of spec questions raised while writing the test vectors
 test-vectors/              Test vectors, one JSON file per area, and their format (README.md)
 test-vectors/scenarios/    Behaviour scenarios: scripted message sequences with expected outcomes
 tools/vectorgen-go/        Go program that generates the vectors (canonical reference)
 tools/verify-js/           Independent Node.js verifier (cbor2 + node:crypto)
-go/                        Go reference implementation (see go/README.md)
-ts/                        TypeScript implementation, @aiviarium/sparrow-rpc (see ts/README.md)
+go/                        Go reference implementation, module github.com/aiviarium/sparrow/go (see go/README.md)
+ts/                        TypeScript implementation, npm package @aiviarium/sparrow-rpc (see ts/README.md)
 e2e/browser/               Browser end-to-end test: a minimal page in headless Chromium (Playwright)
-.github/workflows/ci.yml    CI: Go vet/gofmt/race tests, vectors (regenerate, drift, verify-js), fuzzing, browser test
+.github/workflows/ci.yml   CI: Go vet/gofmt/race tests, vectors (regenerate, drift, verify-js), fuzzing, browser test, TS
 ```
 
-The core specification defines the protocol. [`spec/hub-admin.md`](spec/hub-admin.md) is the companion
+The core specification defines the protocol. Its bindings are WebTransport (4.5), WebSocket (4.6) and
+the optional pipe binding (4.7): one ordered byte stream between peers on one machine, such as a
+child process's standard input and output, where the started process is the client. Both
+implementations have it (`go/transport/pipe`, `ts/src/transport/pipe.ts`); the hub does not use it,
+since a hub never starts processes. The TypeScript package exists for tools that run extensions as
+child processes and speak Sparrow to them, with JavaScript extensions on a TypeScript runtime; it
+has the pipe, WebSocket and in-memory bindings, and is tested against the vectors and against Go. [`spec/hub-admin.md`](spec/hub-admin.md) is the companion
 document that section 10.9 of the core refers to: the standard interface through which a controller
 configures any hub. [`spec/reference-server.md`](spec/reference-server.md) describes how the Go
 reference server is built and configured; another hub may make every choice there differently and
@@ -73,9 +80,11 @@ on any disagreement.
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs on every push and pull request, in four jobs: **go** (`go vet`,
+`.github/workflows/ci.yml` runs on every push and pull request, in five jobs: **go** (`go vet`,
 `gofmt -l`, `go test -race ./...` in `go/`), **vectors** (regenerate with `tools/vectorgen-go`,
 `git diff --exit-code test-vectors`, then `tools/verify-js`), **fuzz** (every Go fuzz target for
-15 s, one job per package; failing inputs are kept as an artifact) and **browser** (`TestBrowser`
+15 s, one job per package; failing inputs are kept as an artifact), **browser** (`TestBrowser`
 in headless Chromium, installed with Playwright in that job; `SPARROW_CHROMIUM` picks another
-binary). See `go/README.md` for running the fuzzers and the network-fault tests locally.
+binary) and **ts** (Node 20 and 22: `npm ci`, type check, `npm test` with the Go interop and
+differential tests; on Node 22 also a longer fuzz and differential run). See `go/README.md` for
+running the fuzzers and the network-fault tests locally, and `ts/README.md` for the TypeScript tests.

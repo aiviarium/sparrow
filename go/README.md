@@ -1,6 +1,6 @@
 # Sparrow RPC: Go reference implementation
 
-Module `github.com/aiviarium/sparrow/go`, Go 1.24, following core spec revision 381
+Module `github.com/aiviarium/sparrow/go`, Go 1.24, following core spec revision 394
 (`../spec/core.md`) and hub-admin revision 41 (`../spec/hub-admin.md`). Phase 1 is the encoding,
 wire format, schema model and web-profile signing (below); phase 2 the sessions, transports and the
 node library (`session/README.md`); phase 3 the hub, `sparrow.hub.admin` and the `sparrow-hub`
@@ -56,14 +56,14 @@ go test -race ./...                 # unit tests and all test vectors
 go test ./conformance -v            # prints "vector coverage: N/N vectors checked and passing"
 ```
 
-The suite runs in a few seconds (`go test ./...` about 4 s, `-race` about 12 s on 4 cores): tests run
+The suite runs in a few seconds (`go test ./...` about 5 s, `-race` about 15 s on 4 cores): tests run
 in parallel, the protocol timers are set to milliseconds where a test only waits for something to
 happen, and a test that checks a timeout runs it on a fake clock (`internal/testutil.FakeClock`) and
 advances it, so no test sleeps for a protocol timer. `testutil.Eventually`, `Never` and `WaitFor`
 poll with a short tick; the echo-node binary is built once per package (`TestMain`). Loaded:
 
 ```sh
-go test -race -count=5 -p 4 ./hub ./cmd/... ./session ./web   # about 30 s
+go test -race -count=5 -p 4 ./hub ./cmd/... ./session ./web ./netsimtest ./transport/...   # about 35 s
 ```
 
 The conformance suite fails if any vector is left unchecked. Set `SPARROW_VECTORS` to test against
@@ -110,14 +110,17 @@ one or both directions, NAT rebinding) and a TCP proxy (writes cut into tiny pie
 resets after n bytes). `netsimtest` puts them between an in-process hub, a client and a node on real
 WebTransport and WebSocket listeners: every kind of call over lossy QUIC links, dead links of a
 dial-in node and of a dialed node (offline rules of 10.7, reconnection), NAT rebinding, choppy TCP,
-resets mid-message and mid-handshake, stalls; after each fault no session counts a call and no
-goroutine is left. quic-go's timers come from `webtransport.ServerOptions.QUICConfig`,
+resets mid-message and mid-handshake, stalls. The pipe binding gets the same faults: the hub serves
+pipe links on a TCP listener (as it would a unix socket), and node "work" also runs as a child
+process on its standard input and output that is killed in the middle of a call and of a download
+(`netsimtest/pipe_test.go`). After each fault no session counts a call and no goroutine is left.
+quic-go's timers come from `webtransport.ServerOptions.QUICConfig`,
 `node.DialOptions.QUICConfig` and `hub.Options.DialQUICConfig`, so a dead link is noticed within a
 second. Faults are seeded from the test name; the seed is logged, and `NETSIM_SEED` repeats a run
 (`NETSIM_LOG=1` prints the hub's log):
 
 ```sh
-go test ./netsimtest -v                    # about 3 s
+go test ./netsimtest -v                    # about 4 s
 NETSIM_SEED=123 go test ./netsimtest -run TestLossyWebTransport -v
 ```
 
@@ -139,6 +142,15 @@ NETSIM_SEED=123 go test ./netsimtest -run TestLossyWebTransport -v
   sent as `dynamic`); `value` rejects it when encoding or decoding.
 - A message that counts zero bytes of credit (an empty `Bytes` chunk, `End`) is never held back
   (`CreditWindow.CanSendCounted`) and never a credit violation.
+- `node.FacetBuilder.Enum` names value sigils `<Enum>.<value>`; validation refuses two sigils of one
+  name in a facet or interface (`duplicate_sigil_name`, core 6.5).
+- Timestamps (`cbor.Time`) are written as integer seconds whenever there is no fraction, also for
+  a float `Time` such as 2.0; `cbor.FromTime` converts a `time.Time`, `Time.Time` and
+  `Time.UnixMilli` convert back (`UnixMilli` rounds to the nearest millisecond, halves up, as the
+  TypeScript implementation does). The value codec refuses NaN and infinite timestamps.
+- `transport/pipe`: `Spawn` reaps the child it starts (killed `Options.KillAfter` after the
+  connection ended if it has not exited; `Conn.Wait` returns its exit status); `Close` finishes this
+  side's direction after the message being written and waits up to `Options.Linger` for the peer.
 
 ## Hub (phase 3)
 
