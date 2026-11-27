@@ -176,8 +176,8 @@ func TestConfigRoundTrip(t *testing.T) {
 func ptr[T any](v T) *T { return &v }
 
 func TestValidate(t *testing.T) {
-	secrets := map[string]bool{"s1": true, "s2": true, "dial": true, "same-as-s1": true}
-	values := map[string]string{"s1": "v1", "s2": "v2", "dial": "v3", "same-as-s1": "v1"}
+	secrets := map[string]bool{"s1": true, "s2": true, "dial": true, "same-as-s1": true, "also-v1": true}
+	values := map[string]string{"s1": "v1", "s2": "v2", "dial": "v3", "same-as-s1": "v1", "also-v1": "v1"}
 	env := ValidateEnv{
 		SecretExists: func(n string) bool { return secrets[n] },
 		SecretValue: func(n string) ([]byte, bool) {
@@ -227,6 +227,14 @@ func TestValidate(t *testing.T) {
 			"b": {Link: DialIn("same-as-s1")},
 			"c": {Link: Dialed(Dial{URL: "https://h", Pin: pin, Credential: "s2"})},
 		}}, [][]string{{"nodes", "b", "link", "credential"}}},
+		// A clash is reported at each node after the first in node-ID
+		// order, whatever the secret names (hub-admin 3).
+		{"a clash reported after the first node", &Config{Nodes: map[string]*NodeConfig{
+			"a": {Link: DialIn("same-as-s1")},
+			"b": {Link: DialIn("s1")},
+			"c": {Link: Dialed(Dial{URL: "https://h", Pin: pin, Credential: "also-v1"})},
+			"d": {Link: DialIn("s2")},
+		}}, [][]string{{"nodes", "b", "link", "credential"}, {"nodes", "c", "link", "dial", "credential"}}},
 		{"a dialed credential with a dial-in credential's value", &Config{Nodes: map[string]*NodeConfig{
 			"a": {Link: DialIn("s1")},
 			"b": {Link: Dialed(Dial{URL: "https://h", Pin: pin, Credential: "same-as-s1"})},
