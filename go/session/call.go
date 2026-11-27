@@ -120,7 +120,18 @@ func (c *call) deliver(m *Msg) {
 	)
 	c.mu.Lock()
 	if c.ended {
+		forgot := c.forgetEarly
 		c.mu.Unlock()
+		if forgot && (m.Kind == wire.KindEnd || m.Kind == wire.KindCancel) {
+			// The caller's half of a call this callee forgot ends: its
+			// stream is idle (7.1). The reader found the call just before
+			// it was forgotten.
+			c.s.mu.Lock()
+			if l := c.ln; l != nil && l.awaitCallerEnd == c.id {
+				l.awaitCallerEnd = 0
+			}
+			c.s.mu.Unlock()
+		}
 		return
 	}
 	k := m.Kind

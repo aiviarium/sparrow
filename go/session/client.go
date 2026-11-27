@@ -44,6 +44,10 @@ type CallOptions struct {
 	// Flags gives the method flags for a raw call to a method the peer's
 	// schema does not list (normally they come from the schema).
 	Flags *uint64
+	// NoWait fails the call with resource_exhausted (not dispatched) when
+	// the peer's maxConcurrentCalls is reached, instead of waiting for a
+	// slot (a hub does not queue calls for a node, 10.2).
+	NoWait bool
 }
 
 // RawRequest is an outgoing Request with its input already encoded.
@@ -219,6 +223,10 @@ func (s *Session) open(ctx context.Context, r RawRequest, o *CallOptions, def *s
 			s.mu.Unlock()
 			break
 		}
+		if o.NoWait {
+			s.mu.Unlock()
+			return nil, &Error{Code: status.ResourceExhausted, Message: "the peer's maxConcurrentCalls is reached", NotDispatched: true}
+		}
 		if s.outSig == nil {
 			s.outSig = make(chan struct{})
 		}
@@ -301,6 +309,13 @@ func (s *Session) open(ctx context.Context, r RawRequest, o *CallOptions, def *s
 	c.sendMu.Unlock()
 	if err != nil {
 		e := asError(err)
+		if e.Code == status.Unavailable {
+			if g, nd := s.peerGoAway(); g != nil {
+				// The peer had closed the session: report why (for example
+				// a rejected optimistic start, 5.3), not the failed write.
+				e = &Error{Code: status.Code(g.Status), Message: g.Reason, Remote: true, NotDispatched: nd}
+			}
+		}
 		if c.id == 0 {
 			// Never sent.
 			e = &Error{Code: e.Code, Message: e.Message, NotDispatched: true}

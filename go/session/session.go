@@ -87,6 +87,8 @@ type Session struct {
 	outSig   chan struct{}
 	inOpen   int
 	inLeased int
+
+	sharedReading atomic.Bool // the shared-lane reader is running
 	pool     pool
 
 	local         *schema.State
@@ -1318,8 +1320,31 @@ func (s *Session) transportGone() {
 }
 
 // lost handles a failed write on the shared lane.
+// peerGoAway waits, up to Linger, for a session whose write just failed to
+// end, and returns the GoAway the peer sent before closing, if any, and
+// whether it means this side's calls were not dispatched (5.3).
+func (s *Session) peerGoAway() (*wire.GoAway, bool) {
+	t := time.NewTimer(dur(s.cfg.Linger, DefaultLinger))
+	defer t.Stop()
+	select {
+	case <-s.done:
+	case <-t.C:
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.goAwayRecv, s.role == wire.Client && (s.optReject || !s.welcomeDone)
+}
+
 func (s *Session) lost(err error) {
-	s.terminate(status.Unavailable, "shared lane write failed: "+err.Error(), false)
+	why := "shared lane write failed: " + err.Error()
+	if s.sharedReading.Load() {
+		// The peer may have closed after a GoAway this side has not read
+		// yet: the shared-lane reader delivers it and then ends the
+		// session; this is a fallback.
+		s.clock.AfterFunc(dur(s.cfg.Linger, DefaultLinger), func() { s.terminate(status.Unavailable, why, false) })
+		return
+	}
+	s.terminate(status.Unavailable, why, false)
 }
 
 // terminate closes the session: every open call fails, the transport is

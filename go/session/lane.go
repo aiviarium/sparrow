@@ -80,6 +80,10 @@ func (l *lane) write(b []byte) error {
 // always read).
 func (l *lane) readLoop() {
 	s := l.s
+	if l.shared {
+		s.sharedReading.Store(true)
+		defer s.sharedReading.Store(false)
+	}
 	for {
 		b, err := l.st.ReadMessage()
 		if err != nil {
