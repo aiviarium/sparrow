@@ -262,6 +262,15 @@ func (h *Hub) attach(n *node, l *link) {
 		h.refreshAll(h.relayTimeout(n)) // the same limits as for an update (10.3)
 	}
 	h.mu.Lock()
+	if ending(l.sess) || h.nodes[n.id] != n {
+		// The session ended, or the node went, while its facets were
+		// relayed: never route calls to it (they would fail, and calls
+		// waiting for the node would wake for nothing).
+		h.mu.Unlock()
+		n.switching.Unlock()
+		l.sess.Close(status.GoingAway, "node session ended before it was routed")
+		return
+	}
 	old := n.link
 	n.link = l
 	l.mu.Lock()
@@ -301,6 +310,16 @@ func (h *Hub) detach(n *node, l *link) {
 		// The message is the last connection failure, if any (hub-admin 4).
 		n.setState(admin.Offline, sessionReason(l.sess))
 	}
+}
+
+// ending reports whether a session has ended or is draining.
+func ending(s *session.Session) bool {
+	select {
+	case <-s.Done():
+		return true
+	default:
+	}
+	return s.Stats().Draining
 }
 
 func sessionReason(s *session.Session) string {
@@ -366,21 +385,24 @@ func (h *Hub) waitLink(ctx context.Context, n *node, timeout time.Duration) (*li
 	n.kickDial()
 	t := time.NewTimer(timeout)
 	defer t.Stop()
-	select {
-	case <-ready:
-	case <-t.C:
-	case <-gone:
-		return nil, &session.Error{Code: status.Unimplemented, Message: fmt.Sprintf("node %s was removed or disabled", n.id)}
-	case <-ctx.Done():
-		return nil, context.Cause(ctx)
+	for {
+		select {
+		case <-ready:
+		case <-t.C:
+			return nil, &session.Error{Code: status.Unavailable, Message: fmt.Sprintf("node %s is not connected", n.id)}
+		case <-gone:
+			return nil, &session.Error{Code: status.Unimplemented, Message: fmt.Sprintf("node %s was removed or disabled", n.id)}
+		case <-ctx.Done():
+			return nil, context.Cause(ctx)
+		}
+		h.mu.Lock()
+		l, ready, gone = n.link, n.ready, n.gone
+		h.mu.Unlock()
+		if l != nil {
+			return l, nil
+		}
+		// The session that became ready has ended again: keep waiting.
 	}
-	h.mu.Lock()
-	l = n.link
-	h.mu.Unlock()
-	if l == nil {
-		return nil, &session.Error{Code: status.Unavailable, Message: fmt.Sprintf("node %s is not connected", n.id)}
-	}
-	return l, nil
 }
 
 // ---------------------------------------------------------------------------

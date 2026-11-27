@@ -161,7 +161,8 @@ func TestCalleeDeadline(t *testing.T) {
 }
 
 // TestCancelGiveUpLeased: a callee that never answers Cancel; after 5 s the
-// caller resets the leased stream, which fails the call and leaves the pool.
+// caller resets the leased stream, which fails the call and leaves the pool;
+// the call counts until the stream does not (7.5).
 func TestCancelGiveUpLeased(t *testing.T) {
 	clk := testutil.NewFakeClock()
 	h := newTestHandlers()
@@ -189,7 +190,9 @@ func TestCancelGiveUpLeased(t *testing.T) {
 	testutil.Eventually(t, 5*time.Second, cc.Done, "call not failed after give-up")
 	_, err = cc.RecvRaw(ctx)
 	mustCode(t, err, status.Cancelled)
-	if st := cli.Stats(); st.OutgoingCalls != 0 || st.PoolIdle != 0 {
+	// The call counts as long as its reset stream does (7.5), never
+	// longer; the stream never returns to the pool.
+	if st := cli.Stats(); st.OutgoingCalls > st.PoolOpen || st.PoolIdle != 0 {
 		t.Fatalf("stats after give-up: %+v", st)
 	}
 	// The server saw the reset and dropped the call and the stream.
@@ -197,7 +200,7 @@ func TestCancelGiveUpLeased(t *testing.T) {
 	// The reset stream stays counted until the server has ended its own
 	// direction too (4.2 rule 5), then is released without waiting for
 	// ResetWait.
-	testutil.Eventually(t, 5*time.Second, func() bool { return cli.Stats().PoolOpen == 0 }, "pool: %+v", cli.Stats())
+	testutil.Eventually(t, 5*time.Second, func() bool { st := cli.Stats(); return st.PoolOpen == 0 && st.OutgoingCalls == 0 }, "pool: %+v", cli.Stats())
 }
 
 // TestCancelGiveUpShared: on the shared lane the call keeps counting and

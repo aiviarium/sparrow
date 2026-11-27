@@ -162,6 +162,7 @@ func TestWaitingCallsForRemovedNode(t *testing.T) {
 		}
 		cli := f.client("websocket", aliceToken)
 		waitFacet(t, cli, "acme")
+		waitNode(t, f.h, "acme", true)
 		n.Close()
 		waitNode(t, f.h, "acme", false)
 		done := make(chan error, 1)
