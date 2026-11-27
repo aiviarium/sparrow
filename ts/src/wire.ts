@@ -902,7 +902,7 @@ class Fields {
     if (t !== TAG_EPOCH_TIME) throw new CborError('expected tag 1');
     const m = this.r.peekMajor();
     if (m === MAJOR_UINT || m === MAJOR_NEG) {
-      // Integer seconds are held as a number: beyond 2^53 - 1 they would change (SPEC-ISSUES Q6).
+      // Integer seconds are held as a number: beyond 2^53 - 1 they would change.
       const at = this.r.off;
       const v = this.r.int();
       if (typeof v === 'bigint') throw new CborError(`integer ${v} is too large`, at);

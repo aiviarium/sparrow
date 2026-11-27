@@ -280,3 +280,20 @@ func TestClientSchemaUpdate(t *testing.T) {
 		t.Fatal("PeerFacet")
 	}
 }
+
+// TestNoLateClientSchema: a client that sent no client schema cannot
+// publish one later (5.4): locally refused, and a SchemaUpdate from such a
+// client closes the session.
+func TestNoLateClientSchema(t *testing.T) {
+	t.Parallel()
+	cli, _ := pair(t, memBinding(), Config{}, Config{Schema: testSchema("s")})
+	if _, err := cli.UpdateSchema(testSchema("late"), SchemaUpdateOptions{}); err == nil {
+		t.Fatal("UpdateSchema succeeded without a client schema in Hello")
+	}
+	p, _, _ := rawClient(t, Config{Schema: testSchema("s")}, mem.Options{})
+	p.handshake(nil)
+	p.send(&wire.SchemaUpdate{Epoch: 1, Hash: append([]byte{1}, make([]byte, 32)...), Delta: []byte{0x80}})
+	if g := p.expectGoAway(); status.Code(g.Status) != status.SchemaMismatch {
+		t.Fatalf("got %+v", g)
+	}
+}

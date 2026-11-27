@@ -1,5 +1,4 @@
 {
-  "spec_revision": "core rev394 (draft); hub-admin rev41 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "calls",
   "vectors": [
@@ -1396,11 +1395,11 @@
           20,
           16,
           12,
-          "unknown method 99 in part 16",
+          "unknown method 99 in facet 16",
           null
         ],
-        "diag": "[20, 16, 12, \"unknown method 99 in part 16\", null]",
-        "cbor": "8514100c781c756e6b6e6f776e206d6574686f6420393920696e2070617274203136f6"
+        "diag": "[20, 16, 12, \"unknown method 99 in facet 16\", null]",
+        "cbor": "8514100c781d756e6b6e6f776e206d6574686f6420393920696e206661636574203136f6"
       }
     },
     {
@@ -1426,11 +1425,11 @@
           20,
           18,
           12,
-          "unknown part 40",
+          "unknown facet 40",
           null
         ],
-        "diag": "[20, 18, 12, \"unknown part 40\", null]",
-        "cbor": "8514120c6f756e6b6e6f776e2070617274203430f6"
+        "diag": "[20, 18, 12, \"unknown facet 40\", null]",
+        "cbor": "8514120c70756e6b6e6f776e206661636574203430f6"
       }
     }
   ]

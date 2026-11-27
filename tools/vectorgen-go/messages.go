@@ -331,9 +331,9 @@ func callVectors() O {
 		req, err   []any
 	}{
 		{"unimplemented/unknown-method", "A Request naming method 99, which facet 16 of the callee's schema does not have, is answered with Error(unimplemented) (7.1).",
-			[]any{16, 16, facetNotes, 99, map[string]any{}, nil}, []any{20, 16, 12, "unknown method 99 in part 16", nil}},
+			[]any{16, 16, facetNotes, 99, map[string]any{}, nil}, []any{20, 16, 12, "unknown method 99 in facet 16", nil}},
 		{"unimplemented/unknown-facet", "A Request naming facet 40, which the callee's schema does not have, is answered with Error(unimplemented) (7.1).",
-			[]any{16, 18, 40, 0, map[string]any{}, nil}, []any{20, 18, 12, "unknown part 40", nil}},
+			[]any{16, 18, 40, 0, map[string]any{}, nil}, []any{20, 18, 12, "unknown facet 40", nil}},
 	} {
 		vs = append(vs, o("name", u.name, "description", u.desc, "spec", "7.1, 8", "type", "unimplemented",
 			"schema", "schema/server-base", "request", msg(u.req), "error", msg(u.err)))

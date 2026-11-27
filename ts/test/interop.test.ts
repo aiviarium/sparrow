@@ -92,7 +92,7 @@ describe.skipIf(skip)('interop with Go over the pipe binding', () => {
         r = ts();
       } catch (e) {
         // TS holds IDs, counts and lengths as numbers: an integer beyond 2^53 - 1 where the
-        // message has a number is refused (SPEC-ISSUES Q6); Go takes any uint64.
+        // message has a number is refused; Go takes any uint64.
         r = /\d+ is too large/.test((e as Error).message) ? 'err (beyond 2^53)' : 'err';
       }
       want.push(r);

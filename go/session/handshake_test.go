@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/aiviarium/sparrow/go/internal/testutil"
 	"github.com/aiviarium/sparrow/go/schema"
 	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/transport"
 	"github.com/aiviarium/sparrow/go/transport/mem"
 	"github.com/aiviarium/sparrow/go/wire"
 )
@@ -427,4 +429,102 @@ func TestAuthRefresh(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("no AuthStatus")
 	}
+}
+
+// TestReadyMismatch: a Ready naming another hash closes the session with
+// GoAway(schema_mismatch) (5.2).
+func TestReadyMismatch(t *testing.T) {
+	t.Parallel()
+	p, _, ech := rawClient(t, Config{Schema: testSchema("s")}, mem.Options{})
+	p.send(hello(nil))
+	if _, ok := p.recv().(*wire.Welcome); !ok {
+		t.Fatal("no Welcome")
+	}
+	p.send(&wire.Ready{SchemaHash: append([]byte{1}, make([]byte, 32)...)})
+	if g := p.expectGoAway(); status.Code(g.Status) != status.SchemaMismatch {
+		t.Fatalf("got %+v", g)
+	}
+	if err := <-ech; Code(err) != status.SchemaMismatch {
+		t.Fatalf("NewServer: %v", err)
+	}
+}
+
+// welcomeGate holds the server's first shared-lane write (Welcome) back,
+// after it has gone out, until the session has taken a leased stream from
+// the connection: the client has Welcome and opens a stream while the
+// server's write has not returned yet.
+type welcomeGate struct {
+	transport.Conn
+	once    sync.Once
+	accepts atomic.Int32
+	release chan struct{}
+}
+
+func (g *welcomeGate) SharedLane(ctx context.Context) (transport.Stream, error) {
+	st, err := g.Conn.SharedLane(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &welcomeGateStream{Stream: st, g: g}, nil
+}
+
+func (g *welcomeGate) AcceptStream(ctx context.Context) (transport.Stream, error) {
+	if g.accepts.Add(1) == 2 {
+		// The session has handled the first leased stream.
+		close(g.release)
+	}
+	return g.Conn.AcceptStream(ctx)
+}
+
+type welcomeGateStream struct {
+	transport.Stream
+	g     *welcomeGate
+	first atomic.Bool
+}
+
+func (s *welcomeGateStream) WriteMessage(b []byte) error {
+	err := s.Stream.WriteMessage(b)
+	if s.first.CompareAndSwap(false, true) {
+		select {
+		case <-s.g.release:
+		case <-time.After(5 * time.Second):
+		}
+	}
+	return err
+}
+
+// TestLeasedStreamBeforeWelcomeWriteReturns: a client that has Welcome may
+// open a leased stream at once (5.3), even before the server's write of
+// Welcome has returned; the server must not take that stream for one
+// opened before Welcome and fail the session with protocol_error.
+func TestLeasedStreamBeforeWelcomeWriteReturns(t *testing.T) {
+	t.Parallel()
+	cc, sc := mem.Pipe(mem.Options{})
+	g := &welcomeGate{Conn: sc, release: make(chan struct{})}
+	h := newTestHandlers()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	type result struct {
+		s   *Session
+		err error
+	}
+	sch := make(chan result, 1)
+	go func() {
+		s, err := NewServer(ctx, g, Config{Schema: testSchema("server"), Handler: h.mux(tFacet)})
+		sch <- result{s, err}
+	}()
+	cli, err := NewClient(ctx, cc, Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cli.Close(status.OK, "test done")
+	out, err := cli.Unary(ctx, tFacet, mEcho, "hello", &CallOptions{Lane: LaneLeased})
+	if err != nil || out != "hello" {
+		t.Fatalf("leased call on a fresh session: %v %v", out, err)
+	}
+	r := <-sch
+	if r.err != nil {
+		t.Fatalf("server: %v", r.err)
+	}
+	r.s.Close(status.OK, "test done")
 }

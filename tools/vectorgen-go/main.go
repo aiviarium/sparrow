@@ -14,8 +14,6 @@ import (
 	"path/filepath"
 )
 
-const specRevision = "core rev394 (draft); hub-admin rev41 (draft)"
-
 func main() {
 	out := flag.String("out", "../../test-vectors", "output directory")
 	flag.Parse()
@@ -36,7 +34,7 @@ func main() {
 	}
 	must(os.MkdirAll(*out, 0o755))
 	for _, f := range files {
-		doc := append(o("spec_revision", specRevision, "generator", "tools/vectorgen-go"), f.build()...)
+		doc := append(o("generator", "tools/vectorgen-go"), f.build()...)
 		buf := writeJSON(filepath.Join(*out, f.name), doc)
 		var n struct {
 			Vectors []json.RawMessage `json:"vectors"`

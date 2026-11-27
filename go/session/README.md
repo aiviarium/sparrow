@@ -1,8 +1,8 @@
-# Sessions, transports and nodes (phase 2)
+# Sessions, transports and nodes
 
-This phase adds the session layer of the core spec (sections 4, 5, 7 and 8) on top of the phase-1
-packages, the three transport bindings, and a library for writing nodes. A hub (phase 3) builds on
-the raw API described below.
+The session layer of the core spec (sections 4, 5, 7 and 8) on top of the encoding, wire and schema
+packages, the transport bindings, and a library for writing nodes. The hub builds on the raw API
+described below.
 
 | Package | Purpose |
 | --- | --- |

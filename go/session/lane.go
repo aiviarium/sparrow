@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/aiviarium/sparrow/go/status"
 	"github.com/aiviarium/sparrow/go/transport"
 	"github.com/aiviarium/sparrow/go/wire"
-	"sync"
 )
 
 // lane is one stream of the session: the shared lane or a leased stream.

@@ -6,15 +6,15 @@ Scripted message sequences between a client and a server, with the outcomes the 
 
 What is checked where:
 
-- **Here (now):** the JS verifier (`tools/verify-js`) and the Go conformance test
+- **Messages and consistency:** the JS verifier (`tools/verify-js`) and the Go conformance test
   (`go/conformance/scenario_test.go`) check that every message encodes and decodes exactly as stated,
   and that the script is consistent: call-ID parity, stream headers, the credit arithmetic, schema
   epochs and hashes, and that every Request names a method of the scenario schema or is answered with
   `Error(unimplemented)` (or, for a notification, is dropped).
-- **Later:** the behaviour itself (who sends what, when, and what must not happen) is executed by the
-  session tests of the Go reference implementation (`go/session`), which drive a real session over each
-  binding with these scripts. Until those tests exist, the outcomes below are a specification, not a
-  passing test.
+- **Behaviour:** who sends what, when, and what must not happen is executed by the session tests of
+  the Go implementation (`go/session`, `TestScenarios`), which drive a real session over each binding
+  with these scripts, by the hub tests (`go/hub`, `TestScenariosThroughHub`) through a hub to a node,
+  and by the TypeScript tests (`ts/test/scenarios.test.ts`) on the shared lane.
 
 ## The scenario server
 
@@ -36,7 +36,6 @@ Every scenario uses the schema of vector `schema/scenario-host` in `schema.json`
 ```json
 {
   "format": 1,
-  "spec_revision": "core rev324 (draft); hub-admin rev25 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "server-stream-credit",
   "description": "...",

@@ -1,5 +1,4 @@
 {
-  "spec_revision": "core rev394 (draft); hub-admin rev41 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "credit",
   "vectors": [

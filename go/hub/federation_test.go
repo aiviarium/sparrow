@@ -2,6 +2,7 @@ package hub
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	nd "github.com/aiviarium/sparrow/go/node"
 	"github.com/aiviarium/sparrow/go/session"
 	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/wire"
 )
 
 func peerDialIn(cred string) *admin.NodeConfig {
@@ -164,4 +166,73 @@ func newProxyNodeOn(t *testing.T, f *fixture) *proxyNode {
 	waitNode(t, f.h, "proxy", true)
 	waitFacet(t, n, "hub-b/echo")
 	return p
+}
+
+// fakePeer is a peer hub that dials in and exports one facet.
+func fakePeer(t *testing.T, f *fixture, id, cred string, calls *atomic.Int32) *nd.Node {
+	b := nd.NewFacet("echo", "1.0.0")
+	b.Service("E").Method("echo", nd.String, nd.String, func(ctx context.Context, c *session.ServerCall) (any, error) {
+		calls.Add(1)
+		v, _ := c.Input()
+		return v, nil
+	})
+	n, err := dialInNode(t, f, "websocket", id, cred, b.MustBuild())
+	if err != nil {
+		t.Fatal(err)
+	}
+	waitNode(t, f.h, id, true)
+	return n
+}
+
+// TestPeerPrincipalRules (10.8): permission_denied for a named principal
+// that starts with peer:, for any call from a peer carrying a context, and
+// for forwarding a call acting for a peer: principal to another peer
+// (here: hub-c's carol calls node proxy, which calls hub-b/echo with its
+// context).
+func TestPeerPrincipalRules(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t, nil)
+	f.secret("b-1", "b-cred")
+	f.secret("c-1", "c-cred")
+	f.secret("proxy-1", "proxy-cred")
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"hub-b": peerDialIn("b-1"), "hub-c": peerDialIn("c-1"), "proxy": dialInConfig("proxy-1")},
+		Extensions: policy(grant("node:hub-c", "proxy", "use"), grant("peer:hub-c/user:carol", "proxy", "use"),
+			grant("peer:hub-c/user:carol", "hub-b/echo", "use"), grant("node:proxy", "hub-b/echo", "use"))})
+	var bCalls, cCalls atomic.Int32
+	fakePeer(t, f, "hub-b", "b-cred", &bCalls)
+	c := fakePeer(t, f, "hub-c", "c-cred", &cCalls)
+	newProxyNodeOn(t, f)
+	waitFacet(t, c, "proxy")
+	ctx := tctx(t)
+	call := func(method string, md wire.Metadata) (any, error) {
+		cl, err := c.Open(ctx, "proxy", method, "x", &session.CallOptions{Metadata: md})
+		if err != nil {
+			return nil, err
+		}
+		return cl.Response(ctx)
+	}
+	carol := wire.Metadata{}
+	carol.SetPrincipal("user:carol")
+	// Acting for carol, proxy calls hub-b/echo as itself: allowed.
+	if v, err := call("asSelf", carol); err != nil || v != "x" {
+		t.Fatalf("as itself: %v %v", v, err)
+	}
+	before := bCalls.Load()
+	// With carol's context the nested call acts for
+	// peer:hub-c/user:carol, which is never forwarded to another peer.
+	_, err := call("viaContext", carol)
+	mustCode(t, err, status.PermissionDenied)
+	if bCalls.Load() != before {
+		t.Fatal("the refused call reached hub-b")
+	}
+	// A named principal that already starts with peer:.
+	md := wire.Metadata{}
+	md.SetPrincipal("peer:hub-x/user:carol")
+	_, err = call("asSelf", md)
+	mustCode(t, err, status.PermissionDenied)
+	// A context from a peer.
+	md = wire.Metadata{}
+	md.SetContext(make([]byte, 16))
+	_, err = call("asSelf", md)
+	mustCode(t, err, status.PermissionDenied)
 }

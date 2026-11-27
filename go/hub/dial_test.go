@@ -199,3 +199,87 @@ func serveNodeAny(t *testing.T, n *nd.Node, creds ...string) *listeningNode {
 	ln.url = fmt.Sprintf("https://127.0.0.1:%d/node", pc.LocalAddr().(*net.UDPAddr).Port)
 	return ln
 }
+
+// TestWaitingCallDialsAtOnce: for a node the hub dials, a call that starts
+// waiting makes the hub dial at once (10.7), here while the dial loop is
+// in a backoff of an hour.
+func TestWaitingCallDialsAtOnce(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t, func(o *Options) {
+		o.RedialBackoff, o.RedialBackoffMax, o.WaitingRedial = time.Hour, time.Hour, time.Hour
+	})
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"echo": f.dialedEcho("echo")}, Extensions: policy(grant("user:alice", "echo", "use"))})
+	waitNode(t, f.h, "echo", true)
+	cli := f.client("websocket", aliceToken)
+	waitFacet(t, cli, "echo")
+	// The node goes away; the dial loop now waits an hour.
+	f.stopEcho("echo", false)
+	waitNode(t, f.h, "echo", false)
+	testutil.Eventually(t, 10*time.Second, func() bool {
+		f.h.mu.Lock()
+		defer f.h.mu.Unlock()
+		dl := f.h.nodes["echo"].dl
+		return dl != nil && !dl.attempting.Load()
+	}, "the dial loop does not wait")
+	attempts := dialAttempts(f.h, "echo")
+	f.restartEcho("echo", false)
+	if v, err := cli.Call(tctx(t), "echo", "echo", "at once"); err != nil || v != "at once" {
+		t.Fatalf("%v %v", v, err)
+	}
+	if got := dialAttempts(f.h, "echo"); got != attempts+1 {
+		t.Fatalf("%d attempts after the call, want %d", got, attempts+1)
+	}
+}
+
+// TestWaitingCallDuringAttempt: a call that starts waiting while an
+// attempt to dial the node is under way does not start another one
+// (10.7); it fails with unavailable at the connect timeout.
+func TestWaitingCallDuringAttempt(t *testing.T) {
+	t.Parallel()
+	clk := testutil.NewFakeClock()
+	f := newFixture(t, func(o *Options) {
+		o.Clock = clk
+		o.DialTimeout = time.Hour
+	})
+	nc := f.dialedEcho("echo")
+	grants := policy(grant("user:alice", "echo", "use"))
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"echo": nc}, Extensions: grants})
+	waitNode(t, f.h, "echo", true)
+	cli := f.client("websocket", aliceToken)
+	waitFacet(t, cli, "echo")
+	// The node moves to an address where nothing answers: the QUIC
+	// handshake of the next attempt hangs. Its facets stay listed (10.7).
+	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { pc.Close() })
+	hole := nc.Clone()
+	hole.Link.Dial.URL = "https://" + pc.LocalAddr().String() + "/sparrow/node"
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"echo": hole}, Extensions: grants})
+	testutil.Eventually(t, 10*time.Second, func() bool {
+		f.h.mu.Lock()
+		defer f.h.mu.Unlock()
+		dl := f.h.nodes["echo"].dl
+		return dl != nil && dl.attempting.Load() && dl.attempts.Load() == 1
+	}, "no attempt under way")
+	done := make(chan error, 1)
+	go func() {
+		_, err := cli.Call(tctx(t), "echo", "echo", "x")
+		done <- err
+	}()
+	waitWaiting(t, f.h, "echo", 1)
+	f.h.mu.Lock()
+	dl := f.h.nodes["echo"].dl
+	f.h.mu.Unlock()
+	if len(dl.kick) != 0 || dl.attempts.Load() != 1 {
+		t.Fatalf("the waiting call asked for another attempt (%d queued, %d made)", len(dl.kick), dl.attempts.Load())
+	}
+	clk.Advance(f.h.o.ConnectTimeout)
+	select {
+	case err := <-done:
+		mustCode(t, err, status.Unavailable)
+	case <-time.After(10 * time.Second):
+		t.Fatal("the call did not fail at the connect timeout")
+	}
+}

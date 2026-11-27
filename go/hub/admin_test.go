@@ -363,3 +363,56 @@ func TestRecheckSparesUnaryOwnCalls(t *testing.T) {
 	default:
 	}
 }
+
+func mustEncode(t *testing.T, f interface{ Encode() ([]byte, error) }) []byte {
+	b, err := f.Encode()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
+}
+
+// TestWatchReportsEveryNode (hub-admin 4): a new watch begins with the
+// Snapshot and one NodeEvent per configured node, and after every applied
+// revision the hub sends a NodeEvent for every configured node, changed or
+// not, naming that revision.
+func TestWatchReportsEveryNode(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t, nil)
+	f.secret("a-1", "a-cred")
+	f.secret("b-1", "b-cred")
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"a": dialInConfig("a-1"), "b": dialInConfig("b-1")}})
+	c, _ := f.adminClient("websocket")
+	w, err := c.Watch(tctx(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := nextEv(t, w)
+	if e.Snapshot == nil || e.Snapshot.Revision != 1 {
+		t.Fatalf("first event %+v", e)
+	}
+	seen := map[string]bool{}
+	for i := 0; i < 2; i++ {
+		e := nextEv(t, w)
+		if e.Node == nil || e.Node.Revision != 1 {
+			t.Fatalf("event %d after the snapshot: %+v", i, e)
+		}
+		seen[e.Node.Node] = true
+	}
+	if !seen["a"] || !seen["b"] {
+		t.Fatalf("node events after the snapshot: %v", seen)
+	}
+	// Revision 2 disables b and leaves a unchanged.
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"a": dialInConfig("a-1"), "b": {Link: admin.DialIn("b-1"), Enabled: boolp(false)}}})
+	got := map[string]bool{}
+	deadline := time.Now().Add(10 * time.Second)
+	for len(got) < 2 && time.Now().Before(deadline) {
+		e := nextEv(t, w)
+		if e.Node != nil && e.Node.Revision == 2 {
+			got[e.Node.Node] = true
+		}
+	}
+	if !got["a"] || !got["b"] {
+		t.Fatalf("node events for revision 2: %v", got)
+	}
+}

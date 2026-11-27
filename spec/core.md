@@ -2,7 +2,7 @@
 
 Nov 26, 2026 · Christoph Feuerer
 
-> Snapshot of the live draft, revision 394, exported for this repository. The live document is the source of truth; diagrams are not included here.
+> Snapshot of the draft specification. The live document is the source of truth; diagrams are not included here.
 
 ## 1. Overview
 

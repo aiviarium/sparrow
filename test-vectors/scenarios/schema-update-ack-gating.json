@@ -1,6 +1,5 @@
 {
   "format": 1,
-  "spec_revision": "core rev394 (draft); hub-admin rev41 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "schema-update-ack-gating",
   "description": "The server's schema changes while a subscription runs. After sending SchemaUpdate for epoch 1 it MUST NOT send any message that uses an ID added in epoch 1, here an Item carrying a dynamic value of the new type 65, until it has received SchemaAck(1). The client acks as soon as it has applied the delta and checked the hash, and may then call the new method (6.6 rule 1).",

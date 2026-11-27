@@ -1,6 +1,5 @@
 {
   "format": 1,
-  "spec_revision": "core rev394 (draft); hub-admin rev41 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "notification-unknown-dropped",
   "description": "Notifications naming a facet or a method the callee does not have are dropped: no Error is sent (there is no call to answer), and the session goes on (7.1).",

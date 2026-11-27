@@ -1,7 +1,9 @@
 package session
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/aiviarium/sparrow/go/schema"
 	"github.com/aiviarium/sparrow/go/wire"
@@ -75,5 +77,39 @@ func TestSchemaDepth(t *testing.T) {
 	f.Services[0].Methods[0].Input = r
 	if d := schemaDepth(testSchema("x", f)); d < 40 {
 		t.Fatalf("depth %d", d)
+	}
+}
+
+// TestCloseSendAfterCalleeFinished: an upload whose callee answers as soon
+// as the last chunk arrives has its caller half finished by the session
+// (End on the caller's behalf, 7.1); the documented CloseSend after the
+// writer then succeeds instead of reporting the call as ended.
+func TestCloseSendAfterCalleeFinished(t *testing.T) {
+	t.Parallel()
+	for _, b := range []binding{memBinding(), wsBinding()} {
+		t.Run(b.name, func(t *testing.T) {
+			cli, _ := stdPair(t, b, newTestHandlers(), nil)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			cc, err := cli.Call(ctx, tFacet, mUpload, nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := cc.Writer(ctx, 0).WriteAll([]byte("abc")); err != nil {
+				t.Fatal(err)
+			}
+			if out, err := cc.Response(ctx); err != nil || out != uint64(3) {
+				t.Fatalf("got %v %v", out, err)
+			}
+			// The session's End has gone out and the call has ended.
+			testutilEventually(t, func() bool {
+				cc.c.mu.Lock()
+				defer cc.c.mu.Unlock()
+				return cc.c.ended
+			})
+			if err := cc.CloseSend(nil); err != nil {
+				t.Fatalf("CloseSend after the callee finished: %v", err)
+			}
+		})
 	}
 }

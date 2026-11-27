@@ -124,3 +124,33 @@ func TestAuthRefresh(t *testing.T) {
 	testutil.Eventually(t, 5*time.Second, func() bool { return f.h.EndLoginSession("sid-1") >= 1 }, "no session for sid-1")
 	wantGoAway(s)
 }
+
+// TestAuthRefreshOnNodeLink: AuthRefresh is for client sessions; a hub
+// that receives one on a link from a node or a peer hub that dialed in
+// closes that session with GoAway(unauthenticated) (5.5).
+func TestAuthRefreshOnNodeLink(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t, nil)
+	f.secret("acme-1", "acme-cred")
+	f.secret("peer-1", "peer-cred")
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": dialInConfig("acme-1"), "other": peerDialIn("peer-1")}})
+	for _, c := range []struct{ id, cred string }{{"acme", "acme-cred"}, {"other", "peer-cred"}} {
+		n, err := dialInNode(t, f, "websocket", c.id, c.cred)
+		if err != nil {
+			t.Fatal(err)
+		}
+		waitNode(t, f.h, c.id, true)
+		s := n.Session()
+		if err := s.RefreshAuth(*linkAuth(c.cred)); err != nil {
+			t.Fatal(err)
+		}
+		select {
+		case <-s.Done():
+		case <-time.After(10 * time.Second):
+			t.Fatalf("%s: the session was not closed", c.id)
+		}
+		if g := s.GoAwayReceived(); g == nil || status.Code(g.Status) != status.Unauthenticated {
+			t.Fatalf("%s: GoAway %v (%v)", c.id, g, s.Err())
+		}
+	}
+}

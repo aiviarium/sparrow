@@ -1,10 +1,10 @@
 # Sparrow: Go reference implementation
 
-Module `github.com/aiviarium/sparrow/go`, Go 1.24, following core spec revision 394
-(`../spec/core.md`) and hub-admin revision 41 (`../spec/hub-admin.md`). Phase 1 is the encoding,
-wire format, schema model and web-profile signing (below); phase 2 the sessions, transports and the
-node library (`session/README.md`); phase 3 the hub, `sparrow.hub.admin` and the `sparrow-hub`
-program (section "Hub" below); phase 4 the Web Profile server (section "Web Profile" below).
+Module `github.com/aiviarium/sparrow/go`, Go 1.24, implementing the core specification
+(`../spec/core.md`) and `sparrow.hub.admin` v1 (`../spec/hub-admin.md`): the encoding, wire format,
+schema model and web-profile signing (below); the sessions, transports and the node library
+(`session/README.md`); the hub, `sparrow.hub.admin` and the `sparrow-hub` program (section "Hub"
+below); and the Web Profile server (section "Web Profile" below).
 
 | Package | Purpose |
 | --- | --- |
@@ -16,7 +16,7 @@ program (section "Hub" below); phase 4 the Web Profile server (section "Web Prof
 | `websign` | Module signing (9.5): key IDs, signature inputs, certificates, revocation lists, web-module entries, the acceptance verdict, semver precedence and rollback records. |
 | `names` | Name grammars: facet names, node IDs, module ids, imported names, principals (6.1, 9.4, 10.2-10.8). |
 | `adminiface` | The `sparrow.hub.admin` v1 interface (`../spec/hub-admin.md`): `Interface()`, `Facet(id)`, `InterfaceHash()`, type, method and sigil IDs. |
-| `session`, `transport/...`, `node`, `examples/echo-node` | Phase 2: see `session/README.md`. The bindings are `transport/webtransport`, `transport/websocket`, `transport/pipe` (4.7: a process the program starts, or its own standard input and output; the hub does not use it) and `transport/mem` (tests). `examples/echo-node` dials in to a hub (`-hub`) or waits to be dialed (`-listen`). |
+| `session`, `transport/...`, `node`, `examples/echo-node` | See `session/README.md`. The bindings are `transport/webtransport`, `transport/websocket`, `transport/pipe` (4.7: a process the program starts, or its own standard input and output; the hub does not use it) and `transport/mem` (tests). `examples/echo-node` dials in to a hub (`-hub`) or waits to be dialed (`-listen`). |
 | `admin` | `sparrow.hub.admin` v1: the document (CBOR and JSON forms), validation, revisions, confirmation and rollback, stored secrets, watch, persistence in a data directory, the facet handler and a client. |
 | `hub` | The Hub Profile (core section 10): node links (nodes dial in, or the hub dials them; it never starts nodes), composition, authorization, forwarding, call contexts, offline nodes, federation. |
 | `web` | The Web Profile (core section 9): `/sparrow/connect`, tickets, schema and module resources, the `web.*` annotations, and a client that follows the browser rules (signatures, rollback, revocation, snapshots). |
@@ -152,7 +152,7 @@ NETSIM_SEED=123 go test ./netsimtest -run TestLossyWebTransport -v
   connection ended if it has not exited; `Conn.Wait` returns its exit status); `Close` finishes this
   side's direction after the message being written and waits up to `Options.Linger` for the peer.
 
-## Hub (phase 3)
+## Hub
 
 ```sh
 go build -o bin/ ./cmd/sparrow-hub ./cmd/sparrow-admin ./examples/echo-node
@@ -271,7 +271,7 @@ by themselves; and every behaviour scenario of `../test-vectors/scenarios` throu
 would: the hub, `sparrow-admin` and two echo-node processes (one dials in, one is dialed), SIGTERM,
 restart on the same ports, cached schemas.
 
-## Web Profile (phase 4)
+## Web Profile
 
 ```sh
 cat > hub.json <<'JSON'

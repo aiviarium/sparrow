@@ -1,6 +1,5 @@
 {
   "format": 1,
-  "spec_revision": "core rev394 (draft); hub-admin rev41 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "upload-referenced-token",
   "description": "An upload whose input struct carries byte token 1 in its [4] field (7.8). The caller sends the Request, the data for token 1 in two chunks (the last with fin), then End, because the method has flag 0x8. The callee answers with the number of bytes received.",

@@ -9,7 +9,7 @@ import (
 )
 
 // Error is a schema error. Code is a stable identifier (the vocabulary of
-// the test vectors, with "part" spelled "facet"); Detail is for humans.
+// the test vectors); Detail is for humans.
 type Error struct {
 	Code   Code
 	Detail string

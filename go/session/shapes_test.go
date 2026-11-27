@@ -7,7 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aiviarium/sparrow/go/cbor"
 	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/transport/mem"
 	"github.com/aiviarium/sparrow/go/value"
 	"github.com/aiviarium/sparrow/go/wire"
 )
@@ -276,4 +278,23 @@ func TestBidirectional(t *testing.T) {
 			testutilEventually(t, func() bool { return srv.Stats().PoolOpen >= 1 })
 		}
 	})
+}
+
+// TestNotificationWithCallID: a Request with a nonzero call ID for a
+// notification method gets Error(invalid_argument); a call-ID-0 Request
+// for a method without flag 0x2 is dropped (7.1).
+func TestNotificationWithCallID(t *testing.T) {
+	t.Parallel()
+	h := newTestHandlers()
+	p, _, _ := rawClient(t, Config{Schema: testSchema("s"), Handler: h.mux(tFacet)}, mem.Options{NoLeases: true})
+	p.handshake(nil)
+	p.send(reqMsg(2, tFacet, mNotify, cbor.AppendText(nil, "x")))
+	if e, ok := p.recv().(*wire.Error); !ok || e.CallID != 2 || status.Code(e.Status) != status.InvalidArgument {
+		t.Fatalf("got %#v", e)
+	}
+	p.send(reqMsg(0, tFacet, mEcho, cbor.AppendText(nil, "dropped")))
+	p.send(reqMsg(4, tFacet, mEcho, cbor.AppendText(nil, "next")))
+	if r, ok := p.recv().(*wire.Response); !ok || r.CallID != 4 {
+		t.Fatalf("the call-ID-0 echo was not dropped: %#v", r)
+	}
 }

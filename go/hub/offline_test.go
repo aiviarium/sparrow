@@ -1,13 +1,16 @@
 package hub
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/aiviarium/sparrow/go/admin"
 	"github.com/aiviarium/sparrow/go/internal/testutil"
+	nd "github.com/aiviarium/sparrow/go/node"
 	"github.com/aiviarium/sparrow/go/session"
 	"github.com/aiviarium/sparrow/go/status"
 )
@@ -141,4 +144,55 @@ func TestDialedNodeRedials(t *testing.T) {
 	}, "no dial failure reported: %+v", f.h.Admin().NodeStates()["late"])
 	f.restartEcho("late", false)
 	waitNode(t, f.h, "late", true)
+}
+
+// TestNotificationToOfflineNodeDropped (10.7): a notification to a node
+// that is offline is dropped, never delivered when it connects.
+func TestNotificationToOfflineNodeDropped(t *testing.T) {
+	t.Parallel()
+	var mu sync.Mutex
+	var got []any
+	mk := func() *nd.Facet {
+		b := nd.NewFacet("acme", "1.0.0")
+		b.Service("A").Notification("poke", nd.String, func(ctx context.Context, c *session.ServerCall) error {
+			v, _ := c.Input()
+			mu.Lock()
+			got = append(got, v)
+			mu.Unlock()
+			return nil
+		})
+		return b.MustBuild()
+	}
+	received := func() []any {
+		mu.Lock()
+		defer mu.Unlock()
+		return append([]any{}, got...)
+	}
+	f := newFixture(t, nil)
+	f.secret("acme-1", "cred-one")
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": dialInConfig("acme-1")}, Extensions: policy(grant("user:alice", "acme", "use"))})
+	first, err := dialInNode(t, f, "websocket", "acme", "cred-one", mk())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cli := f.client("webtransport", aliceToken)
+	waitFacet(t, cli, "acme")
+	first.Close()
+	waitNode(t, f.h, "acme", false) // its last known facets stay listed
+	if err := cli.Notify(tctx(t), "acme", "poke", "while offline"); err != nil {
+		t.Fatal(err)
+	}
+	testutil.Eventually(t, 5*time.Second, func() bool { return f.h.Stats().NotificationsDropped == 1 }, "the notification was not dropped")
+	if _, err := dialInNode(t, f, "websocket", "acme", "cred-one", mk()); err != nil {
+		t.Fatal(err)
+	}
+	waitNode(t, f.h, "acme", true)
+	if err := cli.Notify(tctx(t), "acme", "poke", "online"); err != nil {
+		t.Fatal(err)
+	}
+	testutil.Eventually(t, 5*time.Second, func() bool { return len(received()) > 0 }, "notification not delivered while online")
+	testutil.Never(t, 50*time.Millisecond, func() bool { return len(received()) > 1 }, "more than one notification delivered: %v", received())
+	if r := received(); r[0] != "online" {
+		t.Fatalf("a notification sent while the node was offline was delivered: %v", r)
+	}
 }

@@ -13,7 +13,8 @@ import (
 	"github.com/aiviarium/sparrow/go/wire"
 )
 
-// Behaviour of core rev377 (10.2, 10.5, 10.7) and hub-admin rev38.
+// How the hub applies a configuration change to a node's session and calls
+// (10.2, 10.5, 10.7), and node-link limits.
 
 // blocker is a facet whose wait method runs until released or cancelled.
 func blocker(name string, started chan<- struct{}, release <-chan struct{}) *nd.Facet {
@@ -51,7 +52,7 @@ func runningCall(t *testing.T, cli *nd.Node, facet string, started <-chan struct
 // TestReconfigurationEndsSessionAtOnce: a changed link ends the node's
 // session at once, without the grace period of 5.6: the running call ends
 // with Error(unavailable), the node gets GoAway(going_away) since the hub
-// dialed it (core rev381; GoAway(unauthenticated) goes to a node that
+// dialed it (GoAway(unauthenticated) goes to a node that
 // dialed in), and the hub dials the node anew under the new configuration
 // (10.2).
 func TestReconfigurationEndsSessionAtOnce(t *testing.T) {
@@ -296,5 +297,94 @@ func TestRefusedFacetsKeepOldSession(t *testing.T) {
 	}
 	if st := f.h.Admin().NodeStates()["acme"]; st.State != admin.Connected {
 		t.Fatalf("state %+v", st)
+	}
+}
+
+// TestReconfigurationEndsCallsTheNodeMade: when the configuration
+// disables a dial-in node or changes a dialed node's link, the hub ends
+// the node's session at once (10.2): the calls the node made through the
+// hub end too, cancelled downstream with unavailable, and the node gets
+// GoAway(unauthenticated) if it dialed in or GoAway(going_away) if the
+// hub dialed it.
+func TestReconfigurationEndsCallsTheNodeMade(t *testing.T) {
+	t.Parallel()
+	for _, dialed := range []bool{false, true} {
+		name := "dial-in"
+		if dialed {
+			name = "dialed"
+		}
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			f := newFixture(t, nil)
+			f.secret("work-1", "work-cred")
+			f.secret("acme-1", "acme-cred")
+			f.secret("acme-2", "acme-cred-2")
+			n := nd.New(nd.Options{ID: "acme", Auth: linkAuth("acme-cred"), Logger: testLogger(t)})
+			if _, err := n.Add(tctx(t), blocker("acme", make(chan struct{}, 1), nil)); err != nil {
+				t.Fatal(err)
+			}
+			acme := dialInConfig("acme-1")
+			var ln *listeningNode
+			if dialed {
+				ln = serveNodeAny(t, n, "acme-cred", "acme-cred-2")
+				acme = dialConfig(ln.url, ln.pin, "acme-1")
+			}
+			grants := policy(grant("node:acme", "work", "use"), grant("user:alice", "work", "use"))
+			f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"work": dialInConfig("work-1"), "acme": acme}, Extensions: grants})
+			w := newWorker(t, f, "websocket", nil)
+			if !dialed {
+				if err := n.Dial(tctx(t), f.wsURL, nd.DialOptions{}); err != nil {
+					t.Fatal(err)
+				}
+				f.onCleanup(n.Close)
+			}
+			waitNode(t, f.h, "acme", true)
+			waitFacet(t, n, "work")
+			s := nodeSession(t, n)
+			// A call the node makes on its own, through the hub.
+			done := make(chan error, 1)
+			go func() {
+				_, err := n.Call(tctx(t), "work", "block", nil)
+				done <- err
+			}()
+			<-w.started
+			next := acme.Clone()
+			if dialed {
+				next.Link.Dial.Credential = "acme-2"
+			} else {
+				next.Enabled = boolp(false)
+			}
+			f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"work": dialInConfig("work-1"), "acme": next}, Extensions: grants})
+			select {
+			case cause := <-w.causes:
+				mustCode(t, cause, status.Unavailable)
+			case <-time.After(10 * time.Second):
+				t.Fatal("the call the node made was not cancelled downstream")
+			}
+			select {
+			case err := <-done:
+				if err == nil {
+					t.Fatal("the node's call succeeded")
+				}
+			case <-time.After(10 * time.Second):
+				t.Fatal("the node's call did not end")
+			}
+			select {
+			case <-s.Done():
+			case <-time.After(10 * time.Second):
+				t.Fatal("the node's session did not end")
+			}
+			want := status.Unauthenticated
+			if dialed {
+				want = status.GoingAway
+			}
+			if g := s.GoAwayReceived(); g == nil || status.Code(g.Status) != want {
+				t.Fatalf("the node got GoAway %v, want %v", g, want)
+			}
+			if dialed {
+				// Redialed under the new configuration (10.2).
+				waitNode(t, f.h, "acme", true)
+			}
+		})
 	}
 }

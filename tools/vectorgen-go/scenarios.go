@@ -142,7 +142,7 @@ func (s *scenario) expect(outcome string, kvs ...any) {
 }
 
 func (s *scenario) doc() O {
-	return o("format", scenarioFormat, "spec_revision", specRevision, "generator", "tools/vectorgen-go",
+	return o("format", scenarioFormat, "generator", "tools/vectorgen-go",
 		"name", s.name, "description", s.desc, "spec", s.spec, "given", s.given, "steps", s.steps)
 }
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/aiviarium/sparrow/go/internal/testutil"
 	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/transport/mem"
 	"github.com/aiviarium/sparrow/go/wire"
 )
 
@@ -262,5 +263,25 @@ func TestCancelAnsweredLate(t *testing.T) {
 	testutil.Eventually(t, 5*time.Second, func() bool { return cli.Stats().OutgoingCalls == 0 }, "slot not released")
 	if cli.Stats().Closed {
 		t.Fatal("session closed")
+	}
+}
+
+// TestCancelAfterCallerHalf: Cancel is valid while the callee's half is
+// open even when the caller's half is already finished (7.5); the callee
+// answers Error(cancelled).
+func TestCancelAfterCallerHalf(t *testing.T) {
+	t.Parallel()
+	h := newTestHandlers()
+	p, _, _ := rawClient(t, Config{Schema: testSchema("s"), Handler: h.mux(tFacet)}, mem.Options{NoLeases: true})
+	p.handshake(nil)
+	p.send(reqMsg(2, tFacet, mBlock, nil)) // unary: the Request finishes the caller's half
+	select {
+	case <-h.started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the call was not dispatched")
+	}
+	p.send(&wire.Cancel{CallID: 2, Status: uint64(status.Cancelled)})
+	if e, ok := p.recv().(*wire.Error); !ok || e.CallID != 2 || status.Code(e.Status) != status.Cancelled {
+		t.Fatalf("got %#v", e)
 	}
 }

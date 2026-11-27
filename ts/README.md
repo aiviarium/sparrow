@@ -1,7 +1,7 @@
 # Sparrow for TypeScript
 
-`@aiviarium/sparrow` is the TypeScript implementation of Sparrow (`../spec/core.md`, core
-revision 394, sections 3-8): an own CBOR codec, the wire format, the schema model, the schema-driven value codec
+`@aiviarium/sparrow` is the TypeScript implementation of Sparrow (`../spec/core.md`,
+sections 3-8): an own CBOR codec, the wire format, the schema model, the schema-driven value codec
 and sessions in either role, over the **pipe** binding (4.7), the **WebSocket** binding (4.6) and an
 **in-memory** pair. It mirrors the semantics of the Go reference implementation (`../go`) and is
 tested against the shared test vectors and against Go itself.
@@ -272,7 +272,7 @@ Also: `encodeVarint`, `decodeVarint`, `frame`, `FrameDecoder` (rejects a frame a
 `maxMessageSize` from its prefix), `kindRange`, `classifyStreamHeader`, `limitsOf`, `checkParams`,
 `DEFAULTS`, `MetaKeys`, `countedBytes`, `CreditWindow`. Numbers that the protocol puts in a JS
 `number` (IDs, counts, lengths, timestamps in messages) must stay within 2^53 - 1: a larger one is
-refused as malformed, and a larger credit amount or `retry_after_ms` saturates there (SPEC-ISSUES Q6).
+refused as malformed, and a larger credit amount or `retry_after_ms` saturates there.
 
 ### Transports
 
@@ -318,7 +318,7 @@ Not implemented:
   (section 10) are out of scope; the `context`/`principal` metadata keys are only passed through.
 
 Choices: byte chunks are at most 16 KiB (the shared-lane recommendation of 7.8); `GoAway` reasons
-are cut to 1024 bytes; the reading of each open spec question is in `../SPEC-ISSUES.md`.
+are cut to 1024 bytes.
 
 ## Tests
 

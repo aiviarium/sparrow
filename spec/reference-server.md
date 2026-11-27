@@ -1,6 +1,6 @@
 # Sparrow reference server (design note)
 
-> Design note, not part of the specification. Snapshot of the live draft, revision 10, exported for this repository, with the details and deviations of the Go implementation (phases 3 and 4) added in this copy; they are marked *(implementation)* and go back to the live draft. The live document is the source of truth.
+> Design note, not part of the specification. Snapshot of the draft design note, with the details and deviations of the Go implementation added in this copy; they are marked *(implementation)*. The live document is the source of truth.
 
 The reference server is a Go program, `sparrow-hub`, that implements the core protocol, the Hub Profile, the hub side of the Web Profile and `sparrow.hub.admin` v1. This note describes how it is built and configured. It is not part of the spec: another hub may make every choice here differently and still interoperate.
 
