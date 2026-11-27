@@ -13,6 +13,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	nd "github.com/aiviarium/sparrow/go/node"
 	"github.com/aiviarium/sparrow/go/session"
 	"github.com/aiviarium/sparrow/go/status"
+	"github.com/aiviarium/sparrow/go/transport/pipe"
 	"github.com/aiviarium/sparrow/go/transport/webtransport"
 	"github.com/aiviarium/sparrow/go/wire"
 )
@@ -69,8 +71,12 @@ type env struct {
 	h        *hub.Hub
 	udpAddr  string // the hub's WebTransport listener
 	tcpAddr  string // the hub's WebSocket listener
+	pipeAddr string // a TCP listener whose connections the hub runs as pipe links (4.7)
 	certHash []byte
 }
+
+// pipeOpts are the pipe binding's options in these tests.
+var pipeOpts = &pipe.Options{Linger: 150 * time.Millisecond, KillAfter: 2 * time.Second}
 
 func newEnv(t *testing.T, tune func(*hub.Options)) *env {
 	t.Helper()
@@ -118,10 +124,36 @@ func newEnv(t *testing.T, tune func(*hub.Options)) *env {
 	e.udpAddr = pc.LocalAddr().String()
 	ws := httptest.NewServer(h.WebSocketHandler(func(*http.Request) bool { return true }))
 	e.tcpAddr = ws.Listener.Addr().String()
+	// The pipe binding over TCP: each accepted connection is one byte
+	// stream the hub serves (as it would a unix socket). The hub never
+	// starts processes; a test that does hands the hub the process's pipe.
+	pl, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.pipeAddr = pl.Addr().String()
+	var pipes sync.WaitGroup
+	pipes.Add(1)
+	go func() {
+		defer pipes.Done()
+		for {
+			c, err := pl.Accept()
+			if err != nil {
+				return
+			}
+			pipes.Add(1)
+			go func() {
+				defer pipes.Done()
+				h.ServeConn(context.Background(), pipe.New(c, pipeOpts))
+			}()
+		}
+	}()
 	t.Cleanup(func() {
+		_ = pl.Close()
 		h.Close(2 * time.Second)
 		ws.Close()
 		_ = srv.Close()
+		pipes.Wait()
 	})
 	e.commit(&admin.NodeConfig{Link: admin.DialIn("work-link")})
 	return e
@@ -316,6 +348,90 @@ func (e *env) startWorker(url string) *worker {
 	})
 	e.waitNode(true)
 	return w
+}
+
+func newWorker(t *testing.T, o nd.Options) *worker {
+	w := &worker{started: make(chan struct{}, 16), ended: make(chan error, 16), notes: make(chan string, 64)}
+	w.n = nd.New(o)
+	if _, err := w.n.Add(tctx(t), workFacet(w)); err != nil {
+		t.Fatal(err)
+	}
+	return w
+}
+
+// workLink is how node "work" authenticates to the hub.
+func workLink() *wire.Auth {
+	return &wire.Auth{Scheme: "link", Credentials: cbor.AppendText(nil, workCred)}
+}
+
+// startPipeWorker runs node "work" over the pipe binding: it connects to
+// addr over TCP (the hub's pipe listener, or a proxy in front of it) and
+// reconnects whenever its session ends, until the test ends.
+func (e *env) startPipeWorker(addr string) *worker {
+	e.t.Helper()
+	w := newWorker(e.t, nd.Options{Auth: workLink(), Logger: logger(e.t), Session: fastSession})
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for ctx.Err() == nil {
+			if c, err := dialPipe(ctx, addr); err == nil {
+				actx, acancel := context.WithTimeout(ctx, time.Second)
+				err := w.n.Connect(actx, c, true)
+				acancel()
+				if err == nil {
+					_ = w.n.Wait(ctx)
+					if s := w.n.Session(); s != nil {
+						s.Close(status.OK, "reconnecting")
+					}
+				}
+				_ = c.Close(status.OK, "")
+			}
+			select {
+			case <-ctx.Done():
+			case <-time.After(5 * time.Millisecond):
+			}
+		}
+	}()
+	e.t.Cleanup(func() {
+		cancel()
+		<-done
+		w.n.Close()
+	})
+	e.waitNode(true)
+	return w
+}
+
+// dialPipe opens a pipe connection over TCP to addr.
+func dialPipe(ctx context.Context, addr string) (*pipe.Conn, error) {
+	var d net.Dialer
+	c, err := d.DialContext(ctx, "tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+	return pipe.New(c, pipeOpts), nil
+}
+
+// dialPipeClient connects a client with a bearer token over the pipe
+// binding to addr.
+func (e *env) dialPipeClient(addr, token string, tune ...func(*nd.Options)) *nd.Node {
+	e.t.Helper()
+	o := nd.Options{Auth: bearer(token), Logger: logger(e.t), Session: fastSession}
+	for _, f := range tune {
+		f(&o)
+	}
+	n := nd.New(o)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	c, err := dialPipe(ctx, addr)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	if err := n.Connect(ctx, c, false); err != nil {
+		e.t.Fatalf("pipe client to %s: %v", addr, err)
+	}
+	e.t.Cleanup(n.Close)
+	return n
 }
 
 // listenWorker runs node "work" as a WebTransport server the hub dials,
@@ -538,6 +654,9 @@ func exercise(t *testing.T, cli *nd.Node, w *worker, size int) {
 // tests started are gone (hub, sessions, transports, proxies): the count
 // returns to what it was before, with a little slack for the runtime.
 func TestMain(m *testing.M) {
+	if os.Getenv(childEnv) != "" {
+		os.Exit(runChild())
+	}
 	before := runtime.NumGoroutine()
 	code := m.Run()
 	if code == 0 && !testutil.WaitFor(5*time.Second, func() bool { return runtime.NumGoroutine() <= before+2 }) {
@@ -547,4 +666,33 @@ func TestMain(m *testing.M) {
 		code = 1
 	}
 	os.Exit(code)
+}
+
+// childEnv makes the test binary run as node "work" on its standard input
+// and output (the started process is the client, 4.7), for the tests that
+// start it as a child process.
+const childEnv = "NETSIM_PIPE_CHILD"
+
+// runChild is the child process: node "work" over pipe.Stdio, until the
+// session ends.
+func runChild() int {
+	w := &worker{started: make(chan struct{}, 16), ended: make(chan error, 16), notes: make(chan string, 64)}
+	w.n = nd.New(nd.Options{Auth: workLink(), Session: fastSession})
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	if _, err := w.n.Add(ctx, workFacet(w)); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 2
+	}
+	if err := w.n.Connect(ctx, pipe.Stdio(pipeOpts), true); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 2
+	}
+	go func() {
+		for range w.started {
+			fmt.Fprintln(os.Stderr, "started") // the parent waits for this line
+		}
+	}()
+	_ = w.n.Wait(ctx)
+	return 0
 }

@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/aiviarium/sparrow/go/transport/pipe"
 	"io"
 	"net"
 	"net/http"
@@ -21,6 +20,7 @@ import (
 	"github.com/aiviarium/sparrow/go/status"
 	"github.com/aiviarium/sparrow/go/transport"
 	"github.com/aiviarium/sparrow/go/transport/mem"
+	"github.com/aiviarium/sparrow/go/transport/pipe"
 	wsb "github.com/aiviarium/sparrow/go/transport/websocket"
 	wtb "github.com/aiviarium/sparrow/go/transport/webtransport"
 	"github.com/aiviarium/sparrow/go/value"
@@ -377,7 +377,8 @@ func wtBinding() binding {
 func pipeBinding() binding {
 	return binding{"pipe", func(t testing.TB) (transport.Conn, transport.Conn) {
 		a, b := net.Pipe()
-		return pipe.New(a), pipe.New(b)
+		o := &pipe.Options{Linger: testLinger}
+		return pipe.New(a, o), pipe.New(b, o)
 	}, false}
 }
 

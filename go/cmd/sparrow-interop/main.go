@@ -707,7 +707,7 @@ func runClient() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	cf, cids := clientFacet()
-	s, err := session.NewClient(ctx, pipe.Stdio(), session.Config{
+	s, err := session.NewClient(ctx, pipe.Stdio(nil), session.Config{
 		Schema:  schemaOf("interop.client", cf),
 		Handler: clientMux(cids),
 		Auth:    &wire.Auth{Scheme: "bearer", Credentials: cbor.AppendText(nil, "interop")},
@@ -746,12 +746,10 @@ func runServer(args []string) error {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), "SPARROW_WAIT_FOR_SERVER=1")
-	conn, err := pipe.Spawn(cmd)
+	conn, err := pipe.Spawn(cmd, nil)
 	if err != nil {
 		return err
 	}
-	exited := make(chan error, 1)
-	go func() { exited <- cmd.Wait() }()
 	s, err := session.NewServer(ctx, conn, session.Config{
 		Schema:  schemaOf("interop.server", sf),
 		Handler: serverMux(ids, st),
@@ -808,8 +806,8 @@ func runServer(args []string) error {
 			if l != "suite passed" {
 				continue
 			}
-		case err := <-exited:
-			return fmt.Errorf("the client exited before its suite passed: %v", err)
+		case <-conn.Exited():
+			return fmt.Errorf("the client exited before its suite passed: %v", conn.Wait())
 		case <-ctx.Done():
 			return errors.New("timed out waiting for the client's suite")
 		}
@@ -817,8 +815,8 @@ func runServer(args []string) error {
 	}
 	s.GoAway(status.GoingAway, "interop done", nil)
 	select {
-	case err := <-exited:
-		if err != nil {
+	case <-conn.Exited():
+		if err := conn.Wait(); err != nil {
 			return fmt.Errorf("the client failed: %w", err)
 		}
 	case <-ctx.Done():

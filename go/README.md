@@ -79,6 +79,7 @@ string of `../test-vectors` (`internal/fuzzseed`) and from hand-written inputs:
 | --- | --- |
 | `cbor` | `FuzzValidate` (validation, canonical form, tree round trip), `FuzzDifferential` (against fxamacker/cbor), `FuzzDecoder` (the pull decoder) |
 | `wire` | `FuzzDecode` (every message kind, params, metadata, call-ID rewrite, forwarding), `FuzzFrameReader`, `FuzzVarint` |
+| `transport/pipe` | `FuzzConn` (the pipe binding's reads: limit, empty and truncated frames) |
 | `session` | `FuzzClientHandshake`, `FuzzServerHandshake` (arbitrary first messages each way), `FuzzServerMessages` (an established session) |
 | `schema` | `FuzzSchema` (schema, facet, interface, delta, type ref; canonical form and hashes), `FuzzDelta` (deltas applied to valid schemas), `FuzzFacetPair` (compatibility, conformance) |
 | `value` | `FuzzDecode` (a fixed facet), `FuzzDecodeWithFacet` (arbitrary facet, type and value) |

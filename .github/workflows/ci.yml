@@ -64,7 +64,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pkg: [admin, cbor, hub, names, schema, session, value, web, websign, wire]
+        pkg: [admin, cbor, hub, names, schema, session, transport/pipe, value, web, websign, wire]
     defaults:
       run:
         working-directory: go
@@ -85,11 +85,17 @@ jobs:
             go test ./${{ matrix.pkg }} -run '^$' -fuzz "^$t\$" -fuzztime 15s
             echo "::endgroup::"
           done
+      - name: Name the artifact
+        if: failure()
+        id: artifact
+        env:
+          PKG: ${{ matrix.pkg }}
+        run: echo "name=fuzz-crashers-${PKG//\//-}" >> "$GITHUB_OUTPUT"
       - name: Keep the failing inputs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: fuzz-crashers-${{ matrix.pkg }}
+          name: ${{ steps.artifact.outputs.name }}
           path: go/${{ matrix.pkg }}/testdata/fuzz
           if-no-files-found: ignore
 
