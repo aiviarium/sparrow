@@ -1,7 +1,7 @@
 # Sparrow RPC: Go reference implementation
 
-Module `github.com/aiviarium/sparrow-rpc/go`, Go 1.24, following core spec revision 324
-(`../spec/core.md`) and hub-admin revision 25 (`../spec/hub-admin.md`). Phase 1 is the encoding,
+Module `github.com/aiviarium/sparrow-rpc/go`, Go 1.24, following core spec revision 347
+(`../spec/core.md`) and hub-admin revision 35 (`../spec/hub-admin.md`). Phase 1 is the encoding,
 wire format, schema model and web-profile signing (below); phase 2 the sessions, transports and the
 node library (`session/README.md`); phase 3 the hub, `sparrow.hub.admin` and the `sparrow-hub`
 program (section "Hub" below); phase 4 the Web Profile server (section "Web Profile" below).
@@ -16,9 +16,9 @@ program (section "Hub" below); phase 4 the Web Profile server (section "Web Prof
 | `websign` | Module signing (9.5): key IDs, signature inputs, certificates, revocation lists, web-module entries, the acceptance verdict, semver precedence and rollback records. |
 | `names` | Name grammars: facet names, node IDs, module ids, imported names, principals (6.1, 9.4, 10.2-10.8). |
 | `adminiface` | The `sparrow.hub.admin` v1 interface (`../spec/hub-admin.md`): `Interface()`, `Facet(id)`, `InterfaceHash()`, type, method and sigil IDs, and `StoredFacetKey`. |
-| `session`, `transport/...`, `node`, `examples/echo-node` | Phase 2: see `session/README.md`. |
+| `session`, `transport/...`, `node`, `examples/echo-node` | Phase 2: see `session/README.md`. `examples/echo-node` dials in to a hub (`-hub`) or waits to be dialed (`-listen`). |
 | `admin` | `sparrow.hub.admin` v1: the document (CBOR and JSON forms), validation, revisions, confirmation and rollback, stored secrets and facets, watch, persistence in a data directory, the facet handler and a client. |
-| `hub` | The Hub Profile (core section 10): node links, composition, authorization, forwarding, call contexts, offline nodes, federation. |
+| `hub` | The Hub Profile (core section 10): node links (nodes dial in, or the hub dials them; it never starts nodes), composition, authorization, forwarding, call contexts, offline nodes, federation. |
 | `web` | The Web Profile (core section 9): `/sparrow/connect`, tickets, schema and module resources, the `web.*` annotations, and a client that follows the browser rules (signatures, rollback, revocation, snapshots). |
 | `cmd/sparrow-hub` | The reference server program. |
 | `cmd/sparrow-admin` | A command-line controller for `sparrow.hub.admin`. |
@@ -74,13 +74,23 @@ cat > hub.json <<'JSON'
   "tokens": [{"token": "alice", "principal": "user:alice"}] }
 JSON
 bin/sparrow-hub -config hub.json -addr-file addrs.json     # logs the certificate hash and SPKI pin
+A="bin/sparrow-admin -url https://127.0.0.1:4433/sparrow/wt -token change-me -cert-hash <hash>"
+$A set-secret echo-link echo-credential                     # what the dial-in node presents
+$A set-secret notes-link hub-credential                     # what the hub presents to a dialed node
+bin/echo-node -id notes -listen 127.0.0.1:5533 -credential hub-credential -key-file notes.key &
+#   prints {"webtransport":"https://127.0.0.1:5533/sparrow/node","pin":"<hex>"}
 cat > doc.json <<'JSON'
-{ "nodes": {"echo": {"spawn": {"command": ["bin/echo-node", "-id", "echo"]}}},
-  "policy": [["user:alice", "echo", "use"]] }
+{ "nodes": {"echo":  {"credential": "echo-link"},
+            "notes": {"dial": {"url": "https://127.0.0.1:5533/sparrow/node", "pin": "<hex>", "credential": "notes-link"}}},
+  "policy": [["user:alice", "echo", "use"], ["user:alice", "notes", "use"]] }
 JSON
-bin/sparrow-admin -url https://127.0.0.1:4433/sparrow/wt -token change-me -cert-hash <hash> \
-    commit -confirm-within 10000 -confirm doc.json
+$A commit -confirm-within 10000 -confirm doc.json
+bin/echo-node -id echo -hub https://127.0.0.1:4433/sparrow/wt -hub-pin <pin> -credential echo-credential &
 ```
+
+The hub never starts, installs or supervises nodes: whatever runs them (here a shell, elsewhere an
+orchestrator or a service manager) starts them and hands a dial-in node the hub's URL and its
+credential, or registers a listening node's URL and SPKI pin in the document.
 
 The static file (`cmd/sparrow-hub.Config`) holds listen addresses, TLS (or `selfSigned`), the data
 directory, bootstrap administrators and optional static bearer tokens; everything else is committed
@@ -119,20 +129,21 @@ Choices worth knowing (details in `spec/reference-server.md`):
 - Contexts are 16 random bytes, bound to the node link they were issued on, valid while the call is
   open and 2 s after (never after its deadline); when the grace period ends the hub ends nested calls
   still carrying it with `permission_denied` (Error to the node, Cancel to the callee).
-- Calls to a node that is not connected wait up to the start timeout (default 10 s), starting a
-  spawned node that is not running; notifications to it are dropped.
-- Spawned processes run in their own process group, get `GoAway` when stopped and are killed after
-  5 s; a process that exits cleanly after a `GoAway` of its own is started again on its next call;
-  crashes restart with backoff, and 5 crashes within a minute mark the node failed until its
-  configuration changes.
+- Calls to a node that is not connected wait up to the connect timeout (`Options.ConnectTimeout`,
+  static key `connectTimeoutMs`, default 10 s) for it to connect, then fail with `unavailable`;
+  notifications to it are dropped.
 - Dialed nodes: the TLS chain is not verified, only the SHA-256 of the leaf's SubjectPublicKeyInfo
-  (the pin); `https` dials WebTransport, `wss` WebSocket. A changed Dial ends the old session when the
-  new one is ready or the first new attempt fails.
+  (the pin); `https` dials WebTransport, `wss` WebSocket. The hub redials with backoff (about
+  125 ms doubling to 30 s), at once and then every 250 ms or sooner while a call waits for the node.
+  A changed Dial ends the old session when the new one is ready or the first new attempt fails.
+- With `selfSigned`, the certificate's key is kept in the data directory, so the SPKI pin that
+  dial-in nodes may check (`echo-node -hub-pin`) survives restarts.
+- Call counting (7.6): as callee a session stops counting a call at its own final message; one whose
+  peer keeps more than twice `maxConcurrentCalls` calls with the caller's half open is closed with
+  `GoAway(resource_exhausted)`.
 
-Limitations: the hub presents only `["link", credential]` when dialing (no mutual TLS); `Other` start
-kinds (`wasm`, `oci`) are not implemented and are validation problems; the hub never calls a client's
-own facets (they are scoped to the client's session); spawned nodes get their own process group only
-on Unix (elsewhere the process alone is killed).
+Limitations: the hub presents only `["link", credential]` when dialing (no mutual TLS); the hub never
+calls a client's own facets (they are scoped to the client's session).
 
 ## Hub tests
 
@@ -143,11 +154,14 @@ HUB_TEST_LOG=1 go test ./hub -run TestFederation -v     # with the hub's debug l
 ```
 
 `hub` runs an in-process hub behind real WebTransport and WebSocket listeners, with the echo-node
-binary spawned over stdio, in-process nodes that dial in or are dialed (SPKI pins), three federated
-hubs, a fake clock for context expiry and admin deadlines, restarts on the same data directory, and
-every behaviour scenario of `../test-vectors/scenarios` through the hub to a node (`TestScenariosThroughHub`).
-`cmd/sparrow-hub` builds the binaries and drives them as an operator would (`sparrow-admin`, SIGTERM,
-restart, cached schemas).
+binary run as separate processes (`internal/testutil.Proc`) that dial in over WebSocket or
+WebTransport or wait to be dialed (SPKI pins), killed, stopped and restarted while calls wait for
+them; in-process nodes that dial in or are dialed; three federated hubs; a fake clock for context
+expiry and admin deadlines; restarts on the same data directory, which the node processes find again
+by themselves; and every behaviour scenario of `../test-vectors/scenarios` through the hub to a node
+(`TestScenariosThroughHub`). `cmd/sparrow-hub` builds the binaries and drives them as an operator
+would: the hub, `sparrow-admin` and two echo-node processes (one dials in, one is dialed), SIGTERM,
+restart on the same ports, cached schemas.
 
 ## Web Profile (phase 4)
 

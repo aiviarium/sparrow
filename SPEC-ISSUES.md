@@ -1,8 +1,8 @@
 # Spec issues: resolution log
 
 Questions raised while writing the test vectors and the Go reference implementation, and how the
-spec author resolved them. The current spec is `spec/core.md`, revision 324, with the companion
-`spec/hub-admin.md`, revision 25. Items P1–P16, raised by the Go hub (phase 3), were decided in core
+spec author resolved them. The current spec is `spec/core.md`, revision 347, with the companion
+`spec/hub-admin.md`, revision 35; the scope change S1–S7 below came with them. Items P1–P16, raised by the Go hub (phase 3), were decided in core
 revision 324 and hub-admin revision 25; items 26–36 are decisions taken since revision 183, and
 items O1–O5, raised while applying them, were decided in core revision 305 and hub-admin revision 18.
 Every item is **resolved**; the vectors, the JavaScript verifier and the Go library follow each
@@ -15,6 +15,24 @@ generator, the verifier and the Go conformance tests now use "facet" for it ever
 `facet_owner_table`, `facet_web_keys`) and error codes (`facets_not_sorted`, `facet1_mismatch`,
 `reserved_facet_id`, …). No CBOR byte changed: the error texts inside `unimplemented/*` messages keep
 the word "part". The table rows below for older revisions keep the names of their time.
+
+## Scope change in core revision 347 and hub-admin revision 35
+
+The owner reduced the scope: **the hub never starts, installs or supervises nodes.** Nodes dial in,
+or the hub dials a configured node (URL and SPKI pin). An outside system (an orchestrator, a service
+manager, a person) provisions nodes and hands them the hub's URL and a credential, or registers them
+through `sparrow.hub.admin`. This was a decision, not a question raised here; P12 below (lazy start
+of a spawned node, `ref.lazy`) is superseded by it.
+
+| # | Change | Spec | Go / vectors |
+| --- | --- | --- | --- |
+| S1 | Two link kinds only, "The node dials in" and "The hub dials a configured node at its URL"; identity no longer mentions processes; "A hub never installs, starts or supervises nodes" | core 10.2, 10.10, hub-admin 2.2 | spawning removed from `hub` (supervision, process groups, crash backoff and the `failed` state, `ref.lazy`, environment from secrets, restart on change) and from `admin`, `sparrow-hub` and `sparrow-admin` |
+| S2 | 10.7 "Offline nodes": a call waits "for at most a connect timeout (RECOMMENDED 10 s), and then fails with `Error(unavailable)`"; the rule for restarting spawned nodes is gone | core 10.7 | `hub.Options.ConnectTimeout`, static key `connectTimeoutMs` (was `startTimeoutMs`); dialed nodes are redialed with backoff, sooner while calls wait; `TestOfflineEchoProcesses`, `TestDialedNodeRedials` |
+| S3 | The pipe binding stays as a generic binding: "a hub itself never starts processes" | core 4.7 | `transport/pipe` and `node.RunStdio` kept as library features, unused by the hub; pipe vectors described accordingly (bytes unchanged) |
+| S4 | `NodeConfig` field 0 is `dial optional Dial`; `Start`, `Spawn`, `EnvValue` and `Other` are removed and the types renumbered (64 `Config` … 79 `NodeState`); `NodeState` is `connected`, `offline`, `disabled`, `removed` (sigils 67–70); commit problems are `[71, problems]` | hub-admin 3, 5.1, 5.2 | `adminiface`, `admin`, `admin.json` regenerated: new interface hash; `admin/value/event-node-failed` became `admin/value/event-node-offline` |
+| S5 | Validation: exactly one of `dial` or `credential`; no `Dial.credential` with the same value as a `NodeConfig.credential`; the `Spawn` and `Other.kind` rules are gone | hub-admin 3 | `TestValidate` (`replayable credential value`) |
+| S6 | Problem paths use the field names of section 3 (`["nodes", "acme.notes", "dial", "pin"]`) | hub-admin 5.1 | `admin/value/problems`; the JSON form writes `{"dial": ...}` and refuses `start` |
+| S7 | Call counting: "The caller counts a call until it has both sent its own last message and seen the callee's; the callee counts it only until it has sent its own final message"; a callee "MAY close a session that keeps more than twice `maxConcurrentCalls` calls with the caller's half still open with `GoAway(resource_exhausted)`" | core 7.6 | `session`: the callee uncounts at its final message also while the caller's half is open; the 2× bound; `TestCalleeUncountsAtItsFinalMessage`, `TestCallerCountsUntilCalleesFinal`, `TestCallerHalfOpenBound` |
 
 ## Raised against core revision 316 and hub-admin revision 18 (resolved in core revision 324, hub-admin revision 25)
 
@@ -31,11 +49,11 @@ the word "part". The table rows below for older revisions keep the names of thei
 | P9 | Are configured facets still used after a node has published? | "Once a node has published a schema, configured facets are no longer used for it" (10.7) | `TestConfiguredFacetsIgnoredAfterPublish` |
 | P10 | Notifications to a node that is offline or starting? | "are dropped" (10.7) | `TestNotificationToOfflineNodeDropped` |
 | P11 | What "equal" means for the no-op commit | "byte-for-byte equal to the applied one in canonical encoding" (hub-admin 2) | `TestNoOpCommitIsCanonicalByteEquality` |
-| P12 | May a hub start a spawned node lazily? | "A hub MAY instead start a spawned node on its first call" (hub-admin 2.2) | node extension `ref.lazy` |
+| P12 | May a hub start a spawned node lazily? | "A hub MAY instead start a spawned node on its first call" (hub-admin 2.2) | node extension `ref.lazy`; superseded by S1 (removed) |
 | P13 | When does the old session of a re-dialed node end? | "when the new one is ready or the first new attempt fails, whichever comes first" (hub-admin 2.2) | unchanged |
 | P14 | What follows the watch `Snapshot`, and which nodes are reported after a commit? | "followed by one `NodeEvent` for each configured node"; "After each applied revision the hub sends a `NodeEvent` for every configured node, changed or not" (hub-admin 4) | `TestWatchReportsEveryNode` |
 | P15 | How deep does `Problem.path` go? | "following the JSON form, so a union variant's name is a key, with list positions as decimal strings and byte-string map keys as lowercase hex" (hub-admin 5.1) | `admin/value/problems` now ends in `["start", "dial", "pin"]`; the JSON form writes `{"start": {"spawn": ...}}` and `{"literal": ...}` |
-| P16 | Further validation rules | "no two dial-in nodes name secrets with the same value"; "every `Spawn` program is non-empty and every environment variable name is non-empty and contains no `=` or NUL" (hub-admin 3) | `TestValidate` |
+| P16 | Further validation rules | "no two dial-in nodes name secrets with the same value"; "every `Spawn` program is non-empty and every environment variable name is non-empty and contains no `=` or NUL" (hub-admin 3) | `TestValidate`; the `Spawn` rules went with S5 |
 
 ## Raised against revision 302 (resolved in core revision 305, hub-admin revision 18)
 
