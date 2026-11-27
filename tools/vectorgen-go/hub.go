@@ -18,8 +18,8 @@ func chartValue() []any {
 	return []any{64, "Sales", []any{[]any{"2026", []any{3, 5, 8}}}}
 }
 
-// nodeHello: the node acme.charts, spawned by the hub, speaks first on the
-// pipe binding and publishes its facets in client_schema.
+// nodeHello: the node acme.charts speaks first as the Sparrow client and
+// publishes its facets in client_schema (here on the pipe binding, 4.7).
 func nodeHello() []any {
 	r := schemas()
 	return []any{0, []any{1}, map[string]any{}, nil, nil, []any{2, r.nodeHash, r.node}, map[string]any{}, false}
@@ -79,7 +79,7 @@ func hubVectors() O {
 	msg := func(m []any) O { b := enc(m); return o("message", tj(m), "diag", diag(b), "cbor", hx(b)) }
 	add(o(
 		"name", "forward/unary",
-		"description", "A client of session principal user:alice calls draw (method 0) of facet 17, which belongs to node acme.charts. The hub authorizes it, then opens a call on the node's pipe link with a new call ID (1: the hub is the Sparrow server there, so odd), the node's own facet ID (16), the same method ID and input bytes, deadline lowered by the 50 ms already spent, credit set to 64 KiB (no higher than the default for the caller's leased stream, 1 MiB, since the caller sent no credit), and context/principal set by the hub, replacing the values the caller sent. Every element except the call ID, the facet ID and the Request's metadata is copied byte for byte. The node's Response is relayed with only the call ID changed.",
+		"description", "A client of session principal user:alice calls draw (method 0) of facet 17, which belongs to node acme.charts. The hub authorizes it, then opens a call on the node's link with a new call ID (1: the node dialed in, so the hub is the Sparrow server there and its call IDs are odd), the node's own facet ID (16), the same method ID and input bytes, deadline lowered by the 50 ms already spent, credit set to 64 KiB (no higher than the default for the caller's leased stream, 1 MiB, since the caller sent no credit), and context/principal set by the hub, replacing the values the caller sent. Every element except the call ID, the facet ID and the Request's metadata is copied byte for byte. The node's Response is relayed with only the call ID changed.",
 		"spec", "10.4, 10.5, 10.6",
 		"type", "forward",
 		"session_principal", "user:alice",
@@ -122,7 +122,7 @@ func hubVectors() O {
 	nested := []any{16, 2, facetNotes, 100, map[any]any{36: hubContext}, noteUUID}
 	add(o(
 		"name", "forward/node-call-with-context",
-		"description", "While handling the forwarded call, the node calls get (100) of facet 16 in the hub's schema for it, passing the hub's context. Its call ID is even (the node is the Sparrow client on the pipe). The hub checks both the context's principal and node:acme.charts.",
+		"description", "While handling the forwarded call, the node calls get (100) of facet 16 in the hub's schema for it, passing the hub's context. Its call ID is even (the node, which dialed in, is the Sparrow client). The hub checks both the context's principal and node:acme.charts.",
 		"spec", "10.4, 10.6",
 		"type", "message_with_principals",
 		"request", msg(nested),

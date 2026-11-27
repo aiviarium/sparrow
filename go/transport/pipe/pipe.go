@@ -66,14 +66,16 @@ func NewSplit(r io.ReadCloser, w io.WriteCloser) *Conn {
 }
 
 // Stdio returns a pipe connection on this process's standard input and
-// output, as a process a hub starts speaks to it (the process is the Sparrow
-// client). Nothing else may write to standard output afterwards.
+// output, for a process whose parent speaks Sparrow to it (the started
+// process is the Sparrow client, 4.7). Nothing else may write to standard
+// output afterwards. A hub never starts nodes (10.2); this is for other
+// supervisors and tools.
 func Stdio() *Conn { return NewSplit(os.Stdin, os.Stdout) }
 
 // Spawn starts cmd with a pipe connection on its standard input and output.
 // cmd.Stderr is left as configured; it is not part of the protocol. The
-// returned connection is the hub's end (the Sparrow server). Close does not
-// wait for the process; use cmd.Wait.
+// returned connection is the starting side's end (the Sparrow server, 4.7).
+// Close does not wait for the process; use cmd.Wait.
 func Spawn(cmd *exec.Cmd) (*Conn, error) {
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

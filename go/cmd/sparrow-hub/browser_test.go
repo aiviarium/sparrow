@@ -14,7 +14,7 @@ import (
 // (Playwright) against the sparrow-hub binary: /connect, then a
 // WebTransport session pinned with serverCertificateHashes and a
 // WebSocket session, each with Hello / Welcome / Ready and one unary call
-// to the spawned echo node. Set SPARROW_BROWSER=1 to run it
+// to the echo node, which dials in. Set SPARROW_BROWSER=1 to run it
 // (e2e/browser/run.sh does).
 func TestBrowser(t *testing.T) {
 	if os.Getenv("SPARROW_BROWSER") == "" {

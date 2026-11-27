@@ -118,11 +118,9 @@ func TestValueVectors(t *testing.T) {
 func TestConfigRoundTrip(t *testing.T) {
 	c := &Config{
 		Nodes: map[string]*NodeConfig{
-			"a": {Start: &Start{Spawn: &Spawn{Command: []string{"x", "y"}, Env: map[string]EnvValue{"K": {Value: "v"}, "S": {Secret: true, Value: "s"}}, Dir: ptr("/tmp")}},
-				Facets: [][]byte{{1, 2}}, Enabled: ptr(false), Extensions: map[string][]byte{"ref.lazy": {0xf5}}},
+			"a": {Credential: ptr("a"), Facets: [][]byte{{1, 2}}, Enabled: ptr(false), Extensions: map[string][]byte{"x.y": {0xf5}}},
 			"b": {Credential: ptr("c"), Peer: ptr(true)},
-			"c": {Start: &Start{Dial: &Dial{URL: "https://x", Pin: make([]byte, 32), Credential: "d"}}},
-			"d": {Start: &Start{Other: &Other{Kind: "wasm", Params: []byte{0xa0}}}},
+			"c": {Dial: &Dial{URL: "https://x", Pin: make([]byte, 32), Credential: "d"}},
 		},
 		Defaults:   map[string]string{string(make([]byte, 33)): "a"},
 		Extensions: map[string][]byte{},
@@ -142,23 +140,17 @@ func TestConfigRoundTrip(t *testing.T) {
 	if _, err := codec.Decode(schema.Named(adminiface.TypeConfig), b); err != nil {
 		t.Fatal(err)
 	}
-	// Extra trailing struct elements and unknown variants are tolerated.
+	// Extra trailing struct elements are tolerated.
 	extra := []byte{0x84, 0xa0, 0xf6, 0xf6, 0x01}
 	if _, err := DecodeConfig(extra); err != nil {
 		t.Fatalf("extra element: %v", err)
 	}
-	unk := cbor.AppendArrayHead(nil, 1)
-	unk = cbor.AppendMapHead(unk, 1)
-	unk = cbor.AppendText(unk, "n")
-	unk = append(unk, 0x81, 0x82, 0x09, 0xf6) // NodeConfig [[9, null]]
-	dc, err := DecodeConfig(unk)
-	if err != nil || dc.Nodes["n"].Start.UnknownTag != 9 {
-		t.Fatalf("unknown variant: %v", err)
+	// A Dial with extra elements is fine; one missing an element is not.
+	dialExtra := []byte{0x81, 0xa1, 0x61, 'n', 0x81, 0x84, 0x61, 'u', 0x40, 0x61, 'c', 0x00}
+	if dc, err := DecodeConfig(dialExtra); err != nil || dc.Nodes["n"].Dial == nil || dc.Nodes["n"].Dial.Credential != "c" {
+		t.Fatalf("dial with an extra element: %v", err)
 	}
-	if ps := Validate(dc, ValidateEnv{}); len(ps) == 0 || !strings.Contains(ps[0].Message, "unknown start variant") {
-		t.Fatalf("%v", ps)
-	}
-	for _, bad := range [][]byte{{0x80}, {0x81, 0x01}, {0x81, 0xa1, 0x61, 'a', 0x81, 0x82, 0x00, 0x80}} {
+	for _, bad := range [][]byte{{0x80}, {0x81, 0x01}, {0x81, 0xa1, 0x61, 'a', 0x81, 0x82, 0x00, 0x80}, {0x81, 0xa1, 0x61, 'a', 0x81, 0x82, 0x61, 'u', 0x40}} {
 		if _, err := DecodeConfig(bad); err == nil {
 			t.Fatalf("%x decoded", bad)
 		}
@@ -221,8 +213,8 @@ func TestValidate(t *testing.T) {
 		{"empty", EmptyConfig(), nil},
 		{"good", &Config{Nodes: map[string]*NodeConfig{
 			"acme":        {Credential: ptr("s1")},
-			"acme.charts": {Start: &Start{Spawn: &Spawn{Command: []string{"x"}, Env: map[string]EnvValue{"T": {Secret: true, Value: "s2"}}}}, Facets: [][]byte{[]byte("charts")}},
-			"remote":      {Start: &Start{Dial: &Dial{URL: "wss://h/x", Pin: pin, Credential: "dial"}}},
+			"acme.charts": {Dial: &Dial{URL: "https://charts:4433/sparrow/wt", Pin: pin, Credential: "s2"}, Facets: [][]byte{[]byte("charts")}},
+			"remote":      {Dial: &Dial{URL: "wss://h/x", Pin: pin, Credential: "dial"}},
 		}, Extensions: map[string][]byte{"ok": {0}}}, nil},
 		{"grammar and reserved", &Config{Nodes: map[string]*NodeConfig{
 			"A":         {Credential: ptr("s1")},
@@ -230,20 +222,15 @@ func TestValidate(t *testing.T) {
 			"sparrow.x": {Credential: ptr("dial")},
 		}}, [][]string{{"nodes", "A"}, {"nodes", "sparrow"}, {"nodes", "sparrow.x"}}},
 		{"directions", &Config{Nodes: map[string]*NodeConfig{
-			"both":    {Credential: ptr("s1"), Start: &Start{Spawn: &Spawn{Command: []string{"x"}}}},
+			"both":    {Credential: ptr("s1"), Dial: &Dial{URL: "https://h", Pin: pin, Credential: "s2"}},
 			"neither": {},
 		}}, [][]string{{"nodes", "both"}, {"nodes", "neither"}}},
 		{"missing secrets", &Config{Nodes: map[string]*NodeConfig{
 			"a": {Credential: ptr("nope")},
-			"b": {Start: &Start{Spawn: &Spawn{Command: []string{"x"}, Env: map[string]EnvValue{"K": {Secret: true, Value: "nope"}, "A=B": {Value: "x"}, "1ok": {Value: "x"}}}}},
-			"c": {Start: &Start{Dial: &Dial{URL: "http://h", Pin: []byte{1}, Credential: "nope2"}}},
-		}}, [][]string{{"nodes", "a", "credential"}, {"nodes", "b", "start", "spawn", "env", "A=B"}, {"nodes", "b", "start", "spawn", "env", "K", "secret"},
-			{"nodes", "c", "start", "dial", "url"}, {"nodes", "c", "start", "dial", "pin"}, {"nodes", "c", "start", "dial", "credential"}}},
-		{"spawn programs and env names", &Config{Nodes: map[string]*NodeConfig{
-			"a": {Start: &Start{Spawn: &Spawn{Command: []string{}}}},
-			"b": {Start: &Start{Spawn: &Spawn{Command: []string{"", "arg"}, Env: map[string]EnvValue{"": {Value: "x"}, "N\x00UL": {Value: "x"}, "ok.name-1": {Value: "x"}}}}},
-		}}, [][]string{{"nodes", "a", "start", "spawn", "command"}, {"nodes", "b", "start", "spawn", "command", "0"},
-			{"nodes", "b", "start", "spawn", "env", ""}, {"nodes", "b", "start", "spawn", "env", "N\x00UL"}}},
+			"c": {Dial: &Dial{URL: "http://h", Pin: []byte{1}, Credential: "nope2"}},
+			"d": {Dial: &Dial{URL: "https://", Pin: pin, Credential: "dial"}},
+		}}, [][]string{{"nodes", "a", "credential"},
+			{"nodes", "c", "dial", "url"}, {"nodes", "c", "dial", "pin"}, {"nodes", "c", "dial", "credential"}, {"nodes", "d", "dial", "url"}}},
 		{"dial-in credentials with the same value", &Config{Nodes: map[string]*NodeConfig{
 			"a": {Credential: ptr("s1")},
 			"b": {Credential: ptr("s1")},
@@ -252,8 +239,13 @@ func TestValidate(t *testing.T) {
 		}}, [][]string{{"nodes", "b", "credential"}, {"nodes", "d", "credential"}}},
 		{"replayable credential", &Config{Nodes: map[string]*NodeConfig{
 			"a": {Credential: ptr("s1")},
-			"b": {Start: &Start{Dial: &Dial{URL: "https://h", Pin: pin, Credential: "s1"}}},
-		}}, [][]string{{"nodes", "a", "credential"}, {"nodes", "b", "start", "dial", "credential"}}},
+			"b": {Dial: &Dial{URL: "https://h", Pin: pin, Credential: "s1"}},
+		}}, [][]string{{"nodes", "a", "credential"}, {"nodes", "b", "dial", "credential"}}},
+		{"replayable credential value", &Config{Nodes: map[string]*NodeConfig{
+			"a": {Credential: ptr("s1")},
+			"b": {Dial: &Dial{URL: "https://h", Pin: pin, Credential: "same-as-s1"}},
+			"c": {Dial: &Dial{URL: "https://h", Pin: pin, Credential: "s2"}},
+		}}, [][]string{{"nodes", "b", "dial", "credential"}}},
 		{"facets", &Config{Nodes: map[string]*NodeConfig{
 			"acme":   {Credential: ptr("s1"), Facets: [][]byte{[]byte("charts"), []byte("charts"), []byte("other"), []byte("gone")}},
 			"peer-1": {Credential: ptr("s2"), Peer: ptr(true), Facets: [][]byte{[]byte("charts")}},
@@ -264,9 +256,6 @@ func TestValidate(t *testing.T) {
 		}, Defaults: map[string]string{"short": "a", string(make([]byte, 33)): "Bad Name"}, Extensions: map[string][]byte{"bad": {0}, "x": {0}}},
 			[][]string{{"nodes", "a", "extensions", "nope"}, {"defaults", hex.EncodeToString(make([]byte, 33))}, {"defaults", hex.EncodeToString([]byte("short"))},
 				{"extensions", "bad"}, {"extensions", "x"}}},
-		{"other kinds", &Config{Nodes: map[string]*NodeConfig{
-			"a": {Start: &Start{Other: &Other{Kind: "wasm", Params: []byte{0xa0}}}},
-		}}, [][]string{{"nodes", "a", "start", "other", "kind"}}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -328,7 +317,7 @@ func code(err error) status.Code { return session.Code(err) }
 func doc(ids ...string) *Config {
 	c := EmptyConfig()
 	for _, id := range ids {
-		c.Nodes[id] = &NodeConfig{Start: &Start{Spawn: &Spawn{Command: []string{"node-" + id}, Env: map[string]EnvValue{"CRED": {Secret: true, Value: "cred"}}}}}
+		c.Nodes[id] = &NodeConfig{Dial: &Dial{URL: "https://" + id + ".example:4433/sparrow/wt", Pin: make([]byte, 32), Credential: "cred"}}
 	}
 	return c
 }
@@ -662,7 +651,7 @@ func TestWatchLagging(t *testing.T) {
 	events, lagged, cancel := m.Watch()
 	defer cancel()
 	for i := 0; i < 20; i++ {
-		m.NodeEvent(NodeEvent{Node: "n", Revision: uint64(i), State: Starting})
+		m.NodeEvent(NodeEvent{Node: "n", Revision: uint64(i), State: Offline})
 	}
 	n := 0
 	for range events {

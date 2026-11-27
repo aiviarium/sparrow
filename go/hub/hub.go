@@ -1,9 +1,9 @@
 // Package hub implements the Sparrow Hub Profile (core spec, section 10):
-// node links (spawned processes over pipes, nodes that dial in, nodes the
-// hub dials), composition of per-session schemas with stable facet IDs,
+// node links (nodes that dial in and nodes the hub dials; the hub never
+// starts nodes), composition of per-session schemas with stable facet IDs,
 // authorization with a pluggable Policy, forwarding by rewriting envelopes,
-// call contexts, offline and starting nodes, federation with peer hubs, and
-// the sparrow.hub.admin facet (package admin) that configures all of it.
+// call contexts, offline nodes, federation with peer hubs, and the
+// sparrow.hub.admin facet (package admin) that configures all of it.
 //
 // A Hub serves any transport connection (ServeConn); package
 // cmd/sparrow-hub puts it behind WebTransport and WebSocket listeners.
@@ -15,7 +15,6 @@ import (
 	"crypto/subtle"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"sort"
@@ -84,9 +83,9 @@ type Options struct {
 	// OnModuleRejected is called for every moduleRejected notification a
 	// client sends (9.4), after it is logged.
 	OnModuleRejected func(principal, id, version, reason string)
-	// StartTimeout bounds how long a call waits for a node that is not
+	// ConnectTimeout bounds how long a call waits for a node that is not
 	// connected (10.7); default 10 s.
-	StartTimeout time.Duration
+	ConnectTimeout time.Duration
 	// AdminFacetID fixes the facet ID of sparrow.hub.admin (0 allocates
 	// one from the facet-ID table, normally 16).
 	AdminFacetID uint64
@@ -95,10 +94,7 @@ type Options struct {
 	Clock session.Clock
 	// Session adjusts the configuration of every session the hub runs.
 	Session func(*session.Config)
-	// SpawnStderr receives the standard error of spawned nodes (default:
-	// the logger, line by line).
-	SpawnStderr io.Writer
-	Logger      *slog.Logger
+	Logger  *slog.Logger
 	// CredentialCheckInterval is how often dial-in credentials are
 	// re-validated (10.2: at least every 60 s); default 30 s.
 	CredentialCheckInterval time.Duration
@@ -159,8 +155,8 @@ func New(o Options) (*Hub, error) {
 	if o.SchemaVersion == "" {
 		o.SchemaVersion = "1"
 	}
-	if o.StartTimeout <= 0 {
-		o.StartTimeout = 10 * time.Second
+	if o.ConnectTimeout <= 0 {
+		o.ConnectTimeout = 10 * time.Second
 	}
 	if o.CredentialCheckInterval <= 0 {
 		o.CredentialCheckInterval = 30 * time.Second
@@ -217,7 +213,7 @@ func New(o Options) (*Hub, error) {
 		return nil, err
 	}
 	h.adm, err = admin.NewManager(admin.Options{Store: o.Store, Clock: o.Clock, Logger: h.log,
-		Extension: h.validateExtension, OtherKind: func(string, []byte) error { return admin.ErrUnsupported }})
+		Extension: h.validateExtension})
 	if err != nil {
 		return nil, err
 	}
@@ -241,9 +237,8 @@ func (h *Hub) Admin() *admin.Manager { return h.adm }
 // AdminFacetID returns the facet ID of sparrow.hub.admin.
 func (h *Hub) AdminFacetID() uint64 { return h.adminID }
 
-// Close shuts the hub down: GoAway(going_away) to every session, nodes
-// stopped (spawned processes get GoAway and are waited for), and every
-// session closed within timeout.
+// Close shuts the hub down: GoAway(going_away) to every session, the dial
+// loops of dialed nodes stopped, and every session closed within timeout.
 func (h *Hub) Close(timeout time.Duration) {
 	h.mu.Lock()
 	if h.closed {
@@ -266,10 +261,10 @@ func (h *Hub) Close(timeout time.Duration) {
 			s.GoAway(status.GoingAway, "hub shutting down", nil)
 		}
 	}
-	var sups []*supervisor
+	var dls []*dialer
 	for _, n := range nodes {
-		if s := n.stopLink(); s != nil {
-			sups = append(sups, s)
+		if d := n.stopLink(); d != nil {
+			dls = append(dls, d)
 		}
 	}
 	deadline := time.Now().Add(timeout)
@@ -312,8 +307,8 @@ func (h *Hub) Close(timeout time.Duration) {
 		case <-connDeadline:
 		}
 	}
-	for _, s := range sups {
-		s.wait(time.Until(deadline) + 6*time.Second) // spawned processes exit (killed after 5 s)
+	for _, d := range dls {
+		d.wait(time.Until(deadline) + 6*time.Second) // a dialed session gets 5 s after its GoAway
 	}
 	h.stop()
 	h.wg.Wait()

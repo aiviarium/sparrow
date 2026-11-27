@@ -54,11 +54,12 @@ func TestAdminOverTheWire(t *testing.T) {
 		t.Fatalf("first event %+v", e)
 	}
 	// Commit with confirmation; confirm over a new session (2.3).
-	cfg := &admin.Config{Nodes: map[string]*admin.NodeConfig{"echo": spawnEcho("echo")}, Extensions: policy(grant("user:alice", "echo", "use"))}
+	cfg := &admin.Config{Nodes: map[string]*admin.NodeConfig{"echo": f.echo("echo")}, Extensions: policy(grant("user:alice", "echo", "use"))}
 	rev, err := c.Commit(ctx, 0, cfg, 30000)
 	if err != nil || rev != 1 {
 		t.Fatalf("%d %v", rev, err)
 	}
+	f.startEchoes()
 	if e := nextEv(t, w); e.Revision == nil || e.Revision.State != admin.Pending || e.Revision.ConfirmInMs == nil {
 		t.Fatalf("%+v", e)
 	}
@@ -77,11 +78,12 @@ func TestAdminOverTheWire(t *testing.T) {
 	// An unconfirmed commit is rolled back at its deadline: the node it
 	// added is removed again.
 	cfg2 := cfg.Clone()
-	cfg2.Nodes["echo2"] = spawnEcho("echo2")
+	cfg2.Nodes["echo2"] = f.echo("echo2")
 	rev, err = c.Commit(ctx, 1, cfg2, 1500)
 	if err != nil || rev != 2 {
 		t.Fatal(err)
 	}
+	f.startEchoes()
 	waitNodeEvent(t, w, "echo2", admin.Connected, 2)
 	var sawRolled bool
 	for {
@@ -135,7 +137,7 @@ func TestAdminOverTheWire(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 	names, _ := c.ListSecrets(ctx)
-	if len(names) != 1 || names[0] != "s1" {
+	if len(names) != 3 || names[2] != "s1" { // and the echo nodes' credentials
 		t.Fatal(names)
 	}
 	key, err := c.PutFacet(ctx, echoFacetDoc(t, "echo"))
@@ -211,7 +213,7 @@ func TestRestartPersistence(t *testing.T) {
 	f := startFixture(t, dir, nil)
 	f.secret("acme-1", "cred-one")
 	cfg := &admin.Config{Nodes: map[string]*admin.NodeConfig{
-		"echo": spawnEcho("echo"),
+		"echo": f.echo("echo"),
 		"acme": dialInConfig("acme-1"),
 	}, Extensions: policy(grant("user:alice", "*", "use"))}
 	rev := f.commit(cfg)
@@ -231,15 +233,20 @@ func TestRestartPersistence(t *testing.T) {
 	// A pending commit when the hub stops.
 	c, _ := f.adminClient("websocket")
 	pending := cfg.Clone()
-	pending.Nodes["echo2"] = spawnEcho("echo2")
+	pending.Nodes["echo2"] = f.echo("echo2")
 	prev, err := c.Commit(tctx(t), rev, pending, 60000)
 	if err != nil {
 		t.Fatal(err)
 	}
+	f.startEchoes()
 	waitNode(t, f.h, "echo2", true)
 	f.stop()
 
-	g := startFixture(t, dir, nil)
+	// The new hub listens where the old one did, so the echo processes,
+	// which keep redialing, find it again.
+	g := startFixtureOn(t, dir, f.wsAddr, nil)
+	g.echoes = f.echoes
+	g.stopEcho("echo2", false) // rolled back: no longer configured
 	s := g.h.Admin().Get()
 	if s.Revision != prev+1 || !s.Config.Equal(cfg) || s.State != admin.Confirmed {
 		t.Fatalf("after restart: rev %d (pending was %d) state %v", s.Revision, prev, s.State)
@@ -276,7 +283,7 @@ func TestRestartPersistence(t *testing.T) {
 		t.Fatalf("%v %v", v, err)
 	}
 	// A removed node's IDs are retired: added again, it gets new ones.
-	g.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"echo": spawnEcho("echo")}, Extensions: policy(grant("user:alice", "*", "use"))})
+	g.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"echo": g.echo("echo")}, Extensions: policy(grant("user:alice", "*", "use"))})
 	g.commit(cfg)
 	if _, err := dialInNode(t, g, "websocket", "acme", "cred-one", acmeFacet("acme", "1.0.0", true, false)); err != nil {
 		t.Fatal(err)

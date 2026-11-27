@@ -2,7 +2,6 @@ package hub
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"strings"
 	"testing"
@@ -118,17 +117,29 @@ func asErr(err error, e **session.Error) bool {
 	return ok
 }
 
-func TestSpawnedEchoAllShapes(t *testing.T) {
+// TestEchoAllShapes: every call shape through the hub to examples/echo-node
+// running as its own process, linked each way a node can be (10.2): dialing
+// in over WebSocket, dialing in over WebTransport with the hub's key pinned,
+// and dialed by the hub over WebTransport at its URL and SPKI pin.
+func TestEchoAllShapes(t *testing.T) {
 	f := newFixture(t, nil)
-	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"echo": spawnEcho("echo")},
-		Extensions: policy(grant("user:alice", "echo", "use"))})
-	waitNode(t, f.h, "echo", true)
+	ids := []string{"echo", "echo-wt", "echo-dialed"}
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{
+		"echo":        f.echo("echo"),
+		"echo-wt":     f.echoWT("echo-wt"),
+		"echo-dialed": f.dialedEcho("echo-dialed"),
+	}, Extensions: policy(grant("user:alice", "echo", "use"), grant("user:alice", "echo-wt", "use"), grant("user:alice", "echo-dialed", "use"))})
+	for _, id := range ids {
+		waitNode(t, f.h, id, true)
+	}
 	for _, b := range transports {
-		t.Run(b, func(t *testing.T) {
-			cli := f.client(b, aliceToken)
-			waitFacet(t, cli, "echo")
-			exerciseEcho(t, cli, "echo", "user:alice")
-		})
+		for _, id := range ids {
+			t.Run(b+"/"+id, func(t *testing.T) {
+				cli := f.client(b, aliceToken)
+				waitFacet(t, cli, id)
+				exerciseEcho(t, cli, id, "user:alice")
+			})
+		}
 	}
 	// bob has no grant: the facet is not in his schema, and calling its ID
 	// anyway is refused.
@@ -136,12 +147,13 @@ func TestSpawnedEchoAllShapes(t *testing.T) {
 	if bob.Session().PeerFacet("echo") != nil {
 		t.Fatal("bob sees echo")
 	}
-	ctx := context.Background()
 	alice := f.client("websocket", aliceToken)
 	id := waitFacet(t, alice, "echo")
-	_, err := bob.Session().OpenRaw(ctx, session.RawRequest{FacetID: id, MethodID: 0, Input: []byte{0x61, 0x78}}, &session.CallOptions{Flags: new(uint64)})
+	cc, err := bob.Session().OpenRaw(tctx(t), session.RawRequest{FacetID: id, MethodID: 0, Input: []byte{0x61, 0x78}}, nil)
 	if err == nil {
-		t.Log("opened")
+		_, err = cc.ResponseRaw(tctx(t))
 	}
-	_ = status.OK
+	if c := session.Code(err); c != status.PermissionDenied && c != status.Unimplemented {
+		t.Fatalf("bob called echo: %v", err)
+	}
 }

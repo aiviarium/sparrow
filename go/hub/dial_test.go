@@ -97,7 +97,7 @@ func nilSafe(a *wire.Auth) []byte {
 }
 
 func dialConfig(url string, pin []byte, cred string) *admin.NodeConfig {
-	return &admin.NodeConfig{Start: &admin.Start{Dial: &admin.Dial{URL: url, Pin: pin, Credential: cred}}}
+	return &admin.NodeConfig{Dial: &admin.Dial{URL: url, Pin: pin, Credential: cred}}
 }
 
 func TestHubDialsNode(t *testing.T) {
@@ -142,7 +142,7 @@ func TestHubDialsNode(t *testing.T) {
 				st := f.h.Admin().NodeStates()["remote"]
 				return st.State == admin.Offline && st.Message != nil && strings.Contains(*st.Message, "pin")
 			}, "node state %+v", f.h.Admin().NodeStates()["remote"])
-			// Calls wait for the start timeout and then fail with
+			// Calls wait for the connect timeout and then fail with
 			// unavailable; the facet stays listed (10.7).
 			if cli.Session().PeerFacet("remote") == nil {
 				t.Fatal("facet no longer listed")
@@ -151,7 +151,7 @@ func TestHubDialsNode(t *testing.T) {
 			_, err := cli.Call(tctx(t), "remote", "ping", nil)
 			mustCode(t, err, status.Unavailable)
 			if d := time.Since(start); d < 2*time.Second {
-				t.Fatalf("failed after %v, before the start timeout", d)
+				t.Fatalf("failed after %v, before the connect timeout", d)
 			}
 		})
 	}

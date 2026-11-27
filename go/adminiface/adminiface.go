@@ -23,38 +23,30 @@ const (
 const (
 	TypeConfig          uint64 = 64
 	TypeNodeConfig      uint64 = 65
-	TypeStart           uint64 = 66
-	TypeSpawn           uint64 = 67
-	TypeEnvValue        uint64 = 68
-	TypeDial            uint64 = 69
-	TypeOther           uint64 = 70
-	TypeSnapshot        uint64 = 71
-	TypeCommitRequest   uint64 = 72
-	TypeValidateRequest uint64 = 73
-	TypeProblem         uint64 = 74
-	TypeProblems        uint64 = 75
-	TypeSecret          uint64 = 76
-	TypeNames           uint64 = 77
-	TypeHashes          uint64 = 78
-	TypeEvent           uint64 = 79
-	TypeRevisionEvent   uint64 = 80
-	TypeRevisionState   uint64 = 81
-	TypeNodeEvent       uint64 = 82
-	TypeNodeState       uint64 = 83
+	TypeDial            uint64 = 66
+	TypeSnapshot        uint64 = 67
+	TypeCommitRequest   uint64 = 68
+	TypeValidateRequest uint64 = 69
+	TypeProblem         uint64 = 70
+	TypeProblems        uint64 = 71
+	TypeSecret          uint64 = 72
+	TypeNames           uint64 = 73
+	TypeHashes          uint64 = 74
+	TypeEvent           uint64 = 75
+	TypeRevisionEvent   uint64 = 76
+	TypeRevisionState   uint64 = 77
+	TypeNodeEvent       uint64 = 78
+	TypeNodeState       uint64 = 79
 )
 
 // Field tags of the structs and variant tags of the unions.
 const (
 	ConfigNodes, ConfigDefaults, ConfigExtensions uint64 = 0, 1, 2
 
-	NodeConfigStart, NodeConfigCredential, NodeConfigFacets uint64 = 0, 1, 2
+	NodeConfigDial, NodeConfigCredential, NodeConfigFacets  uint64 = 0, 1, 2
 	NodeConfigPeer, NodeConfigEnabled, NodeConfigExtensions uint64 = 3, 4, 5
 
-	StartSpawn, StartDial, StartOther uint64 = 0, 1, 2
-	SpawnCommand, SpawnEnv, SpawnDir  uint64 = 0, 1, 2
-	EnvLiteral, EnvSecret             uint64 = 0, 1
-	DialURL, DialPin, DialCredential  uint64 = 0, 1, 2
-	OtherKind, OtherParams            uint64 = 0, 1
+	DialURL, DialPin, DialCredential uint64 = 0, 1, 2
 
 	SnapshotRevision, SnapshotConfig, SnapshotState, SnapshotConfirmInMs uint64 = 0, 1, 2, 3
 	CommitBase, CommitConfig, CommitConfirmWithinMs                      uint64 = 0, 1, 2
@@ -72,12 +64,10 @@ const (
 	SigilPending    uint64 = 64
 	SigilConfirmed  uint64 = 65
 	SigilRolledBack uint64 = 66
-	SigilStarting   uint64 = 67
-	SigilConnected  uint64 = 68
-	SigilOffline    uint64 = 69
-	SigilFailed     uint64 = 70
-	SigilDisabled   uint64 = 71
-	SigilRemoved    uint64 = 72
+	SigilConnected  uint64 = 67
+	SigilOffline    uint64 = 68
+	SigilDisabled   uint64 = 69
+	SigilRemoved    uint64 = 70
 )
 
 // ServiceAdmin is the interface's only service.
@@ -141,7 +131,7 @@ var (
 	tUnit   = named(schema.TypeUnit)
 )
 
-// Types returns types 64-83. An optional field has flag 0x1 and its plain
+// Types returns types 64-79. An optional field has flag 0x1 and its plain
 // type.
 func Types() []schema.TypeDef {
 	return []schema.TypeDef{
@@ -150,17 +140,13 @@ func Types() []schema.TypeDef {
 			opt(1, "defaults", mapOf(tBytes, tString)),
 			opt(2, "extensions", mapOf(tString, tBytes))),
 		strct(TypeNodeConfig, "NodeConfig",
-			opt(0, "start", named(TypeStart)),
+			opt(0, "dial", named(TypeDial)),
 			opt(1, "credential", tString),
 			opt(2, "facets", list(tBytes)),
 			opt(3, "peer", tBool),
 			opt(4, "enabled", tBool),
 			opt(5, "extensions", mapOf(tString, tBytes))),
-		union(TypeStart, "Start", req(0, "spawn", named(TypeSpawn)), req(1, "dial", named(TypeDial)), req(2, "other", named(TypeOther))),
-		strct(TypeSpawn, "Spawn", req(0, "command", list(tString)), opt(1, "env", mapOf(tString, named(TypeEnvValue))), opt(2, "dir", tString)),
-		union(TypeEnvValue, "EnvValue", req(0, "literal", tString), req(1, "secret", tString)),
 		strct(TypeDial, "Dial", req(0, "url", tString), req(1, "pin", tBytes), req(2, "credential", tString)),
-		strct(TypeOther, "Other", req(0, "kind", tString), req(1, "params", tBytes)),
 		strct(TypeSnapshot, "Snapshot", req(0, "revision", tUint), req(1, "config", named(TypeConfig)), req(2, "state", named(TypeRevisionState)), opt(3, "confirmInMs", tUint)),
 		strct(TypeCommitRequest, "CommitRequest", req(0, "base", tUint), req(1, "config", named(TypeConfig)), req(2, "confirmWithinMs", tUint)),
 		strct(TypeValidateRequest, "ValidateRequest", req(0, "base", tUint), req(1, "config", named(TypeConfig))),
@@ -173,13 +159,13 @@ func Types() []schema.TypeDef {
 		strct(TypeRevisionEvent, "RevisionEvent", req(0, "revision", tUint), req(1, "state", named(TypeRevisionState)), opt(2, "confirmInMs", tUint)),
 		enum(TypeRevisionState, "RevisionState", SigilPending, SigilConfirmed, SigilRolledBack),
 		strct(TypeNodeEvent, "NodeEvent", req(0, "node", tString), req(1, "revision", tUint), req(2, "state", named(TypeNodeState)), opt(3, "message", tString)),
-		enum(TypeNodeState, "NodeState", SigilStarting, SigilConnected, SigilOffline, SigilFailed, SigilDisabled, SigilRemoved),
+		enum(TypeNodeState, "NodeState", SigilConnected, SigilOffline, SigilDisabled, SigilRemoved),
 	}
 }
 
-// Sigils returns sigils 64-72, all kind 0 (enum values).
+// Sigils returns sigils 64-70, all kind 0 (enum values).
 func Sigils() []schema.Sigil {
-	names := []string{"pending", "confirmed", "rolledBack", "starting", "connected", "offline", "failed", "disabled", "removed"}
+	names := []string{"pending", "confirmed", "rolledBack", "connected", "offline", "disabled", "removed"}
 	out := make([]schema.Sigil, len(names))
 	for i, n := range names {
 		out[i] = schema.Sigil{ID: SigilPending + uint64(i), Name: n, Kind: schema.SigilEnumValue, Annotations: schema.Annotations{}}

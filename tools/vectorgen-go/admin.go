@@ -13,11 +13,7 @@ import (
 const (
 	adConfig = 64 + iota
 	adNodeConfig
-	adStart
-	adSpawn
-	adEnvValue
 	adDial
-	adOther
 	adSnapshot
 	adCommitRequest
 	adValidateRequest
@@ -37,15 +33,13 @@ const (
 	sgPending = 64 + iota
 	sgConfirmed
 	sgRolledBack
-	sgStarting
 	sgConnected
 	sgOffline
-	sgFailed
 	sgDisabled
 	sgRemoved
 )
 
-// adminTypes are types 64-83 of section 5.1. An optional field has flag 0x1
+// adminTypes are types 64-79 of section 5.1. An optional field has flag 0x1
 // and its plain type (hub-admin 5).
 func adminTypes() []any {
 	of := func(tag int, name string, t any) []any { return field(tag, name, t, ffOptional, nil) }
@@ -57,29 +51,14 @@ func adminTypes() []any {
 			of(2, "extensions", tMap(tString, tBytes)),
 		), 0, nil),
 		structDef(adNodeConfig, "NodeConfig", list(
-			of(0, "start", adStart),
+			of(0, "dial", adDial),
 			of(1, "credential", tString),
 			of(2, "facets", tList(tBytes)),
 			of(3, "peer", tBool),
 			of(4, "enabled", tBool),
 			of(5, "extensions", tMap(tString, tBytes)),
 		), 0, nil),
-		unionDef(adStart, "Start", list(
-			variant(0, "spawn", adSpawn, 0, nil),
-			variant(1, "dial", adDial, 0, nil),
-			variant(2, "other", adOther, 0, nil),
-		), nil),
-		structDef(adSpawn, "Spawn", list(
-			rf(0, "command", tList(tString)),
-			of(1, "env", tMap(tString, adEnvValue)),
-			of(2, "dir", tString),
-		), 0, nil),
-		unionDef(adEnvValue, "EnvValue", list(
-			variant(0, "literal", tString, 0, nil),
-			variant(1, "secret", tString, 0, nil),
-		), nil),
 		structDef(adDial, "Dial", list(rf(0, "url", tString), rf(1, "pin", tBytes), rf(2, "credential", tString)), 0, nil),
-		structDef(adOther, "Other", list(rf(0, "kind", tString), rf(1, "params", tBytes)), 0, nil),
 		structDef(adSnapshot, "Snapshot", list(
 			rf(0, "revision", tUint), rf(1, "config", adConfig), rf(2, "state", adRevisionState), of(3, "confirmInMs", tUint),
 		), 0, nil),
@@ -98,15 +77,15 @@ func adminTypes() []any {
 		structDef(adRevisionEvent, "RevisionEvent", list(rf(0, "revision", tUint), rf(1, "state", adRevisionState), of(2, "confirmInMs", tUint)), 0, nil),
 		enumDef(adRevisionState, "RevisionState", list(sgPending, sgConfirmed, sgRolledBack), nil),
 		structDef(adNodeEvent, "NodeEvent", list(rf(0, "node", tString), rf(1, "revision", tUint), rf(2, "state", adNodeState), of(3, "message", tString)), 0, nil),
-		enumDef(adNodeState, "NodeState", list(sgStarting, sgConnected, sgOffline, sgFailed, sgDisabled, sgRemoved), nil),
+		enumDef(adNodeState, "NodeState", list(sgConnected, sgOffline, sgDisabled, sgRemoved), nil),
 	)
 }
 
 func adminSigils() []any {
 	return list(
 		sigil(sgPending, "pending", 0, nil), sigil(sgConfirmed, "confirmed", 0, nil), sigil(sgRolledBack, "rolledBack", 0, nil),
-		sigil(sgStarting, "starting", 0, nil), sigil(sgConnected, "connected", 0, nil), sigil(sgOffline, "offline", 0, nil),
-		sigil(sgFailed, "failed", 0, nil), sigil(sgDisabled, "disabled", 0, nil), sigil(sgRemoved, "removed", 0, nil),
+		sigil(sgConnected, "connected", 0, nil), sigil(sgOffline, "offline", 0, nil),
+		sigil(sgDisabled, "disabled", 0, nil), sigil(sgRemoved, "removed", 0, nil),
 	)
 }
 
@@ -167,12 +146,8 @@ func adminExampleConfig() []any {
 	policy := enc([]any{[]any{"user:alice", "acme.charts", "use"}, []any{"group:ops", "sparrow.hub.admin", "manage"}})
 	return []any{
 		map[string]any{
-			"acme.charts": []any{
-				[]any{0, []any{[]any{"/opt/acme/charts", "--stdio"}, map[string]any{"MODE": []any{0, "production"}, "TOKEN": []any{1, "charts-token"}}}},
-				nil,
-				[]any{chartsKey},
-			},
-			"acme.notes":  []any{[]any{1, []any{"https://notes.example.com/sparrow/wt", adminPin, "hub-to-notes"}}},
+			"acme.charts": []any{nil, "charts-link", []any{chartsKey}},
+			"acme.notes":  []any{[]any{"https://notes.example.com/sparrow/wt", adminPin, "hub-to-notes"}},
 			"acme.sensor": []any{nil, "sensor-link"},
 			"hub-b":       []any{nil, "hub-b-link", nil, true},
 			"acme.old":    []any{nil, "old-link", nil, nil, false},
@@ -191,7 +166,7 @@ func adminVectors() O {
 		panic(e)
 	}
 	ic := canonicalIface(iface)
-	add(o("name", "admin/interface", "description", "The canonical interface document of sparrow.hub.admin v1 (hub-admin section 5): types 64-83, enum sigils 64-72 (kind 0), service 0 Admin with methods 0-11. Method flags: 0x1 (idempotent) on get, validate, confirm, deleteSecret, listSecrets, putFacet, deleteFacet and listFacets; 0x10 on watch, whose output is [3, Event]; no other flags. An optional field has flag 0x1 and its plain type. The interface document is named sparrow.hub.admin, version \"1.0.0\", carries no annotations, and its methods list no errors, since every error they use is a core code (hub-admin 5).",
+	add(o("name", "admin/interface", "description", "The canonical interface document of sparrow.hub.admin v1 (hub-admin section 5): types 64-79, enum sigils 64-70 (kind 0), service 0 Admin with methods 0-11. Method flags: 0x1 (idempotent) on get, validate, confirm, deleteSecret, listSecrets, putFacet, deleteFacet and listFacets; 0x10 on watch, whose output is [3, Event]; no other flags. An optional field has flag 0x1 and its plain type. The interface document is named sparrow.hub.admin, version \"1.0.0\", carries no annotations, and its methods list no errors, since every error they use is a core code (hub-admin 5).",
 		"spec", "hub-admin 5, core 6.5, 6.6", "type", "interface", "input", tj(iface), "canonical", tj(ic), "canonical_cbor", hx(enc(ic)),
 		"hash", hx(ifaceHash(iface)), "expected_valid", true))
 
@@ -231,27 +206,27 @@ func adminVectors() O {
 			"interface", "admin/interface", "type_id", typeID, "type_name", typeName(iface, typeID), "logical", logical,
 			"value", tj(v), "diag", diag(b), "cbor", hx(b)))
 	}
-	valueVec("admin/value/config", "A Config (type 64) with five nodes: acme.charts spawned with an environment holding a literal and a secret, and listing its stored facet by stored-facet key; acme.notes dialed at an https URL with a 32-byte pin and the credential secret the hub presents; acme.sensor dialing in; hub-b, a peer hub dialing in; acme.old, disabled. defaults maps the Renderer interface hash to acme.charts, and extensions carries the reference server's ref.policy as an embedded CBOR document. Absent optional fields are null and trailing nulls are omitted.",
+	valueVec("admin/value/config", "A Config (type 64) with five nodes: acme.charts dialing in with its credential secret and listing its stored facet by stored-facet key; acme.notes dialed (NodeConfig.dial, field 0) at an https URL with a 32-byte pin and the credential secret the hub presents; acme.sensor dialing in; hub-b, a peer hub dialing in; acme.old, disabled. defaults maps the Renderer interface hash to acme.charts, and extensions carries the reference server's ref.policy as an embedded CBOR document. Absent optional fields are null and trailing nulls are omitted.",
 		adConfig, "see description", cfg)
 	valueVec("admin/value/config-empty", "The document of a hub that was never configured, revision 0: {nodes: {}}, i.e. [{}] (hub-admin 2).", adConfig, "{nodes: {}}", []any{map[string]any{}})
 	commit := []any{6, cfg, 30000}
-	valueVec("admin/value/commit-request", "CommitRequest (type 72): base revision 6, the Config of admin/value/config, confirmWithinMs 30000.", adCommitRequest, "base 6, config, confirmWithinMs 30000", commit)
+	valueVec("admin/value/commit-request", "CommitRequest (type 68): base revision 6, the Config of admin/value/config, confirmWithinMs 30000.", adCommitRequest, "base 6, config, confirmWithinMs 30000", commit)
 	snap := []any{7, cfg, sgPending, 24500}
-	valueVec("admin/value/snapshot", "Snapshot (type 71) right after that commit: revision 7, pending (sigil 64), confirmInMs 24500.", adSnapshot, "revision 7, pending, confirmInMs 24500", snap)
-	valueVec("admin/value/event-snapshot", "Event (type 79) variant 0: the Snapshot every watch starts with.", adEvent, "snapshot", []any{0, snap})
+	valueVec("admin/value/snapshot", "Snapshot (type 67) right after that commit: revision 7, pending (sigil 64), confirmInMs 24500.", adSnapshot, "revision 7, pending, confirmInMs 24500", snap)
+	valueVec("admin/value/event-snapshot", "Event (type 75) variant 0: the Snapshot every watch starts with.", adEvent, "snapshot", []any{0, snap})
 	valueVec("admin/value/event-rolled-back", "Event variant 1: RevisionEvent revision 7 rolledBack (66), confirmInMs absent.", adEvent, "revision 7 rolledBack", []any{1, []any{7, sgRolledBack}})
 	valueVec("admin/value/event-confirmed", "Event variant 1: RevisionEvent revision 8 confirmed (65): the rollback target applied as revision N+1 (hub-admin 2.3).", adEvent, "revision 8 confirmed", []any{1, []any{8, sgConfirmed}})
-	valueVec("admin/value/event-node", "Event variant 2: NodeEvent for acme.charts under revision 8, connected (68), no message.", adEvent, "acme.charts connected", []any{2, []any{"acme.charts", 8, sgConnected}})
-	valueVec("admin/value/event-node-failed", "Event variant 2: NodeEvent for acme.notes under revision 8, failed (70), with a message.", adEvent, "acme.notes failed", []any{2, []any{"acme.notes", 8, sgFailed, "dial failed: pinned key hash does not match"}})
+	valueVec("admin/value/event-node", "Event variant 2: NodeEvent for acme.charts under revision 8, connected (67), no message.", adEvent, "acme.charts connected", []any{2, []any{"acme.charts", 8, sgConnected}})
+	valueVec("admin/value/event-node-offline", "Event variant 2: NodeEvent for acme.notes under revision 8, offline (68), with a message.", adEvent, "acme.notes offline", []any{2, []any{"acme.notes", 8, sgOffline, "dial failed: pinned key hash does not match"}})
 	problems := []any{
 		[]any{[]any{"nodes", "acme.charts", "facets", "0"}, "stored facet not found"},
-		[]any{[]any{"nodes", "acme.notes", "start", "dial", "pin"}, "Dial.pin must be 32 bytes"},
+		[]any{[]any{"nodes", "acme.notes", "dial", "pin"}, "Dial.pin must be 32 bytes"},
 	}
-	valueVec("admin/value/problems", "Problems (type 75, alias of list<Problem>): each Problem.path lists the keys from the document root following the JSON form: a union variant's name is a key (\"dial\" inside Start), list positions are decimal strings (\"0\" is the first entry of NodeConfig.facets) and byte-string map keys lowercase hex (hub-admin 5.1).", adProblems, "two problems", problems)
+	valueVec("admin/value/problems", "Problems (type 71, alias of list<Problem>): each Problem.path lists the keys from the document root using the field names of hub-admin section 3 (\"dial\", then \"pin\" inside Dial), list positions are decimal strings (\"0\" is the first entry of NodeConfig.facets) and byte-string map keys lowercase hex (hub-admin 5.1).", adProblems, "two problems", problems)
 
 	errMsg := []any{20, 10, 9, "invalid configuration", []any{adProblems, problems}}
 	eb := enc(errMsg)
-	add(o("name", "admin/commit-invalid", "description", "commit answered with Error(failed_precondition) (status 9) whose details are the dynamic value [75, problems] (hub-admin 5.2, core 8).",
+	add(o("name", "admin/commit-invalid", "description", "commit answered with Error(failed_precondition) (status 9) whose details are the dynamic value [71, problems] (hub-admin 5.2, core 8).",
 		"spec", "hub-admin 5.2, core 7.2, 8", "type", "message", "kind", 20, "kind_name", "Error", "message", tj(errMsg),
 		"diag", diag(eb), "cbor", hx(eb), "length", len(eb), "framed", hx(cat(varint(uint64(len(eb))), eb))))
 	return o("area", "admin", "vectors", vs)

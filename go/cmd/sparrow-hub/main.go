@@ -6,19 +6,23 @@
 //
 // The static configuration file (JSON) holds only what cannot come through
 // sparrow.hub.admin: listen addresses, TLS, the data directory and the
-// bootstrap administrator. See Config.
+// bootstrap administrator. See Config. The hub never starts nodes: they
+// dial in, or the hub dials the ones the document lists with a URL and pin.
 package main
 
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
@@ -83,8 +87,9 @@ type Config struct {
 	// /sparrow/connect, /sparrow/schema/{hash} and /sparrow/mods/{hash}.{ext}
 	// on both listeners. `true` or an object (WebConfig).
 	Web WebConfig `json:"web"`
-	// StartTimeoutMs bounds how long calls wait for a node (default 10000).
-	StartTimeoutMs uint64 `json:"startTimeoutMs"`
+	// ConnectTimeoutMs bounds how long a call waits for a node that is not
+	// connected (core 10.7; default 10000).
+	ConnectTimeoutMs uint64 `json:"connectTimeoutMs"`
 	// AllowedOrigins are the Origins accepted besides the hub's own (and
 	// requests without one); ["*"] allows every origin.
 	AllowedOrigins []string `json:"allowedOrigins"`
@@ -240,17 +245,50 @@ func LoadConfig(path string) (*Config, error) {
 	return &c, nil
 }
 
+// selfSignedKeyFile keeps the key of the self-signed certificate in the
+// data directory: the certificate is made anew at every start, but its SPKI
+// pin, which nodes dialing in may check, stays the same.
+const selfSignedKeyFile = "selfsigned.key"
+
+func selfSignedKey(store *admin.Store) (*ecdsa.PrivateKey, error) {
+	b, err := store.Read(selfSignedKeyFile)
+	if err == nil {
+		if blk, _ := pem.Decode(b); blk != nil {
+			return x509.ParseECPrivateKey(blk.Bytes)
+		}
+		return nil, fmt.Errorf("%s: no PEM block", selfSignedKeyFile)
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	der, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		return nil, err
+	}
+	return key, store.Write(selfSignedKeyFile, pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der}))
+}
+
 // Run serves until ctx ends, then shuts down gracefully: GoAway to every
 // session and node, then the listeners close.
 func Run(ctx context.Context, c *Config, log *slog.Logger, ready func(Addrs)) error {
 	var cert tls.Certificate
-	var err error
+	store, err := admin.OpenStore(c.DataDir)
+	if err != nil {
+		return err
+	}
 	if c.SelfSigned {
 		hosts := c.Hosts
 		if len(hosts) == 0 {
 			hosts = []string{"127.0.0.1", "localhost"}
 		}
-		cert, _, err = webtransport.SelfSigned(hosts...)
+		var key *ecdsa.PrivateKey
+		if key, err = selfSignedKey(store); err == nil {
+			cert, _, err = webtransport.SelfSignedWithKey(key, hosts...)
+		}
 	} else if c.TLS.Cert != "" {
 		cert, err = tls.LoadX509KeyPair(c.TLS.Cert, c.TLS.Key)
 	}
@@ -266,10 +304,6 @@ func Run(ctx context.Context, c *Config, log *slog.Logger, ready func(Addrs)) er
 		sum := sha256.Sum256(cert.Certificate[0])
 		addrs.CertHash = hex.EncodeToString(sum[:])
 		addrs.Pin = hex.EncodeToString(hub.PinFor(leaf))
-	}
-	store, err := admin.OpenStore(c.DataDir)
-	if err != nil {
-		return err
 	}
 	// Listen first: the Web Profile needs the endpoints before serving.
 	var pc net.PacketConn
@@ -304,7 +338,7 @@ func Run(ctx context.Context, c *Config, log *slog.Logger, ready func(Addrs)) er
 			ln.Close()
 		}
 	}
-	o := hub.Options{Store: store, SchemaName: c.SchemaName, Web: c.Web.Enabled, Logger: log, StartTimeout: time.Duration(c.StartTimeoutMs) * time.Millisecond}
+	o := hub.Options{Store: store, SchemaName: c.SchemaName, Web: c.Web.Enabled, Logger: log, ConnectTimeout: time.Duration(c.ConnectTimeoutMs) * time.Millisecond}
 	for _, b := range c.Bootstrap {
 		o.Bootstrap = append(o.Bootstrap, hub.Credential{Principal: b.Principal, Token: b.Credential})
 	}

@@ -1,8 +1,7 @@
 package hub
 
 import (
-	"context"
-	"os"
+	"fmt"
 	"os/exec"
 	"strings"
 	"testing"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/aiviarium/sparrow-rpc/go/admin"
 	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
-	"github.com/aiviarium/sparrow-rpc/go/schema"
 	"github.com/aiviarium/sparrow-rpc/go/session"
 	"github.com/aiviarium/sparrow-rpc/go/status"
 	"github.com/aiviarium/sparrow-rpc/go/transport/pipe"
@@ -38,30 +36,96 @@ func echoFacetDoc(t *testing.T, id string) []byte {
 	return b
 }
 
-func TestLazyStartFromConfiguredFacets(t *testing.T) {
+// TestConfiguredFacetsBeforeFirstConnect: the facets the document lists
+// for a node never seen are listed at once (10.7); a call to them waits for
+// the node, which an outside system starts meanwhile, and the node serves
+// it.
+func TestConfiguredFacetsBeforeFirstConnect(t *testing.T) {
 	f := newFixture(t, nil)
 	c, _ := f.adminClient("websocket")
-	key, err := c.PutFacet(tctx(t), echoFacetDoc(t, "echo"))
+	ctx := tctx(t)
+	key, err := c.PutFacet(ctx, echoFacetDoc(t, "echo"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	nc := spawnEcho("echo")
+	nc := f.echo("echo")
 	nc.Facets = [][]byte{key}
-	nc.Extensions = map[string][]byte{LazyExtension: {0xf5}}
-	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"echo": nc}, Extensions: policy(grant("user:alice", "echo", "use"))})
+	snap, _ := c.Get(ctx)
+	// Committed directly, so the echo process is not started yet.
+	if _, err := c.Commit(ctx, snap.Revision, &admin.Config{Nodes: map[string]*admin.NodeConfig{"echo": nc}, Extensions: policy(grant("user:alice", "echo", "use"))}, 0); err != nil {
+		t.Fatal(err)
+	}
 	cli := f.client("webtransport", aliceToken)
 	// Listed from the document before the node was ever seen (10.7).
 	waitFacet(t, cli, "echo")
-	time.Sleep(200 * time.Millisecond)
 	if f.h.Stats().Nodes["echo"].Connected {
-		t.Fatal("a lazy node started before its first call")
+		t.Fatal("connected before the node was started")
 	}
-	// The first call starts it and waits for it.
-	if v, err := cli.Call(tctx(t), "echo", "echo", "first"); err != nil || v != "first" {
+	go func() {
+		time.Sleep(300 * time.Millisecond)
+		f.startEchoes()
+	}()
+	if v, err := cli.Call(ctx, "echo", "echo", "first"); err != nil || v != "first" {
 		t.Fatalf("%v %v", v, err)
 	}
 	if !f.h.Stats().Nodes["echo"].Connected {
 		t.Fatal("not connected")
+	}
+}
+
+// TestOfflineEchoProcesses: a node process that goes away (a dial-in node
+// killed, a dialed node stopped) is offline; a call made meanwhile waits,
+// and the node coming back within the connect timeout serves it: the
+// dial-in node by dialing in again, the dialed node because the hub keeps
+// redialing it.
+func TestOfflineEchoProcesses(t *testing.T) {
+	f := newFixture(t, nil)
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{
+		"echo":        f.echo("echo"),
+		"echo-dialed": f.dialedEcho("echo-dialed"),
+	}, Extensions: policy(grant("user:alice", "*", "use"))})
+	cli := f.client("websocket", aliceToken)
+	for _, c := range []struct {
+		id    string
+		crash bool
+	}{{"echo", true}, {"echo-dialed", false}} {
+		t.Run(c.id, func(t *testing.T) {
+			waitNode(t, f.h, c.id, true)
+			fid := waitFacet(t, cli, c.id)
+			// A dialed node that is killed is noticed only by the QUIC idle
+			// timeout; stopped, it ends its session with GoAway.
+			f.stopEcho(c.id, c.crash)
+			waitNode(t, f.h, c.id, false)
+			if fc := cli.Session().PeerFacet(c.id); fc == nil || fc.ID != fid {
+				t.Fatal("facet not listed while offline")
+			}
+			done := make(chan error, 1)
+			go func() {
+				v, err := cli.Call(tctx(t), c.id, "echo", "waited")
+				if err == nil && v != "waited" {
+					err = fmt.Errorf("reply %v", v)
+				}
+				done <- err
+			}()
+			time.Sleep(500 * time.Millisecond)
+			f.restartEcho(c.id, false)
+			if err := <-done; err != nil {
+				t.Fatal(err)
+			}
+			if st := f.h.Admin().NodeStates()[c.id]; st.State != admin.Connected {
+				t.Fatalf("state %v", st.State)
+			}
+		})
+	}
+	// A call to a node that stays away fails with unavailable after the
+	// connect timeout (3 s here).
+	f.stopEcho("echo", false)
+	waitNode(t, f.h, "echo", false)
+	start := time.Now()
+	_, err := cli.Call(tctx(t), "echo", "echo", "nobody")
+	mustCode(t, err, status.Unavailable)
+	if d := time.Since(start); d < 2500*time.Millisecond || d > 10*time.Second {
+		t.Fatalf("failed after %v, want about the 3 s connect timeout", d)
 	}
 }
 
@@ -80,7 +144,7 @@ func TestOfflineDialInNode(t *testing.T) {
 	if fc := cli.Session().PeerFacet("acme"); fc == nil || fc.ID != id {
 		t.Fatal("facet not listed while offline")
 	}
-	// A call waits; the node connecting within the start timeout serves it.
+	// A call waits; the node connecting within the connect timeout serves it.
 	done := make(chan error, 1)
 	go func() {
 		v, err := cli.Call(tctx(t), "acme", "ping", nil)
@@ -98,56 +162,18 @@ func TestOfflineDialInNode(t *testing.T) {
 	}
 }
 
-func TestCrashingNodeFails(t *testing.T) {
+// TestDialedNodeRedials: a dialed node that is not there yet is offline
+// with the reason; once it listens, the hub's redialing (with backoff)
+// reaches it without any call or commit.
+func TestDialedNodeRedials(t *testing.T) {
 	f := newFixture(t, nil)
-	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{
-		"broken": {Start: &admin.Start{Spawn: &admin.Spawn{Command: []string{"/bin/sh", "-c", "exit 3"}}}},
-	}})
-	testutil.Eventually(t, 30*time.Second, func() bool {
-		return f.h.Admin().NodeStates()["broken"].State == admin.Failed
-	}, "node not marked failed: %+v", f.h.Admin().NodeStates()["broken"])
-	msg := f.h.Admin().NodeStates()["broken"].Message
-	if msg == nil || !strings.Contains(*msg, "5 crashes") {
-		t.Fatalf("message %v", msg)
-	}
-}
-
-// TestSpawnRestartOnConfigChange: changing how a node starts stops the old
-// process before the new one starts (10.7), and env values from secrets
-// reach the process.
-func TestSpawnRestartOnConfigChange(t *testing.T) {
-	f := newFixture(t, nil)
-	f.secret("motd", "from-a-secret")
-	nc := spawnEcho("echo")
-	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"echo": nc}, Extensions: policy(grant("user:alice", "echo", "use"))})
-	waitNode(t, f.h, "echo", true)
-	cli := f.client("websocket", aliceToken)
-	waitFacet(t, cli, "echo")
-	var first *session.Session
-	for _, ss := range f.h.Sessions()["node:echo"] {
-		first = ss
-	}
-	out := t.TempDir() + "/env"
-	nc2 := &admin.NodeConfig{Start: &admin.Start{Spawn: &admin.Spawn{
-		Command: []string{"/bin/sh", "-c", `printf '%s %s' "$MOTD" "$PLAIN" > ` + out + `; exec ` + echoBin + ` -id echo`},
-		Env:     map[string]admin.EnvValue{"MOTD": {Secret: true, Value: "motd"}, "PLAIN": {Value: "x"}},
-	}}}
-	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"echo": nc2}, Extensions: policy(grant("user:alice", "echo", "use"))})
-	select {
-	case <-first.Done():
-	case <-time.After(10 * time.Second):
-		t.Fatal("old process not stopped")
-	}
-	waitNode(t, f.h, "echo", true)
-	if n := len(f.h.Sessions()["node:echo"]); n != 1 {
-		t.Fatalf("%d node sessions: the node runs twice", n)
-	}
-	if v, err := cli.Call(tctx(t), "echo", "echo", "again"); err != nil || v != "again" {
-		t.Fatalf("%v %v", v, err)
-	}
-	if b, err := os.ReadFile(out); err != nil || string(b) != "from-a-secret x" {
-		t.Fatalf("environment %q %v", b, err)
-	}
-	_ = context.Background
-	_ = schema.Format
+	nc := f.dialedEcho("late")
+	f.stopEcho("late", false)
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"late": nc}})
+	testutil.Eventually(t, 15*time.Second, func() bool {
+		st := f.h.Admin().NodeStates()["late"]
+		return st.State == admin.Offline && st.Message != nil && *st.Message != "" && !strings.HasPrefix(*st.Message, "dialing")
+	}, "no dial failure reported: %+v", f.h.Admin().NodeStates()["late"])
+	f.restartEcho("late", false)
+	waitNode(t, f.h, "late", true)
 }

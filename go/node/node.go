@@ -55,6 +55,7 @@ type Node struct {
 	facets  map[uint64]*Facet
 	nextID  uint64
 	sess    *session.Session
+	last    *session.Session // the latest session, also once it ended
 	trusted bool
 	connErr error
 	lastGA  *wire.GoAway
@@ -275,6 +276,7 @@ func (n *Node) Serve(ctx context.Context, conn transport.Conn, authenticate func
 func (n *Node) attach(s *session.Session, trusted bool) {
 	n.mu.Lock()
 	n.sess = s
+	n.last = s
 	n.trusted = trusted || n.opts.TrustPeer
 	select {
 	case <-n.ready:
@@ -294,9 +296,10 @@ func (n *Node) attach(s *session.Session, trusted bool) {
 	}()
 }
 
-// RunStdio connects on standard input and output, as a process a hub
-// started (4.7, 10.2), and blocks until the session ends. Logs must go to
-// standard error.
+// RunStdio connects on standard input and output with the pipe binding
+// (4.7), as a process whose parent speaks Sparrow to it, and blocks until
+// the session ends. Logs must go to standard error. A hub never starts
+// nodes (10.2); this is for other supervisors.
 func (n *Node) RunStdio(ctx context.Context) error {
 	if err := n.Connect(ctx, pipe.Stdio(), true); err != nil {
 		return err
@@ -368,7 +371,11 @@ func (n *Node) RunDial(ctx context.Context, url string, o DialOptions) error {
 			backoff = 500 * time.Millisecond
 			_ = n.Wait(ctx)
 			if s := n.Session(); s != nil {
-				s.Close(status.OK, "reconnecting")
+				if ctx.Err() != nil {
+					s.Close(status.OK, "node shutting down")
+				} else {
+					s.Close(status.OK, "reconnecting")
+				}
 			}
 			if g := n.lastGoAway(); g != nil && g.RetryAfterMs != nil {
 				backoff = time.Duration(*g.RetryAfterMs) * time.Millisecond
@@ -433,6 +440,24 @@ func (n *Node) Wait(ctx context.Context) error {
 func (n *Node) Close() {
 	if s := n.Session(); s != nil {
 		s.Close(status.OK, "node closing")
+	}
+}
+
+// Shutdown ends the session with GoAway(ok), like Close, and then waits
+// until ctx ends for its transport connection to finish closing, so that a
+// program exiting next does not cut off the GoAway (a WebTransport peer
+// would otherwise notice only at its idle timeout).
+func (n *Node) Shutdown(ctx context.Context) {
+	n.mu.Lock()
+	s := n.last
+	n.mu.Unlock()
+	if s == nil {
+		return
+	}
+	s.Close(status.OK, "node shutting down")
+	select {
+	case <-s.Conn().Done():
+	case <-ctx.Done():
 	}
 }
 

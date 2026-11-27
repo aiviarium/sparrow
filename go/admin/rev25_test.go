@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
@@ -32,30 +33,29 @@ func TestNoOpCommitIsCanonicalByteEquality(t *testing.T) {
 	}
 }
 
-// TestJSONFormUnions: the JSON form writes a union as an object keyed by
-// its variant name (Start, EnvValue), the form Problem.path follows; the
-// reader also takes the older shorthand.
-func TestJSONFormUnions(t *testing.T) {
+// TestJSONForm: the JSON form names struct fields as in the interface and
+// writes byte strings as hex; a node with the old "start" key is refused.
+func TestJSONForm(t *testing.T) {
+	pin := make([]byte, 32)
+	pin[0] = 0xab
 	c := &Config{Nodes: map[string]*NodeConfig{
-		"echo": {Start: &Start{Spawn: &Spawn{Command: []string{"echo-node"}, Env: map[string]EnvValue{"A": {Value: "x"}, "B": {Secret: true, Value: "s"}}}}},
+		"echo":    {Dial: &Dial{URL: "https://h:1/sparrow/wt", Pin: pin, Credential: "s"}},
+		"inbound": {Credential: ptr("t"), Enabled: ptr(false)},
 	}}
 	b, err := c.MarshalJSON()
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"nodes":{"echo":{"start":{"spawn":{"command":["echo-node"],"env":{"A":{"literal":"x"},"B":{"secret":"s"}}}}}}}`
+	want := `{"nodes":{"echo":{"dial":{"url":"https://h:1/sparrow/wt","pin":"ab` + strings.Repeat("00", 31) + `","credential":"s"}},"inbound":{"credential":"t","enabled":false}}}`
 	if string(b) != want {
 		t.Fatalf("got %s", b)
 	}
-	var back, short Config
+	var back Config
 	if err := back.UnmarshalJSON(b); err != nil || !back.Equal(c) {
 		t.Fatalf("round trip: %v", err)
 	}
-	if err := short.UnmarshalJSON([]byte(`{"nodes":{"echo":{"spawn":{"command":["echo-node"],"env":{"A":"x","B":{"secret":"s"}}}}}}`)); err != nil || !short.Equal(c) {
-		t.Fatalf("shorthand: %v", err)
-	}
 	var bad Config
-	if err := bad.UnmarshalJSON([]byte(`{"nodes":{"echo":{"start":{"spawn":{"command":["x"]}},"dial":{"url":"https://h","pin":"","credential":"c"}}}}`)); err == nil {
-		t.Fatal("two starts accepted")
+	if err := bad.UnmarshalJSON([]byte(`{"nodes":{"echo":{"start":{"dial":{"url":"https://h","pin":"","credential":"c"}}}}}`)); err == nil {
+		t.Fatal("a start key was accepted")
 	}
 }

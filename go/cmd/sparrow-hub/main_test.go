@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -69,7 +70,7 @@ func writeConfig(t *testing.T, dir string) string {
 		"dataDir":   filepath.Join(dir, "data"),
 		"bootstrap": []map[string]string{{"principal": "user:admin", "credential": "admin-secret"}},
 		"tokens":    []map[string]any{{"token": "alice-token", "principal": "user:alice", "groups": []string{"group:eng"}}},
-		"log":       "debug", "shutdownGraceMs": 3000, "startTimeoutMs": 3000,
+		"log":       "debug", "shutdownGraceMs": 3000, "connectTimeoutMs": 15000,
 	}
 	b, _ := json.Marshal(cfg)
 	p := filepath.Join(dir, "hub.json")
@@ -166,10 +167,71 @@ func (p *hubProc) client(t *testing.T, url, token string, known *session.Config)
 	return n
 }
 
+// echoDialIn starts examples/echo-node as its own process, dialing in to
+// the hub over WebTransport with the hub's SPKI pin and the given link
+// credential; it redials whenever its session ends.
+func (p *hubProc) echoDialIn(t *testing.T, id, cred string, extra ...string) *testutil.Proc {
+	t.Helper()
+	args := append([]string{"-id", id, "-hub", p.addrs.WebTransport, "-hub-pin", p.addrs.Pin, "-credential", cred}, extra...)
+	return testutil.StartProc(t, "echo-node "+id, bins["echo-node"], args...)
+}
+
+// echoListening starts examples/echo-node as its own process waiting to be
+// dialed over WebTransport by a hub presenting cred, and returns the URL
+// and SPKI pin (hex) it printed.
+func echoListening(t *testing.T, id, cred string) (*testutil.Proc, string, string) {
+	t.Helper()
+	pr := testutil.StartProc(t, "echo-node "+id, bins["echo-node"], "-id", id, "-listen", "127.0.0.1:0", "-credential", cred)
+	line, err := pr.Line(15 * time.Second)
+	if err != nil {
+		t.Fatalf("%v\n%s", err, pr.Log())
+	}
+	var a struct{ WebTransport, Pin string }
+	if err := json.Unmarshal([]byte(line), &a); err != nil || a.WebTransport == "" || len(a.Pin) != 64 {
+		t.Fatalf("echo-node printed %q: %v", line, err)
+	}
+	return pr, a.WebTransport, a.Pin
+}
+
+// keepPorts rewrites the static file so that a restarted hub listens where
+// this one does: a node that dials in then finds it again by itself.
+func keepPorts(t *testing.T, dir string, a Addrs) {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join(dir, "hub.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg map[string]any
+	_ = json.Unmarshal(b, &cfg)
+	for key, u := range map[string]string{"webtransport": a.WebTransport, "websocket": a.WebSocket} {
+		pu, err := url.Parse(u)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cfg[key] = pu.Host
+	}
+	b, _ = json.Marshal(cfg)
+	if err := os.WriteFile(filepath.Join(dir, "hub.json"), b, 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestBinary drives the built programs as separate processes: the hub,
+// sparrow-admin, and examples/echo-node twice, once dialing in (echo) and
+// once waiting to be dialed (echo-dialed). It covers validate, commit and
+// confirm, secrets, calls through both nodes over both bindings, graceful
+// shutdown, a restart on the same data directory (the dial-in node
+// reconnects by itself and serves a call that waited for it; the hub
+// redials the other) and watch.
 func TestBinary(t *testing.T) {
 	dir := t.TempDir()
 	p := startHub(t, dir)
-	doc := fmt.Sprintf(`{"nodes": {"echo": {"spawn": {"command": [%q, "-id", "echo"]}}}, "policy": [["group:eng", "echo", "use"]]}`, bins["echo-node"])
+	keepPorts(t, dir, p.addrs)
+	_, dialURL, dialPin := echoListening(t, "echo-dialed", "hub-to-dialed")
+	p.admin(t, p.addrs.WebSocket, "set-secret", "echo-link", "echo-to-hub")
+	p.admin(t, p.addrs.WebSocket, "set-secret", "dialed-link", "hub-to-dialed")
+	doc := fmt.Sprintf(`{"nodes": {"echo": {"credential": "echo-link"}, "echo-dialed": {"dial": {"url": %q, "pin": %q, "credential": "dialed-link"}}},
+		"policy": [["group:eng", "echo", "use"], ["group:eng", "echo-dialed", "use"]]}`, dialURL, dialPin)
 	docFile := filepath.Join(dir, "doc.json")
 	_ = os.WriteFile(docFile, []byte(doc), 0o600)
 	if out := p.admin(t, p.addrs.WebSocket, "validate", docFile); strings.TrimSpace(out) != "[]" {
@@ -179,6 +241,7 @@ func TestBinary(t *testing.T) {
 	if !strings.Contains(out, `"revision": 1`) {
 		t.Fatalf("commit: %s", out)
 	}
+	p.echoDialIn(t, "echo", "echo-to-hub")
 	if out := p.admin(t, p.addrs.WebSocket, "get"); !strings.Contains(out, `"state": "confirmed"`) || !strings.Contains(out, `"revision": 1`) {
 		t.Fatalf("get: %s", out)
 	}
@@ -191,26 +254,28 @@ func TestBinary(t *testing.T) {
 	var cached *session.Config
 	for _, url := range []string{p.addrs.WebTransport, p.addrs.WebSocket} {
 		c := p.client(t, url, "alice-token", nil)
-		testutil.Eventually(t, 15*time.Second, func() bool { return c.Session().PeerFacet("echo") != nil }, "no echo facet")
-		if v, err := c.Call(ctx, "echo", "echo", "through the binary"); err != nil || v != "through the binary" {
-			t.Fatalf("%v %v", v, err)
-		}
-		cs, err := c.Open(ctx, "echo", "count", uint64(10), nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		n := 0
-		for {
-			if _, err := cs.Recv(ctx); err != nil {
-				break
+		for _, facet := range []string{"echo", "echo-dialed"} {
+			testutil.Eventually(t, 15*time.Second, func() bool { return c.Session().PeerFacet(facet) != nil }, "no %s facet", facet)
+			if v, err := c.Call(ctx, facet, "echo", "through the binary"); err != nil || v != "through the binary" {
+				t.Fatalf("%s: %v %v", facet, v, err)
 			}
-			n++
-		}
-		if n != 10 {
-			t.Fatalf("count %d", n)
-		}
-		if v, err := c.Call(ctx, "echo", "whoami", nil); err != nil || v != "user:alice" {
-			t.Fatalf("whoami %v %v", v, err)
+			cs, err := c.Open(ctx, facet, "count", uint64(10), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			n := 0
+			for {
+				if _, err := cs.Recv(ctx); err != nil {
+					break
+				}
+				n++
+			}
+			if n != 10 {
+				t.Fatalf("%s: count %d", facet, n)
+			}
+			if v, err := c.Call(ctx, facet, "whoami", nil); err != nil || v != "user:alice" {
+				t.Fatalf("%s: whoami %v %v", facet, v, err)
+			}
 		}
 		cached = &session.Config{KnownSchema: c.Session().PeerSchema().Schema()}
 		c.Close()
@@ -231,17 +296,25 @@ func TestBinary(t *testing.T) {
 			t.Fatalf("client got %v", g)
 		}
 	}
-	// Restart: everything persisted; the cached schema is still current.
+	// Restart: everything persisted; the cached schema is still current,
+	// since both nodes' last known facets are listed while they are
+	// offline. The call to echo waits (connectTimeoutMs) until the node,
+	// redialing with backoff, is back; the hub redials echo-dialed.
 	p2 := startHub(t, dir)
-	if out := p2.admin(t, p2.addrs.WebSocket, "get"); !strings.Contains(out, `"revision": 1`) || !strings.Contains(out, "echo-node") {
+	if p2.addrs.Pin != p.addrs.Pin || p2.addrs.WebTransport != p.addrs.WebTransport {
+		t.Fatalf("restarted hub at %+v, was %+v", p2.addrs, p.addrs)
+	}
+	if out := p2.admin(t, p2.addrs.WebSocket, "get"); !strings.Contains(out, `"revision": 1`) || !strings.Contains(out, `"echo-link"`) {
 		t.Fatalf("after restart: %s", out)
 	}
 	c := p2.client(t, p2.addrs.WebSocket, "alice-token", cached)
 	if k := c.Session().Welcome().ServerSchema.Kind; k != wire.OfferUnchanged {
 		t.Fatalf("offer %v after restart, want Unchanged", k)
 	}
-	if v, err := c.Call(ctx, "echo", "echo", "again"); err != nil || v != "again" {
-		t.Fatalf("%v %v", v, err)
+	for _, facet := range []string{"echo", "echo-dialed"} {
+		if v, err := c.Call(ctx, facet, "echo", "again"); err != nil || v != "again" {
+			t.Fatalf("%s: %v %v\n%s", facet, v, err, p2.logText())
+		}
 	}
 	c.Close()
 	// watch prints the snapshot first.
@@ -296,7 +369,7 @@ func pinnedClient(hash []byte) *http.Client {
 }
 
 // TestRunInProcess runs the program's Run in this process: plain-ws
-// WebSocket plus WebTransport, a spawned node, and shutdown on cancel.
+// WebSocket plus WebTransport, and shutdown on cancel.
 func TestRunInProcess(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &Config{WebTransport: "127.0.0.1:0", WebSocket: "127.0.0.1:0", WebSocketPlain: true, SelfSigned: true, DataDir: dir}

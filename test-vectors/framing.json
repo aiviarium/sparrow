@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev324 (draft); hub-admin rev25 (draft)",
+  "spec_revision": "core rev347 (draft); hub-admin rev35 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "framing",
   "vectors": [
@@ -407,7 +407,7 @@
     },
     {
       "name": "pipe/node-hello",
-      "description": "Pipe binding (section 4.7): a node process started by the hub writes Hello on its standard output, length-prefixed with a QUIC varint and with no stream header. The hub answers on the node's standard input the same way.",
+      "description": "Pipe binding (section 4.7): a started process, here node acme.charts, writes Hello on its standard output, length-prefixed with a QUIC varint and with no stream header. The side that started it answers on the process's standard input the same way. A hub never starts processes (section 10.2); the binding is generic.",
       "spec": "4.7, 10.2",
       "type": "stream",
       "parts": [

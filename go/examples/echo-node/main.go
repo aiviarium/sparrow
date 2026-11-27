@@ -1,6 +1,23 @@
-// Command echo-node is an example Sparrow node. By default it speaks on its
-// standard input and output, as a process a hub starts (sections 4.7 and
-// 10.2); with -url it dials a hub over WebTransport or WebSocket instead.
+// Command echo-node is an example Sparrow node. It runs in one of three
+// ways; whatever starts it (a person, a service manager, an orchestrator, a
+// test) hands it its configuration, since a hub never starts nodes (core
+// section 10.2):
+//
+//   - -hub URL dials in to a hub (https:// WebTransport, ws:// or wss://
+//     WebSocket), presenting ["link", credential], and reconnects with
+//     backoff whenever the session ends. -hub-pin checks the hub's
+//     SubjectPublicKeyInfo hash instead of the system roots (self-signed
+//     hubs).
+//   - -listen ADDR (WebTransport over UDP) and/or -listen-wss ADDR
+//     (WebSocket over TLS) wait to be dialed by a hub, which must present
+//     ["link", credential]. The node prints one JSON line on standard
+//     output, {"webtransport": URL, "websocket": URL, "pin": HEX}, with the
+//     SHA-256 of its SubjectPublicKeyInfo: the URL and pin to register with
+//     sparrow.hub.admin. -key-file keeps the key (made if missing), so the
+//     pin survives restarts.
+//   - With neither, it speaks the pipe binding on its standard input and
+//     output (4.7), for a supervisor that starts it as a child process.
+//
 // Logs go to standard error. With -web-modules it ships client modules
 // (Web Profile 9.4) in its facet.
 //
@@ -21,34 +38,71 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/hex"
+	"encoding/json"
+	"encoding/pem"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/aiviarium/sparrow-rpc/go/cbor"
 	"github.com/aiviarium/sparrow-rpc/go/node"
 	"github.com/aiviarium/sparrow-rpc/go/session"
+	"github.com/aiviarium/sparrow-rpc/go/status"
+	"github.com/aiviarium/sparrow-rpc/go/transport"
+	"github.com/aiviarium/sparrow-rpc/go/transport/websocket"
+	"github.com/aiviarium/sparrow-rpc/go/transport/webtransport"
 	"github.com/aiviarium/sparrow-rpc/go/wire"
 )
 
+// Path is where a listening node serves sessions.
+const Path = "/sparrow/node"
+
 func main() {
 	id := flag.String("id", "echo", "node ID; the facet is named after it")
-	url := flag.String("url", "", "hub URL (https:// WebTransport, ws:// or wss:// WebSocket); empty for stdio")
-	credential := flag.String("credential", "", "link credential, sent as [\"link\", credential] when dialing")
+	hubURL := flag.String("hub", "", "dial in to the hub at this URL (https:// WebTransport, ws:// or wss:// WebSocket)")
+	hubPin := flag.String("hub-pin", "", "with -hub: hex SHA-256 of the hub's SubjectPublicKeyInfo, checked instead of the system roots")
+	credential := flag.String("credential", "", "with -hub: the link credential presented as [\"link\", credential]; with -listen: the one the hub must present")
+	listen := flag.String("listen", "", "serve WebTransport on this UDP address, for a hub that dials the node")
+	listenWSS := flag.String("listen-wss", "", "serve WebSocket over TLS on this TCP address, for a hub that dials the node")
+	keyFile := flag.String("key-file", "", "with -listen: PEM file holding the node's ECDSA key, made if missing")
 	webModules := flag.String("web-modules", "", "file holding a CBOR list of signed web-module entries, published as the facet's web.modules annotation (Web Profile 9.4)")
 	flag.Parse()
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	fail := func(msg string, err error) {
+		log.Error(msg, "err", err)
+		os.Exit(1)
+	}
+	listening := *listen != "" || *listenWSS != ""
+	if *hubURL != "" && listening {
+		fail("flags", errors.New("-hub and -listen exclude each other: a node has one link direction"))
+	}
+	if listening && *credential == "" {
+		fail("flags", errors.New("-listen needs -credential, the credential the hub presents"))
+	}
 
 	opts := node.Options{ID: *id, Logger: log}
-	if *credential != "" {
+	if *hubURL != "" && *credential != "" {
 		opts.Auth = &wire.Auth{Scheme: "link", Credentials: cbor.AppendText(nil, *credential)}
 	}
 	n := node.New(opts)
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	f := Facet(*id, n, log)
 	if *webModules != "" {
@@ -57,25 +111,192 @@ func main() {
 			err = cbor.Validate(b, cbor.Options{})
 		}
 		if err != nil {
-			log.Error("web modules", "err", err)
-			os.Exit(1)
+			fail("web modules", err)
 		}
 		f.Def.Annotations["web.modules"] = b
 	}
 	if _, err := n.Add(ctx, f); err != nil {
-		log.Error("add facet", "err", err)
-		os.Exit(1)
+		fail("add facet", err)
 	}
 	var err error
-	if *url == "" {
+	switch {
+	case *hubURL != "":
+		var do node.DialOptions
+		if *hubPin != "" {
+			pin, perr := hex.DecodeString(*hubPin)
+			if perr != nil || len(pin) != sha256.Size {
+				fail("flags", errors.New("-hub-pin is the hex SHA-256 of a SubjectPublicKeyInfo"))
+			}
+			tc := pinnedTLS(pin)
+			do.TLSConfig = tc
+			do.HTTPClient = &http.Client{Transport: &http.Transport{TLSClientConfig: tc}}
+		}
+		err = n.RunDial(ctx, *hubURL, do)
+	case listening:
+		err = serveListening(ctx, n, log, *listen, *listenWSS, *keyFile, *credential)
+	default:
 		err = n.RunStdio(ctx)
-	} else if err = n.Dial(ctx, *url, node.DialOptions{}); err == nil {
-		err = n.Wait(ctx)
 	}
-	if err != nil && err != context.Canceled {
-		log.Error("session ended", "err", err)
-		os.Exit(1)
+	sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	n.Shutdown(sctx)
+	cancel()
+	if err != nil && !errors.Is(err, context.Canceled) {
+		fail("session ended", err)
 	}
+}
+
+// pinnedTLS accepts exactly the server key whose SPKI hash is pin.
+func pinnedTLS(pin []byte) *tls.Config {
+	return &tls.Config{
+		InsecureSkipVerify: true, // the pin replaces chain verification
+		VerifyConnection: func(cs tls.ConnectionState) error {
+			if len(cs.PeerCertificates) == 0 {
+				return errors.New("no certificate")
+			}
+			sum := sha256.Sum256(cs.PeerCertificates[0].RawSubjectPublicKeyInfo)
+			if subtle.ConstantTimeCompare(sum[:], pin) != 1 {
+				return errors.New("the hub's public key does not match -hub-pin")
+			}
+			return nil
+		},
+	}
+}
+
+// loadKey reads the node's key from path, or makes one (and writes it when
+// path is set).
+func loadKey(path string) (*ecdsa.PrivateKey, error) {
+	if path != "" {
+		if b, err := os.ReadFile(path); err == nil {
+			blk, _ := pem.Decode(b)
+			if blk == nil {
+				return nil, fmt.Errorf("%s: no PEM block", path)
+			}
+			return x509.ParseECPrivateKey(blk.Bytes)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+	}
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil || path == "" {
+		return key, err
+	}
+	der, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		return nil, err
+	}
+	return key, os.WriteFile(path, pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der}), 0o600)
+}
+
+// serveListening serves sessions from a hub that dials the node (10.2):
+// the node is the Sparrow server and its facets travel in Welcome.
+func serveListening(ctx context.Context, n *node.Node, log *slog.Logger, wtAddr, wssAddr, keyFile, cred string) error {
+	key, err := loadKey(keyFile)
+	if err != nil {
+		return err
+	}
+	hosts := []string{"127.0.0.1", "localhost"}
+	for _, a := range []string{wtAddr, wssAddr} {
+		if h, _, err := net.SplitHostPort(a); err == nil && h != "" && h != "127.0.0.1" && h != "localhost" {
+			hosts = append(hosts, h)
+		}
+	}
+	cert, _, err := webtransport.SelfSignedWithKey(key, hosts...)
+	if err != nil {
+		return err
+	}
+	leaf, _ := x509.ParseCertificate(cert.Certificate[0])
+	pin := sha256.Sum256(leaf.RawSubjectPublicKeyInfo)
+	auth := func(a *wire.Auth) error {
+		if a == nil || a.Scheme != "link" || !credentialIs(a.Credentials, cred) {
+			return &session.Error{Code: status.Unauthenticated, Message: "the hub presented a wrong link credential"}
+		}
+		return nil
+	}
+	serve := func(c transport.Conn) {
+		if err := n.Serve(ctx, c, auth); err != nil {
+			log.Warn("a dialing hub was refused", "err", err)
+			return
+		}
+		log.Info("a hub connected")
+	}
+	addrs := map[string]string{"pin": hex.EncodeToString(pin[:])}
+	errc := make(chan error, 2)
+	if wtAddr != "" {
+		pc, err := net.ListenPacket("udp", wtAddr)
+		if err != nil {
+			return err
+		}
+		srv := webtransport.NewServer(webtransport.ServerOptions{
+			TLSConfig:   &tls.Config{Certificates: []tls.Certificate{cert}},
+			CheckOrigin: func(*http.Request) bool { return true },
+		})
+		mux := http.NewServeMux()
+		mux.Handle(Path, srv.Handler(func(c *webtransport.Conn, _ *http.Request) { serve(c) }))
+		srv.WT.H3.Handler = mux
+		go func() { errc <- srv.Serve(pc) }()
+		defer srv.Close()
+		addrs["webtransport"] = "https://" + pc.LocalAddr().String() + Path
+	}
+	if wssAddr != "" {
+		ln, err := tls.Listen("tcp", wssAddr, &tls.Config{Certificates: []tls.Certificate{cert}})
+		if err != nil {
+			return err
+		}
+		hs := &http.Server{
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != Path {
+					http.NotFound(w, r)
+					return
+				}
+				c, err := websocket.Accept(w, r, &websocket.AcceptOptions{CheckOrigin: func(*http.Request) bool { return true }})
+				if err != nil {
+					return
+				}
+				serve(c)
+			}),
+			ErrorLog: slog.NewLogLogger(log.Handler(), slog.LevelDebug),
+		}
+		go func() { errc <- hs.Serve(ln) }()
+		defer hs.Close()
+		addrs["websocket"] = "wss://" + ln.Addr().String() + Path
+	}
+	line, _ := json.Marshal(addrs)
+	fmt.Println(string(line))
+	log.Info("waiting for a hub to dial", "addrs", string(line))
+	select {
+	case <-ctx.Done():
+		// GoAway to the hub before the listeners close (main waits for
+		// the transport too).
+		sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		n.Shutdown(sctx)
+		cancel()
+		return ctx.Err()
+	case err := <-errc:
+		return err
+	}
+}
+
+// credentialIs compares a Hello credential (text or bytes) with want.
+func credentialIs(raw cbor.Raw, want string) bool {
+	d := cbor.NewDecoder(raw)
+	var got []byte
+	switch m, _ := d.PeekMajor(); m {
+	case cbor.MajorText:
+		s, err := d.Text()
+		if err != nil {
+			return false
+		}
+		got = []byte(s)
+	case cbor.MajorBytes:
+		b, err := d.Bytes()
+		if err != nil {
+			return false
+		}
+		got = b
+	default:
+		return false
+	}
+	return subtle.ConstantTimeCompare(got, []byte(want)) == 1
 }
 
 // Facet builds the echo facet for node n.

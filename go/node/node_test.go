@@ -52,8 +52,8 @@ func methodID(t *testing.T, s *session.Session, facet, method string) (uint64, u
 	return f.ID, m.ID
 }
 
-// TestEchoNodeStdio builds examples/echo-node, starts it the way a hub
-// does (pipe binding on its standard input and output) and calls it.
+// TestEchoNodeStdio builds examples/echo-node, starts it with the pipe
+// binding on its standard input and output (4.7) and calls it.
 func TestEchoNodeStdio(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds a binary")

@@ -17,7 +17,7 @@ func peerDialIn(cred string) *admin.NodeConfig {
 }
 
 func peerDial(f *fixture, cred string) *admin.NodeConfig {
-	return &admin.NodeConfig{Start: &admin.Start{Dial: &admin.Dial{URL: f.wtURL, Pin: f.pin, Credential: cred}}, Peer: boolp(true)}
+	return &admin.NodeConfig{Dial: &admin.Dial{URL: f.wtURL, Pin: f.pin, Credential: cred}, Peer: boolp(true)}
 }
 
 // TestFederation: hub-a dials hub-b as a peer and imports its facets as
@@ -32,7 +32,7 @@ func TestFederation(t *testing.T) {
 	// hub-b: node echo, exported to hub-a, usable by hub-a's alice.
 	b.secret("from-a", "a-to-b")
 	b.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{
-		"echo":  spawnEcho("echo"),
+		"echo":  b.echo("echo"),
 		"hub-a": peerDialIn("from-a"),
 	}, Extensions: policy(
 		grant("node:hub-a", "echo", "use"), // both acting principals are checked
@@ -137,7 +137,7 @@ func TestFederation(t *testing.T) {
 	_, err = alice.Call(ctx, "hub-b/echo", "echo", "x")
 	mustCode(t, err, status.Unavailable)
 	if time.Since(start) < 2*time.Second {
-		t.Fatal("did not wait for the start timeout")
+		t.Fatal("did not wait for the connect timeout")
 	}
 	_ = context.Background
 	_ = session.Code

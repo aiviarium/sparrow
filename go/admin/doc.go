@@ -33,7 +33,7 @@ type Config struct {
 
 // NodeConfig configures one node.
 type NodeConfig struct {
-	Start      *Start
+	Dial       *Dial // the hub dials the node; nil: the node dials in
 	Credential *string
 	Facets     [][]byte // stored-facet keys; nil when absent
 	Peer       *bool
@@ -47,43 +47,11 @@ func (n *NodeConfig) IsEnabled() bool { return n.Enabled == nil || *n.Enabled }
 // IsPeer reports the peer flag (default false).
 func (n *NodeConfig) IsPeer() bool { return n.Peer != nil && *n.Peer }
 
-// Start is the Start union: exactly one of Spawn, Dial or Other, or an
-// unknown variant (Tag beyond 2, kept as Raw).
-type Start struct {
-	Spawn *Spawn
-	Dial  *Dial
-	Other *Other
-	// Unknown holds a variant this hub does not know.
-	UnknownTag uint64
-	Unknown    cbor.Raw
-}
-
-// Spawn starts a process (Hub Profile 10.2, pipe binding).
-type Spawn struct {
-	Command []string
-	Env     map[string]EnvValue // nil when absent
-	Dir     *string
-}
-
-// EnvValue is a literal or the value of a stored secret.
-type EnvValue struct {
-	Secret bool // false: Value is the literal; true: Value is a secret name
-	Value  string
-	// UnknownTag is set (nonzero) for a variant this hub does not know.
-	UnknownTag uint64
-}
-
 // Dial makes the hub dial a node.
 type Dial struct {
 	URL        string
 	Pin        []byte
 	Credential string
-}
-
-// Other is a start kind the hub defines.
-type Other struct {
-	Kind   string
-	Params []byte
 }
 
 // EmptyConfig returns {nodes: {}}, the document of revision 0.
@@ -96,6 +64,11 @@ func (c *Config) Clone() *Config {
 		panic(err)
 	}
 	return n
+}
+
+// Clone returns a deep copy of a node's configuration.
+func (n *NodeConfig) Clone() *NodeConfig {
+	return (&Config{Nodes: map[string]*NodeConfig{"n": n}}).Clone().Nodes["n"]
 }
 
 // Equal reports whether two documents are the same.
@@ -192,9 +165,9 @@ func (c *Config) AppendTo(dst []byte) []byte {
 
 // AppendTo appends the canonical encoding of a NodeConfig (type 65).
 func (n *NodeConfig) AppendTo(dst []byte) []byte {
-	var start, facets, peer, enabled []byte
-	if n.Start != nil {
-		start = n.Start.AppendTo(nil)
+	var dial, facets, peer, enabled []byte
+	if n.Dial != nil {
+		dial = n.Dial.AppendTo(nil)
 	}
 	if n.Facets != nil {
 		facets = cbor.AppendArrayHead(nil, len(n.Facets))
@@ -208,50 +181,12 @@ func (n *NodeConfig) AppendTo(dst []byte) []byte {
 	if n.Enabled != nil {
 		enabled = boolv(*n.Enabled)
 	}
-	return appendStruct(dst, start, optText(n.Credential), facets, peer, enabled, encStringBytesMap(n.Extensions))
+	return appendStruct(dst, dial, optText(n.Credential), facets, peer, enabled, encStringBytesMap(n.Extensions))
 }
 
-// AppendTo appends the Start union (type 66).
-func (s *Start) AppendTo(dst []byte) []byte {
-	dst = cbor.AppendArrayHead(dst, 2)
-	switch {
-	case s.Spawn != nil:
-		dst = cbor.AppendUint(dst, adminiface.StartSpawn)
-		var env []byte
-		if s.Spawn.Env != nil {
-			es := make([]mapEntry, 0, len(s.Spawn.Env))
-			for k, v := range s.Spawn.Env {
-				tag := adminiface.EnvLiteral
-				if v.Secret {
-					tag = adminiface.EnvSecret
-				}
-				if v.UnknownTag != 0 {
-					tag = v.UnknownTag
-				}
-				ev := cbor.AppendArrayHead(nil, 2)
-				ev = cbor.AppendUint(ev, tag)
-				ev = cbor.AppendText(ev, v.Value)
-				es = append(es, mapEntry{text(k), ev})
-			}
-			env = appendMap(nil, es)
-		}
-		cmd := cbor.AppendArrayHead(nil, len(s.Spawn.Command))
-		for _, a := range s.Spawn.Command {
-			cmd = cbor.AppendText(cmd, a)
-		}
-		return appendStruct(dst, cmd, env, optText(s.Spawn.Dir))
-	case s.Dial != nil:
-		dst = cbor.AppendUint(dst, adminiface.StartDial)
-		return appendStruct(dst, text(s.Dial.URL), bstr(s.Dial.Pin), text(s.Dial.Credential))
-	case s.Other != nil:
-		dst = cbor.AppendUint(dst, adminiface.StartOther)
-		return appendStruct(dst, text(s.Other.Kind), bstr(s.Other.Params))
-	}
-	dst = cbor.AppendUint(dst, s.UnknownTag)
-	if s.Unknown == nil {
-		return cbor.AppendNull(dst)
-	}
-	return append(dst, s.Unknown...)
+// AppendTo appends the canonical encoding of a Dial (type 66).
+func (d *Dial) AppendTo(dst []byte) []byte {
+	return appendStruct(dst, text(d.URL), bstr(d.Pin), text(d.Credential))
 }
 
 // ---------------------------------------------------------------------------
@@ -478,9 +413,9 @@ func (r *dec) nodeConfig() *NodeConfig {
 	r.structFields(6, func(i int) {
 		switch i {
 		case 0:
-			r.push("start")
+			r.push("dial")
 			if !r.null() {
-				n.Start = r.start()
+				n.Dial = r.dial()
 			}
 			r.pop()
 		case 1:
@@ -525,112 +460,28 @@ func (r *dec) nodeConfig() *NodeConfig {
 	return n
 }
 
-func (r *dec) start() *Start {
-	s := &Start{}
-	if n := r.array(); n != 2 && r.err == nil {
-		r.fail("a union is [tag, value]")
-		return s
+func (r *dec) dial() *Dial {
+	d := &Dial{}
+	seen := 0
+	r.structFields(3, func(i int) {
+		seen++
+		switch i {
+		case 0:
+			r.push("url")
+			d.URL = r.text()
+		case 1:
+			r.push("pin")
+			d.Pin = r.bytes()
+		case 2:
+			r.push("credential")
+			d.Credential = r.text()
+		}
+		r.pop()
+	})
+	if seen < 3 && r.err == nil {
+		r.fail("url, pin and credential are required")
 	}
-	tag := r.uint()
-	switch tag {
-	case adminiface.StartSpawn:
-		r.push("spawn")
-		sp := &Spawn{}
-		r.structFields(3, func(i int) {
-			switch i {
-			case 0:
-				r.push("command")
-				k := r.array()
-				sp.Command = make([]string, 0, k)
-				for j := 0; j < k && r.err == nil; j++ {
-					sp.Command = append(sp.Command, r.text())
-				}
-				r.pop()
-			case 1:
-				r.push("env")
-				if !r.null() {
-					k := r.mapHead()
-					sp.Env = make(map[string]EnvValue, k)
-					for j := 0; j < k && r.err == nil; j++ {
-						name := r.text()
-						r.push(name)
-						if m := r.array(); m != 2 && r.err == nil {
-							r.fail("a union is [tag, value]")
-						}
-						t := r.uint()
-						v := EnvValue{}
-						switch t {
-						case adminiface.EnvLiteral:
-							v.Value = r.text()
-						case adminiface.EnvSecret:
-							v.Secret = true
-							v.Value = r.text()
-						default:
-							v.UnknownTag = t
-							r.skip(1)
-						}
-						sp.Env[name] = v
-						r.pop()
-					}
-				}
-				r.pop()
-			case 2:
-				r.push("dir")
-				if !r.null() {
-					d := r.text()
-					sp.Dir = &d
-				}
-				r.pop()
-			}
-		})
-		if sp.Command == nil && r.err == nil {
-			r.fail("command is required")
-		}
-		s.Spawn = sp
-		r.pop()
-	case adminiface.StartDial:
-		r.push("dial")
-		d := &Dial{}
-		seen := 0
-		r.structFields(3, func(i int) {
-			seen++
-			switch i {
-			case 0:
-				d.URL = r.text()
-			case 1:
-				d.Pin = r.bytes()
-			case 2:
-				d.Credential = r.text()
-			}
-		})
-		if seen < 3 && r.err == nil {
-			r.fail("url, pin and credential are required")
-		}
-		s.Dial = d
-		r.pop()
-	case adminiface.StartOther:
-		r.push("other")
-		o := &Other{}
-		seen := 0
-		r.structFields(2, func(i int) {
-			seen++
-			switch i {
-			case 0:
-				o.Kind = r.text()
-			case 1:
-				o.Params = r.bytes()
-			}
-		})
-		if seen < 2 && r.err == nil {
-			r.fail("kind and params are required")
-		}
-		s.Other = o
-		r.pop()
-	default:
-		s.UnknownTag = tag
-		s.Unknown = r.raw()
-	}
-	return s
+	return d
 }
 
 // ---------------------------------------------------------------------------
@@ -662,26 +513,20 @@ func (s RevisionState) String() string {
 // NodeState is the state of a node.
 type NodeState uint64
 
-// Node states (sigils 67-72).
+// Node states (sigils 67-70).
 const (
-	Starting  = NodeState(adminiface.SigilStarting)
 	Connected = NodeState(adminiface.SigilConnected)
 	Offline   = NodeState(adminiface.SigilOffline)
-	Failed    = NodeState(adminiface.SigilFailed)
 	Disabled  = NodeState(adminiface.SigilDisabled)
 	Removed   = NodeState(adminiface.SigilRemoved)
 )
 
 func (s NodeState) String() string {
 	switch s {
-	case Starting:
-		return "starting"
 	case Connected:
 		return "connected"
 	case Offline:
 		return "offline"
-	case Failed:
-		return "failed"
 	case Disabled:
 		return "disabled"
 	case Removed:
@@ -690,7 +535,7 @@ func (s NodeState) String() string {
 	return fmt.Sprintf("NodeState(%d)", uint64(s))
 }
 
-// Snapshot is type 71.
+// Snapshot is type 67.
 type Snapshot struct {
 	Revision    uint64
 	Config      *Config
@@ -698,14 +543,14 @@ type Snapshot struct {
 	ConfirmInMs *uint64
 }
 
-// RevisionEvent is type 80.
+// RevisionEvent is type 76.
 type RevisionEvent struct {
 	Revision    uint64
 	State       RevisionState
 	ConfirmInMs *uint64
 }
 
-// NodeEvent is type 82.
+// NodeEvent is type 78.
 type NodeEvent struct {
 	Node     string
 	Revision uint64
@@ -713,14 +558,14 @@ type NodeEvent struct {
 	Message  *string
 }
 
-// Event is type 79: exactly one of its fields is set.
+// Event is type 75: exactly one of its fields is set.
 type Event struct {
 	Snapshot *Snapshot
 	Revision *RevisionEvent
 	Node     *NodeEvent
 }
 
-// Problem is type 74.
+// Problem is type 70.
 type Problem struct {
 	Path    []string
 	Message string
@@ -758,7 +603,7 @@ func (e *Event) Encode() []byte {
 	}
 }
 
-// EncodeProblems encodes a Problems list (type 75).
+// EncodeProblems encodes a Problems list (type 71).
 func EncodeProblems(ps []Problem) []byte {
 	dst := cbor.AppendArrayHead(nil, len(ps))
 	for _, p := range ps {
@@ -772,14 +617,14 @@ func EncodeProblems(ps []Problem) []byte {
 }
 
 // ProblemsDetails returns Error.details for an invalid document: the
-// dynamic value [75, problems] (section 5.2).
+// dynamic value [71, problems] (section 5.2).
 func ProblemsDetails(ps []Problem) cbor.Raw {
 	dst := cbor.AppendArrayHead(nil, 2)
 	dst = cbor.AppendUint(dst, adminiface.TypeProblems)
 	return append(dst, EncodeProblems(ps)...)
 }
 
-// DecodeSnapshot decodes type 71.
+// DecodeSnapshot decodes type 67.
 func DecodeSnapshot(b []byte) (*Snapshot, error) {
 	var s *Snapshot
 	err := decodeWith(b, func(r *dec) { s = r.snapshot() })
@@ -811,7 +656,7 @@ func (r *dec) snapshot() *Snapshot {
 	return s
 }
 
-// DecodeEvent decodes type 79.
+// DecodeEvent decodes type 75.
 func DecodeEvent(b []byte) (*Event, error) {
 	e := &Event{}
 	err := decodeWith(b, func(r *dec) {
@@ -864,7 +709,7 @@ func DecodeEvent(b []byte) (*Event, error) {
 	return e, err
 }
 
-// DecodeProblems decodes type 75, or the dynamic [75, problems].
+// DecodeProblems decodes type 71, or the dynamic [71, problems].
 func DecodeProblems(b []byte) ([]Problem, error) {
 	var ps []Problem
 	err := decodeWith(b, func(r *dec) {
@@ -899,7 +744,7 @@ func DecodeProblems(b []byte) ([]Problem, error) {
 	return ps, err
 }
 
-// CommitRequest is type 72.
+// CommitRequest is type 68.
 type CommitRequest struct {
 	Base            uint64
 	Config          *Config
@@ -911,7 +756,7 @@ func (c *CommitRequest) Encode() []byte {
 	return appendStruct(nil, uintv(c.Base), c.Config.Encode(), uintv(c.ConfirmWithinMs))
 }
 
-// DecodeCommitRequest decodes type 72 (and type 73, which is its prefix).
+// DecodeCommitRequest decodes type 68 (and type 69, which is its prefix).
 func DecodeCommitRequest(b []byte) (*CommitRequest, error) {
 	c := &CommitRequest{}
 	seen := 0
@@ -934,17 +779,17 @@ func DecodeCommitRequest(b []byte) (*CommitRequest, error) {
 	return c, err
 }
 
-// EncodeValidateRequest encodes type 73.
+// EncodeValidateRequest encodes type 69.
 func EncodeValidateRequest(base uint64, c *Config) []byte {
 	return appendStruct(nil, uintv(base), c.Encode())
 }
 
-// EncodeSecret encodes type 76.
+// EncodeSecret encodes type 72.
 func EncodeSecret(name string, value []byte) []byte {
 	return appendStruct(nil, text(name), bstr(value))
 }
 
-// DecodeSecret decodes type 76.
+// DecodeSecret decodes type 72.
 func DecodeSecret(b []byte) (string, []byte, error) {
 	var name string
 	var value []byte

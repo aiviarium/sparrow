@@ -181,9 +181,11 @@ func TestOneLinkDirection(t *testing.T) {
 		t.Fatal(err)
 	}
 	waitNode(t, f.h, "acme", true)
-	// Now the hub starts node acme itself; only a node configured to dial
+	// Now the hub dials node acme itself; only a node configured to dial
 	// in has a dial-in credential, so the old one is unknown (10.2).
-	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": spawnEcho("acme")}})
+	f.secret("acme-dial", "hub-to-acme")
+	dialed := dialConfig("https://127.0.0.1:9/sparrow/node", make([]byte, 32), "acme-dial")
+	f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": dialed}})
 	if s := n.Session(); s != nil {
 		<-s.Done()
 	}
@@ -192,7 +194,7 @@ func TestOneLinkDirection(t *testing.T) {
 	// A document with both directions, or neither, is invalid.
 	c, _ := f.adminClient("websocket")
 	snap, _ := c.Get(tctx(t))
-	both := spawnEcho("acme")
+	both := dialed.Clone()
 	both.Credential = strp("acme-1")
 	ps, err := c.Validate(tctx(t), snap.Revision, &admin.Config{Nodes: map[string]*admin.NodeConfig{"acme": both, "x": {}}})
 	if err != nil {
@@ -212,8 +214,8 @@ func TestNamingRules(t *testing.T) {
 	// Reserved node IDs and bad grammar.
 	_, err := c.Commit(ctx, snap.Revision, &admin.Config{Nodes: map[string]*admin.NodeConfig{
 		"sparrow":     dialInConfig("acme-1"),
-		"sparrow.x":   spawnEcho("sparrow.x"),
-		"Bad_Name":    spawnEcho("bad"),
+		"sparrow.x":   dialConfig("https://h.example/n", make([]byte, 32), "missing"),
+		"Bad_Name":    dialConfig("https://h.example/n", make([]byte, 32), "missing"),
 		"acme":        dialInConfig("acme-1"),
 		"acme.charts": dialInConfig("missing"),
 	}}, 0)

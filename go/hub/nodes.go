@@ -1,7 +1,6 @@
 package hub
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -10,11 +9,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io"
 	"math/rand/v2"
 	"net/http"
-	"os"
-	"os/exec"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -29,7 +25,6 @@ import (
 	"github.com/aiviarium/sparrow-rpc/go/session"
 	"github.com/aiviarium/sparrow-rpc/go/status"
 	"github.com/aiviarium/sparrow-rpc/go/transport"
-	"github.com/aiviarium/sparrow-rpc/go/transport/pipe"
 	"github.com/aiviarium/sparrow-rpc/go/transport/websocket"
 	"github.com/aiviarium/sparrow-rpc/go/transport/webtransport"
 	"github.com/aiviarium/sparrow-rpc/go/web"
@@ -41,9 +36,8 @@ const statusSchemaMismatch = status.SchemaMismatch
 type linkKind int
 
 const (
-	linkSpawn linkKind = iota
-	linkDialIn
-	linkDial
+	linkDialIn linkKind = iota // the node dialed in
+	linkDial                   // the hub dialed the node
 )
 
 // link is one session with a node (10.2).
@@ -81,9 +75,10 @@ type node struct {
 	ready   chan struct{}
 	state   admin.NodeState
 	message string
-	sup     *supervisor // the spawn or dial loop
+	dl      *dialer // the dial loop of a dialed node
 
-	switching sync.Mutex // serializes supersedes and schema updates (10.2)
+	switching sync.Mutex   // serializes supersedes and schema updates (10.2)
+	waiting   atomic.Int32 // calls waiting for the node to connect (10.7)
 }
 
 func (n *node) credentialName() string {
@@ -348,8 +343,10 @@ func (h *Hub) relayTimeout(n *node) time.Duration {
 	return h.o.RelayAckTimeout
 }
 
-// waitLink returns the node's routed session, waiting up to timeout and
-// starting the node if the hub can (10.7).
+// waitLink returns the node's routed session, waiting up to timeout for
+// an offline node to connect (10.7). A dialed node is redialed at once, and
+// then at least every waitingRedial while calls wait, rather than after its
+// backoff.
 func (h *Hub) waitLink(ctx context.Context, n *node, timeout time.Duration) (*link, error) {
 	h.mu.Lock()
 	l, ready := n.link, n.ready
@@ -357,7 +354,9 @@ func (h *Hub) waitLink(ctx context.Context, n *node, timeout time.Duration) (*li
 	if l != nil {
 		return l, nil
 	}
-	n.ensureStarted()
+	n.waiting.Add(1)
+	defer n.waiting.Add(-1)
+	n.kickDial()
 	t := time.NewTimer(timeout)
 	defer t.Stop()
 	select {
@@ -488,32 +487,31 @@ func (h *Hub) reconfigure(n *node, old *admin.NodeConfig) {
 		h.listConfiguredFacetsLocked(n)
 	}
 	h.mu.Unlock()
-	startChanged := !bytes.Equal(encStart(old.Start), encStart(nc.Start)) || old.IsPeer() != nc.IsPeer()
+	dialChanged := !bytes.Equal(encDial(old.Dial), encDial(nc.Dial)) || old.IsPeer() != nc.IsPeer()
 	switch {
 	case !nc.IsEnabled():
 		n.stopLink()
 		n.setState(admin.Disabled, "")
-	case nc.Start == nil:
-		// Dial-in: a node the hub used to start or dial, or whose kind
-		// changed, must dial in again (a changed credential is handled by
-		// the revalidation in Apply).
-		if old.Start != nil || old.IsPeer() != nc.IsPeer() || !old.IsEnabled() {
+	case nc.Dial == nil:
+		// Dial-in: a node the hub used to dial, or whose kind changed,
+		// must dial in again (a changed credential is handled by the
+		// revalidation in Apply).
+		if old.Dial != nil || old.IsPeer() != nc.IsPeer() || !old.IsEnabled() {
 			n.stopLink()
 			n.setState(admin.Offline, "waiting for the node to dial in")
 		}
-	case !old.IsEnabled() || startChanged:
-		// A spawned node is stopped before its new process starts (10.7);
-		// a dialed node is dialed again and the new session supersedes the
-		// old one, which stays open until then (hub-admin 2.2).
-		n.restart()
+	case !old.IsEnabled() || dialChanged:
+		// A dialed node is dialed again and the new session supersedes
+		// the old one, which stays open until then (hub-admin 2.2).
+		n.redial()
 	}
 }
 
-func encStart(s *admin.Start) []byte {
-	if s == nil {
+func encDial(d *admin.Dial) []byte {
+	if d == nil {
 		return nil
 	}
-	return s.AppendTo(nil)
+	return d.AppendTo(nil)
 }
 
 // WebExtension is the document extension holding the top-level web.*
@@ -521,10 +519,6 @@ func encStart(s *admin.Start) []byte {
 // configuration) a hub with the Web Profile publishes: a CBOR map from
 // annotation key to value (9.4, 9.5).
 const WebExtension = "ref.web"
-
-// LazyExtension is the node extension that makes a spawned node start on
-// its first call instead of at once (CBOR true).
-const LazyExtension = "ref.lazy"
 
 // InterfacesExtension is the document extension listing interface
 // documents (a CBOR list of encoded interfaces) the hub verifies implements
@@ -545,13 +539,6 @@ func (h *Hub) validateExtension(nodeID, key string, v []byte) error {
 	case nodeID == "" && key == WebExtension && h.o.Web:
 		_, err := web.ParseTopLevel(v, h.o.WebRoots)
 		return err
-	case nodeID != "" && key == LazyExtension:
-		if b, err := cbor.NewDecoder(v).Bool(); err != nil || len(v) != 1 {
-			return errors.New("ref.lazy is a CBOR bool")
-		} else {
-			_ = b
-		}
-		return nil
 	}
 	return admin.ErrUnsupported
 }
@@ -597,50 +584,37 @@ func (h *Hub) loadInterfacesLocked(cfg *admin.Config) {
 	}
 }
 
-func (n *node) lazy() bool {
-	v, ok := n.cfg.Extensions[LazyExtension]
-	return ok && len(v) == 1 && v[0] == 0xf5
-}
-
 // begin starts a new node as its configuration says.
 func (n *node) begin() {
 	switch {
 	case !n.cfg.IsEnabled():
 		n.setState(admin.Disabled, "")
-	case n.cfg.Start == nil:
+	case n.cfg.Dial == nil:
 		n.setState(admin.Offline, "waiting for the node to dial in")
-	case n.cfg.Start.Spawn != nil && n.lazy():
-		n.setState(admin.Offline, "starts on its first call")
 	default:
-		n.restart()
+		n.redial()
 	}
 }
 
-// ensureStarted starts a spawned node that is not running (10.7).
-func (n *node) ensureStarted() {
-	h := n.h
-	h.mu.Lock()
-	sup := n.sup
-	ok := h.nodes[n.id] == n && n.cfg.IsEnabled() && n.cfg.Start != nil && n.cfg.Start.Spawn != nil
-	h.mu.Unlock()
-	if !ok {
-		return
+// kickDial makes the dial loop of an offline dialed node try again now.
+func (n *node) kickDial() {
+	n.h.mu.Lock()
+	d := n.dl
+	n.h.mu.Unlock()
+	if d != nil {
+		select {
+		case d.kick <- struct{}{}:
+		default:
+		}
 	}
-	if sup != nil && !sup.finished() {
-		return
-	}
-	if sup != nil && sup.failed {
-		return // marked failed: only a new configuration starts it again
-	}
-	n.restart()
 }
 
-// stopLink stops the node's supervisor and ends its sessions.
-func (n *node) stopLink() *supervisor {
+// stopLink stops the node's dial loop and ends its session.
+func (n *node) stopLink() *dialer {
 	h := n.h
 	h.mu.Lock()
-	sup := n.sup
-	n.sup = nil
+	dl := n.dl
+	n.dl = nil
 	l := n.link
 	if l != nil {
 		// New calls wait for the next session (10.7).
@@ -648,83 +622,75 @@ func (n *node) stopLink() *supervisor {
 		n.ready = make(chan struct{})
 	}
 	h.mu.Unlock()
-	if sup != nil {
-		sup.stop()
+	if dl != nil {
+		dl.stop()
 	}
 	if l != nil {
 		l.sess.GoAway(status.GoingAway, "node removed, disabled or reconfigured", nil)
 	}
-	return sup
+	return dl
 }
 
-// restart stops the current supervisor (waiting for a spawned process to
-// exit) and starts a new one for the current configuration.
-func (n *node) restart() {
+// redial stops the current dial loop and starts a new one for the current
+// configuration. When the old loop has a session, that session stays until
+// the new one supersedes it or the first new attempt fails (hub-admin 2.2).
+func (n *node) redial() {
 	h := n.h
 	h.mu.Lock()
-	old := n.sup
+	old := n.dl
 	cfg := n.cfg
-	if h.nodes[n.id] != n || h.closed || cfg.Start == nil || !cfg.IsEnabled() {
+	if h.nodes[n.id] != n || h.closed || cfg.Dial == nil || !cfg.IsEnabled() {
 		h.mu.Unlock()
 		return
 	}
-	s := &supervisor{n: n, done: make(chan struct{}), handEnd: make(chan struct{})}
-	s.ctx, s.cancel = context.WithCancel(h.ctx)
-	n.sup = s
-	handoff := old != nil && cfg.Start.Dial != nil && n.link != nil && n.link.kind == linkDial
+	d := &dialer{n: n, done: make(chan struct{}), handEnd: make(chan struct{}), kick: make(chan struct{}, 1)}
+	d.ctx, d.cancel = context.WithCancel(h.ctx)
+	n.dl = d
+	handoff := old != nil && n.link != nil && n.link.kind == linkDial
 	if handoff {
 		old.handoff.Store(true)
-		s.prev = old
+		d.prev = old
 	}
-	if old != nil && n.link != nil && n.link.kind == linkSpawn {
-		// The old process is being stopped: new calls wait for the new
-		// one (10.7).
-		n.link = nil
-		n.ready = make(chan struct{})
-	}
+	connected := n.link != nil
 	h.mu.Unlock()
+	if !connected {
+		n.setState(admin.Offline, "dialing "+cfg.Dial.URL)
+	}
 	go func() {
 		if old != nil && handoff {
 			old.cancel() // its session stays until the new one supersedes it
 		} else if old != nil {
 			old.stop()
-			old.wait(30 * time.Second) // never run a node twice (10.7)
+			old.wait(10 * time.Second)
 		}
-		switch {
-		case cfg.Start.Spawn != nil:
-			s.runSpawn(cfg.Start.Spawn)
-		case cfg.Start.Dial != nil:
-			s.runDial(cfg.Start.Dial)
-		default:
-			close(s.done)
-		}
+		d.run(cfg.Dial)
 	}()
 }
 
-// supervisor runs one spawned process or one dial loop.
-type supervisor struct {
+// dialer keeps one dialed node connected (10.2), redialing with backoff.
+type dialer struct {
 	n      *node
 	ctx    context.Context
 	cancel context.CancelFunc
 	done   chan struct{}
-	failed bool
+	kick   chan struct{} // a waiting call asks for an attempt now (10.7)
 	mu     sync.Mutex
 	sess   *session.Session
-	// handoff: a new dial supervisor took over; the current session ends
-	// when the new one supersedes it (or after a minute).
+	// handoff: a new dialer took over; the current session ends when the
+	// new one supersedes it (or after a minute).
 	handoff  atomic.Bool
 	handEnd  chan struct{} // closed when the successor's first dial failed
 	handOnce sync.Once
-	prev     *supervisor // the supervisor this one takes over from
+	prev     *dialer // the dialer this one takes over from
 }
 
 // endHandoff lets a handed-off session close: its successor could not
 // connect.
-func (s *supervisor) endHandoff() {
+func (s *dialer) endHandoff() {
 	s.handOnce.Do(func() { close(s.handEnd) })
 }
 
-func (s *supervisor) stop() {
+func (s *dialer) stop() {
 	s.cancel()
 	s.mu.Lock()
 	sess := s.sess
@@ -734,7 +700,7 @@ func (s *supervisor) stop() {
 	}
 }
 
-func (s *supervisor) wait(d time.Duration) {
+func (s *dialer) wait(d time.Duration) {
 	t := time.NewTimer(d)
 	defer t.Stop()
 	select {
@@ -743,28 +709,18 @@ func (s *supervisor) wait(d time.Duration) {
 	}
 }
 
-func (s *supervisor) finished() bool {
-	select {
-	case <-s.done:
-		return true
-	default:
-		return false
-	}
-}
-
-func (s *supervisor) setSession(sess *session.Session) {
+func (s *dialer) setSession(sess *session.Session) {
 	s.mu.Lock()
 	s.sess = sess
 	s.mu.Unlock()
 }
 
-// Crash policy (reference-server note, section 3): restart with backoff,
-// failed after 5 crashes within a minute.
-const (
-	crashLimit  = 5
-	crashWindow = time.Minute
-)
+// waitingRedial is the longest wait between redial attempts while calls
+// wait for the node.
+const waitingRedial = 250 * time.Millisecond
 
+// backoff is the wait before redial attempt n: from about 125 ms, doubling
+// up to 30 s, with jitter. A call waiting for the node cuts it short.
 func backoff(attempt int) time.Duration {
 	d := 250 * time.Millisecond << min(attempt, 7)
 	if d > 30*time.Second {
@@ -773,183 +729,10 @@ func backoff(attempt int) time.Duration {
 	return d/2 + time.Duration(rand.Int64N(int64(d/2)+1))
 }
 
-func (s *supervisor) runSpawn(sp *admin.Spawn) {
-	defer close(s.done)
-	n := s.n
-	h := n.h
-	var crashes []time.Time
-	for attempt := 0; ; attempt++ {
-		if s.ctx.Err() != nil {
-			return
-		}
-		n.setState(admin.Starting, "")
-		clean, err := s.spawnOnce(sp)
-		if s.ctx.Err() != nil {
-			return
-		}
-		if clean {
-			n.setState(admin.Offline, "exited; starts again on the next call")
-			return
-		}
-		now := time.Now()
-		crashes = append(crashes, now)
-		for len(crashes) > 0 && now.Sub(crashes[0]) > crashWindow {
-			crashes = crashes[1:]
-		}
-		msg := "crashed"
-		if err != nil {
-			msg = err.Error()
-		}
-		h.log.Warn("spawned node ended", "node", n.id, "err", msg)
-		if len(crashes) >= crashLimit {
-			s.failed = true
-			n.setState(admin.Failed, fmt.Sprintf("%d crashes within a minute: %s", len(crashes), msg))
-			return
-		}
-		n.setState(admin.Offline, msg)
-		select {
-		case <-s.ctx.Done():
-			return
-		case <-time.After(backoff(len(crashes))):
-		}
-	}
-}
-
-// spawnOnce runs the process once; clean reports a deliberate exit (status
-// 0 after the session ended with GoAway from the node).
-func (s *supervisor) spawnOnce(sp *admin.Spawn) (clean bool, err error) {
-	n := s.n
-	h := n.h
-	cmd := exec.Command(sp.Command[0], sp.Command[1:]...)
-	if sp.Dir != nil {
-		cmd.Dir = *sp.Dir
-	}
-	env := os.Environ()
-	for _, k := range sortedEnv(sp.Env) {
-		v := sp.Env[k]
-		val := v.Value
-		if v.Secret {
-			b, ok := h.adm.SecretValue(v.Value)
-			if !ok {
-				return false, fmt.Errorf("secret %q is missing", v.Value)
-			}
-			val = string(b)
-		}
-		env = append(env, k+"="+val)
-	}
-	cmd.Env = env
-	ownProcessGroup(cmd)
-	var stderr io.WriteCloser
-	if h.o.SpawnStderr != nil {
-		cmd.Stderr = h.o.SpawnStderr
-	} else {
-		pr, pw := io.Pipe()
-		stderr = pw
-		cmd.Stderr = pw
-		go func() {
-			sc := bufio.NewScanner(pr)
-			for sc.Scan() {
-				h.log.Info("node stderr", "node", n.id, "line", sc.Text())
-			}
-		}()
-	}
-	conn, err := pipe.Spawn(cmd)
-	if err != nil {
-		if stderr != nil {
-			stderr.Close()
-		}
-		return false, err
-	}
-	exited := make(chan error, 1)
-	go func() {
-		exited <- cmd.Wait()
-		if stderr != nil {
-			stderr.Close()
-		}
-	}()
-	v := &viewer{h: h, node: n, kind: kindFor(n)}
-	cfg := h.nodeServerConfig(v, func(ctx context.Context, hello *wire.Hello) (string, error) {
-		// The process is the node it was configured as (10.2).
-		return names.NodePrincipal(n.id), nil
-	})
-	sess, err := session.NewServer(s.ctx, conn, cfg)
-	if err != nil {
-		h.removeViewer(v)
-		_ = conn.Close(status.Unavailable, "handshake failed")
-		killAfter(cmd, exited, 2*time.Second)
-		return false, err
-	}
-	v.setSession(sess)
-	s.setSession(sess)
-	l := &link{n: n, sess: sess, v: v, kind: linkSpawn}
-	h.attach(n, l)
-	select {
-	case <-sess.Done():
-	case <-s.ctx.Done():
-		sess.GoAway(status.GoingAway, "node stopped by the hub", nil)
-		select {
-		case <-sess.Done():
-		case <-time.After(5 * time.Second):
-			sess.Close(status.GoingAway, "node stopped by the hub")
-		}
-	}
-	err = killAfter(cmd, exited, 5*time.Second)
-	g := sess.GoAwayReceived()
-	clean = err == nil && g != nil && (status.Code(g.Status) == status.OK || status.Code(g.Status) == status.GoingAway)
-	return clean, err
-}
-
-// killAfter waits for the process to exit, killing it (and its process
-// group) after d.
-func killAfter(cmd *exec.Cmd, exited chan error, d time.Duration) error {
-	select {
-	case err := <-exited:
-		return err
-	case <-time.After(d):
-		if cmd.Process != nil {
-			killProcessGroup(cmd)
-			_ = cmd.Process.Kill()
-		}
-		return <-exited
-	}
-}
-
-func sortedEnv(m map[string]admin.EnvValue) []string {
-	ks := make([]string, 0, len(m))
-	for k := range m {
-		ks = append(ks, k)
-	}
-	sortStrings(ks)
-	return ks
-}
-
-// nodeServerConfig is the session configuration for a node the hub serves
-// (spawned).
-func (h *Hub) nodeServerConfig(v *viewer, auth func(context.Context, *wire.Hello) (string, error)) session.Config {
-	cfg := session.Config{
-		Handler:             &sessHandler{h: h, v: v},
-		Authenticate:        auth,
-		MaxClientSchemaSize: -1,
-		SchemaFor: func(ctx context.Context, principal string, hello *wire.Hello) (*schema.Schema, error) {
-			h.addViewer(v)
-			return h.viewFor(v), nil
-		},
-		AcceptClientSchema: func(ctx context.Context, principal string, s *schema.Schema) error {
-			_, err := h.checkNodeFacets(v.node, s)
-			return err
-		},
-		OnPeerSchemaUpdate: func(ctx context.Context, s *session.Session, u *session.PeerSchemaUpdate) error {
-			return h.nodeSchemaUpdate(v, u)
-		},
-	}
-	h.sessionConfig(&cfg)
-	return cfg
-}
-
-// runDial keeps a dialed node connected (10.2): WebTransport for https,
+// run keeps a dialed node connected (10.2): WebTransport for https,
 // WebSocket for wss, the SPKI pin verified on every connection, and
 // ["link", credential] presented in Hello.
-func (s *supervisor) runDial(d *admin.Dial) {
+func (s *dialer) run(d *admin.Dial) {
 	defer close(s.done)
 	n := s.n
 	h := n.h
@@ -957,7 +740,6 @@ func (s *supervisor) runDial(d *admin.Dial) {
 		if s.ctx.Err() != nil {
 			return
 		}
-		n.setState(admin.Starting, "dialing "+d.URL)
 		err := s.dialOnce(d)
 		if s.ctx.Err() != nil {
 			return
@@ -973,15 +755,23 @@ func (s *supervisor) runDial(d *admin.Dial) {
 			attempt = 0
 		}
 		n.setState(admin.Offline, msg)
+		wait := backoff(attempt)
+		if n.waiting.Load() > 0 && wait > waitingRedial {
+			wait = waitingRedial
+		}
+		t := time.NewTimer(wait)
 		select {
 		case <-s.ctx.Done():
+			t.Stop()
 			return
-		case <-time.After(backoff(attempt)):
+		case <-t.C:
+		case <-s.kick:
+			t.Stop()
 		}
 	}
 }
 
-func (s *supervisor) dialOnce(d *admin.Dial) error {
+func (s *dialer) dialOnce(d *admin.Dial) error {
 	n := s.n
 	h := n.h
 	cred, ok := h.adm.SecretValue(d.Credential)

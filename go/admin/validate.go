@@ -13,8 +13,8 @@ import (
 	"github.com/aiviarium/sparrow-rpc/go/schema"
 )
 
-// ErrUnsupported is returned by ValidateEnv hooks for an extension key or
-// an Other kind the hub does not support.
+// ErrUnsupported is returned by the ValidateEnv extension hook for an
+// extension key the hub does not support.
 var ErrUnsupported = errors.New("not supported by this hub")
 
 // ValidateEnv supplies what document validation needs from the hub and the
@@ -22,7 +22,8 @@ var ErrUnsupported = errors.New("not supported by this hub")
 type ValidateEnv struct {
 	SecretExists func(name string) bool
 	// SecretValue returns a stored secret's value, to check that no two
-	// dial-in nodes present the same credential; nil skips that check.
+	// dial-in nodes present the same credential and that the hub never
+	// presents one of them; nil skips those checks.
 	SecretValue func(name string) ([]byte, bool)
 	// StoredFacet returns the stored facet with this key, or nil.
 	StoredFacet func(key []byte) *schema.Facet
@@ -30,8 +31,6 @@ type ValidateEnv struct {
 	// extensions. It returns ErrUnsupported for an unknown key, or another
 	// error for invalid contents.
 	Extension func(node, key string, value []byte) error
-	// OtherKind checks an Other start; ErrUnsupported for an unknown kind.
-	OtherKind func(kind string, params []byte) error
 }
 
 // IsReservedNodeID reports whether a node ID is reserved for the hub
@@ -41,12 +40,6 @@ func IsReservedNodeID(id string) bool { return id == "sparrow" || strings.HasPre
 // ValidSecretName reports whether a secret name follows the node-ID grammar
 // (section 2.1).
 func ValidSecretName(name string) bool { return names.IsNodeID(name) }
-
-// isEnvName reports whether s may name an environment variable (section
-// 3): non-empty, without '=' or NUL.
-func isEnvName(s string) bool {
-	return s != "" && !strings.ContainsAny(s, "=\x00")
-}
 
 // Validate checks a document against every rule of section 3 and returns
 // the problems found, in a stable order; none means valid.
@@ -72,8 +65,8 @@ func Validate(c *Config, env ValidateEnv) []Problem {
 				accepted[*n.Credential] = id
 			}
 		}
-		if n.Start != nil && n.Start.Dial != nil {
-			presented[n.Start.Dial.Credential] = id
+		if n.Dial != nil {
+			presented[n.Dial.Credential] = id
 		}
 	}
 	for _, id := range c.NodeIDs() {
@@ -85,10 +78,10 @@ func Validate(c *Config, env ValidateEnv) []Problem {
 			add("node IDs sparrow and sparrow.* are reserved for the hub", np...)
 		}
 		switch {
-		case n.Start != nil && n.Credential != nil:
-			add("a node has exactly one link direction: start or credential, not both", np...)
-		case n.Start == nil && n.Credential == nil:
-			add("a node has exactly one link direction: a start, or a credential for dialing in", np...)
+		case n.Dial != nil && n.Credential != nil:
+			add("a node has exactly one link direction: dial or credential, not both", np...)
+		case n.Dial == nil && n.Credential == nil:
+			add("a node has exactly one link direction: a dial, or a credential for dialing in", np...)
 		}
 		if n.Credential != nil {
 			secret(*n.Credential, append(np, "credential")...)
@@ -109,56 +102,33 @@ func Validate(c *Config, env ValidateEnv) []Problem {
 				add(fmt.Sprintf("secret %q is also the credential the hub presents to node %q", *n.Credential, other), append(np, "credential")...)
 			}
 		}
-		if s := n.Start; s != nil {
-			sp := append(np, "start")
-			switch {
-			case s.Spawn != nil:
-				p := append(sp, "spawn")
-				switch {
-				case len(s.Spawn.Command) == 0:
-					add("command needs at least the program", append(p, "command")...)
-				case s.Spawn.Command[0] == "":
-					add("the program is empty", append(p, "command", "0")...)
-				}
-				for _, k := range sortedKeys(s.Spawn.Env) {
-					v := s.Spawn.Env[k]
-					ep := append(p, "env", k)
-					if !isEnvName(k) {
-						add("an environment variable name is non-empty and contains no '=' or NUL", ep...)
+		if d := n.Dial; d != nil {
+			p := append(np, "dial")
+			u, err := url.Parse(d.URL)
+			if err != nil || (u.Scheme != "https" && u.Scheme != "wss") || u.Host == "" {
+				add("url must be an https (WebTransport) or wss (WebSocket) URL", append(p, "url")...)
+			}
+			if len(d.Pin) != 32 {
+				add(fmt.Sprintf("pin must be the 32-byte SHA-256 of the node's SubjectPublicKeyInfo, not %d bytes", len(d.Pin)), append(p, "pin")...)
+			}
+			secret(d.Credential, append(p, "credential")...)
+			if other, ok := accepted[d.Credential]; ok {
+				add(fmt.Sprintf("secret %q is also the credential dial-in node %q presents", d.Credential, other), append(p, "credential")...)
+			} else if env.SecretValue != nil {
+				// Nor may it have the value of one (section 3): the hub's
+				// own credential could otherwise be replayed to it.
+				if v, ok := env.SecretValue(d.Credential); ok {
+					for _, oid := range c.NodeIDs() {
+						o := c.Nodes[oid]
+						if o.Credential == nil {
+							continue
+						}
+						if ov, ok := env.SecretValue(*o.Credential); ok && string(ov) == string(v) {
+							add(fmt.Sprintf("secret %q has the same value as the credential dial-in node %q presents", d.Credential, oid), append(p, "credential")...)
+							break
+						}
 					}
-					switch {
-					case v.UnknownTag != 0:
-						add(fmt.Sprintf("unknown EnvValue variant %d", v.UnknownTag), ep...)
-					case v.Secret:
-						secret(v.Value, append(ep, "secret")...)
-					}
 				}
-			case s.Dial != nil:
-				p := append(sp, "dial")
-				u, err := url.Parse(s.Dial.URL)
-				if err != nil || (u.Scheme != "https" && u.Scheme != "wss") || u.Host == "" {
-					add("url must be an https (WebTransport) or wss (WebSocket) URL", append(p, "url")...)
-				}
-				if len(s.Dial.Pin) != 32 {
-					add(fmt.Sprintf("pin must be the 32-byte SHA-256 of the node's SubjectPublicKeyInfo, not %d bytes", len(s.Dial.Pin)), append(p, "pin")...)
-				}
-				secret(s.Dial.Credential, append(p, "credential")...)
-				if other, ok := accepted[s.Dial.Credential]; ok {
-					add(fmt.Sprintf("secret %q is also the credential dial-in node %q presents", s.Dial.Credential, other), append(p, "credential")...)
-				}
-			case s.Other != nil:
-				p := append(sp, "other")
-				var err error = ErrUnsupported
-				if env.OtherKind != nil {
-					err = env.OtherKind(s.Other.Kind, s.Other.Params)
-				}
-				if errors.Is(err, ErrUnsupported) {
-					add(fmt.Sprintf("start kind %q is not supported by this hub", s.Other.Kind), append(p, "kind")...)
-				} else if err != nil {
-					add(err.Error(), append(p, "params")...)
-				}
-			default:
-				add(fmt.Sprintf("unknown start variant %d", s.UnknownTag), sp...)
 			}
 		}
 		if n.Facets != nil {
@@ -238,17 +208,8 @@ func References(c *Config) (secrets map[string]bool, facets map[string]bool) {
 		if n.Credential != nil {
 			secrets[*n.Credential] = true
 		}
-		if n.Start != nil {
-			if n.Start.Dial != nil {
-				secrets[n.Start.Dial.Credential] = true
-			}
-			if n.Start.Spawn != nil {
-				for _, v := range n.Start.Spawn.Env {
-					if v.Secret {
-						secrets[v.Value] = true
-					}
-				}
-			}
+		if n.Dial != nil {
+			secrets[n.Dial.Credential] = true
 		}
 		for _, f := range n.Facets {
 			facets[string(f)] = true

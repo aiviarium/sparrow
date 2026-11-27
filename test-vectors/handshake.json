@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev324 (draft); hub-admin rev25 (draft)",
+  "spec_revision": "core rev347 (draft); hub-admin rev35 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "handshake",
   "vectors": [
@@ -1538,7 +1538,7 @@
     },
     {
       "name": "hello/node-pipe",
-      "description": "Hello from node 'acme.charts', a process the hub started on the pipe binding: no auth (identity comes from the link, section 10.2); the node's facets travel in client_schema.",
+      "description": "Hello from node 'acme.charts', a started process on the pipe binding (section 4.7): no auth, since only the side that started it holds its standard input and output; the node's facets travel in client_schema.",
       "spec": "4.7, 10.2",
       "type": "message",
       "kind": 0,
@@ -1799,7 +1799,7 @@
     },
     {
       "name": "welcome/node-pipe",
-      "description": "The hub's Welcome to node 'acme.charts': the full schema the node may call, which leaves out the node's own facet (section 10.3).",
+      "description": "The Welcome to node 'acme.charts' on the pipe: the full schema of the hub's view the node may call, which leaves out the node's own facet (section 10.3).",
       "spec": "4.7, 10.3",
       "type": "message",
       "kind": 1,

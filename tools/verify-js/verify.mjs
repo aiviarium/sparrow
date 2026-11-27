@@ -781,36 +781,32 @@ function checkParams(v) {
 
 // Section 5 of the admin tab, transcribed independently of the generator.
 const ADMIN_TYPES = [
-  [64, 'Config', 'struct'], [65, 'NodeConfig', 'struct'], [66, 'Start', 'union'], [67, 'Spawn', 'struct'], [68, 'EnvValue', 'union'],
-  [69, 'Dial', 'struct'], [70, 'Other', 'struct'], [71, 'Snapshot', 'struct'], [72, 'CommitRequest', 'struct'], [73, 'ValidateRequest', 'struct'],
-  [74, 'Problem', 'struct'], [75, 'Problems', 'alias'], [76, 'Secret', 'struct'], [77, 'Names', 'alias'], [78, 'Hashes', 'alias'],
-  [79, 'Event', 'union'], [80, 'RevisionEvent', 'struct'], [81, 'RevisionState', 'enum'], [82, 'NodeEvent', 'struct'], [83, 'NodeState', 'enum'],
+  [64, 'Config', 'struct'], [65, 'NodeConfig', 'struct'], [66, 'Dial', 'struct'], [67, 'Snapshot', 'struct'], [68, 'CommitRequest', 'struct'],
+  [69, 'ValidateRequest', 'struct'], [70, 'Problem', 'struct'], [71, 'Problems', 'alias'], [72, 'Secret', 'struct'], [73, 'Names', 'alias'],
+  [74, 'Hashes', 'alias'], [75, 'Event', 'union'], [76, 'RevisionEvent', 'struct'], [77, 'RevisionState', 'enum'], [78, 'NodeEvent', 'struct'],
+  [79, 'NodeState', 'enum'],
 ];
 const ADMIN_FIELDS = { // type -> [tag, name, type, optional]
   64: [[0, 'nodes', [1, 6, 65]], [1, 'defaults', [1, 7, 6], 1], [2, 'extensions', [1, 6, 7], 1]],
-  65: [[0, 'start', 66, 1], [1, 'credential', 6, 1], [2, 'facets', [0, 7], 1], [3, 'peer', 1, 1], [4, 'enabled', 1, 1], [5, 'extensions', [1, 6, 7], 1]],
-  66: [[0, 'spawn', 67], [1, 'dial', 69], [2, 'other', 70]],
-  67: [[0, 'command', [0, 6]], [1, 'env', [1, 6, 68], 1], [2, 'dir', 6, 1]],
-  68: [[0, 'literal', 6], [1, 'secret', 6]],
-  69: [[0, 'url', 6], [1, 'pin', 7], [2, 'credential', 6]],
-  70: [[0, 'kind', 6], [1, 'params', 7]],
-  71: [[0, 'revision', 3], [1, 'config', 64], [2, 'state', 81], [3, 'confirmInMs', 3, 1]],
-  72: [[0, 'base', 3], [1, 'config', 64], [2, 'confirmWithinMs', 3]],
-  73: [[0, 'base', 3], [1, 'config', 64]],
-  74: [[0, 'path', [0, 6]], [1, 'message', 6]],
-  76: [[0, 'name', 6], [1, 'value', 7]],
-  79: [[0, 'snapshot', 71], [1, 'revision', 80], [2, 'node', 82]],
-  80: [[0, 'revision', 3], [1, 'state', 81], [2, 'confirmInMs', 3, 1]],
-  82: [[0, 'node', 6], [1, 'revision', 3], [2, 'state', 83], [3, 'message', 6, 1]],
+  65: [[0, 'dial', 66, 1], [1, 'credential', 6, 1], [2, 'facets', [0, 7], 1], [3, 'peer', 1, 1], [4, 'enabled', 1, 1], [5, 'extensions', [1, 6, 7], 1]],
+  66: [[0, 'url', 6], [1, 'pin', 7], [2, 'credential', 6]],
+  67: [[0, 'revision', 3], [1, 'config', 64], [2, 'state', 77], [3, 'confirmInMs', 3, 1]],
+  68: [[0, 'base', 3], [1, 'config', 64], [2, 'confirmWithinMs', 3]],
+  69: [[0, 'base', 3], [1, 'config', 64]],
+  70: [[0, 'path', [0, 6]], [1, 'message', 6]],
+  72: [[0, 'name', 6], [1, 'value', 7]],
+  75: [[0, 'snapshot', 67], [1, 'revision', 76], [2, 'node', 78]],
+  76: [[0, 'revision', 3], [1, 'state', 77], [2, 'confirmInMs', 3, 1]],
+  78: [[0, 'node', 6], [1, 'revision', 3], [2, 'state', 79], [3, 'message', 6, 1]],
 };
-const ADMIN_ALIASES = { 75: [0, 74], 77: [0, 6], 78: [0, 7] };
-const ADMIN_ENUMS = { 81: [64, 65, 66], 83: [67, 68, 69, 70, 71, 72] };
-const ADMIN_SIGILS = ['pending', 'confirmed', 'rolledBack', 'starting', 'connected', 'offline', 'failed', 'disabled', 'removed'];
+const ADMIN_ALIASES = { 71: [0, 70], 73: [0, 6], 74: [0, 7] };
+const ADMIN_ENUMS = { 77: [64, 65, 66], 79: [67, 68, 69, 70] };
+const ADMIN_SIGILS = ['pending', 'confirmed', 'rolledBack', 'connected', 'offline', 'disabled', 'removed'];
 const IDEM = 0x1;
 const ADMIN_METHODS = [ // id, name, input, output, flags
-  [0, 'get', 0, 71, IDEM], [1, 'validate', 73, 75, IDEM], [2, 'commit', 72, 3, 0], [3, 'confirm', 3, 0, IDEM],
-  [4, 'rollback', 3, 3, 0], [5, 'setSecret', 76, 0, 0], [6, 'deleteSecret', 6, 0, IDEM], [7, 'listSecrets', 0, 77, IDEM],
-  [8, 'putFacet', 7, 7, IDEM], [9, 'deleteFacet', 7, 0, IDEM], [10, 'listFacets', 0, 78, IDEM], [11, 'watch', 0, [3, 79], 0x10],
+  [0, 'get', 0, 67, IDEM], [1, 'validate', 69, 71, IDEM], [2, 'commit', 68, 3, 0], [3, 'confirm', 3, 0, IDEM],
+  [4, 'rollback', 3, 3, 0], [5, 'setSecret', 72, 0, 0], [6, 'deleteSecret', 6, 0, IDEM], [7, 'listSecrets', 0, 73, IDEM],
+  [8, 'putFacet', 7, 7, IDEM], [9, 'deleteFacet', 7, 0, IDEM], [10, 'listFacets', 0, 74, IDEM], [11, 'watch', 0, [3, 75], 0x10],
 ];
 const KIND_NAMES = ['struct', 'enum', 'union', 'alias'];
 
@@ -818,7 +814,7 @@ function checkAdminInterface(v, iface) {
   checkEq(iface[0], 'sparrow.hub.admin', v, 'interface name');
   checkEq(iface[1], '1.0.0', v, 'interface version');
   const types = canonicalIface(iface)[2];
-  check(eqTJ(types.map((t) => [t[1], t[2], KIND_NAMES[t[0]]]), ADMIN_TYPES), v, 'types 64-83 with names and kinds');
+  check(eqTJ(types.map((t) => [t[1], t[2], KIND_NAMES[t[0]]]), ADMIN_TYPES), v, 'types 64-79 with names and kinds');
   for (const t of types) {
     if (ADMIN_FIELDS[t[1]]) {
       const want = ADMIN_FIELDS[t[1]].map(([tag, name, ty, optional]) => [tag, name, ty, optional ? 1 : 0, {}]); // optional: flag 0x1, plain type
@@ -829,7 +825,7 @@ function checkAdminInterface(v, iface) {
     if (ADMIN_ENUMS[t[1]]) check(eqTJ(t[3], ADMIN_ENUMS[t[1]]), v, `enum ${t[1]}`);
   }
   const sig = canonicalIface(iface)[4];
-  check(eqTJ(sig, ADMIN_SIGILS.map((n, i) => [64 + i, n, 0, {}])), v, 'sigils 64-72, kind 0');
+  check(eqTJ(sig, ADMIN_SIGILS.map((n, i) => [64 + i, n, 0, {}])), v, 'sigils 64-70, kind 0');
   const svcs = canonicalIface(iface)[3];
   checkEq(svcs.length, 1, v, 'one service');
   checkEq(svcs[0][0], 0, v, 'service 0');
@@ -882,7 +878,7 @@ function checkAdmin(v) {
       checkMessage(v);
       const m = v.message;
       checkEq(m[2], 9, v, 'failed_precondition');
-      checkEq(m[4][0], 75, v, 'details are dynamic Problems');
+      checkEq(m[4][0], 71, v, 'details are dynamic Problems');
       expectOk(() => checkValue(typeMap(), 10, m[4]), v, 'details conform');
       break;
     }

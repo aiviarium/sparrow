@@ -569,6 +569,12 @@ func SelfSigned(hosts ...string) (tls.Certificate, []byte, error) {
 	if err != nil {
 		return tls.Certificate{}, nil, err
 	}
+	return SelfSignedWithKey(key, hosts...)
+}
+
+// SelfSignedWithKey is SelfSigned for a given key, so that the public key
+// (and with it an SPKI pin) stays the same across restarts.
+func SelfSignedWithKey(key *ecdsa.PrivateKey, hosts ...string) (tls.Certificate, []byte, error) {
 	serial, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 62))
 	if err != nil {
 		return tls.Certificate{}, nil, err

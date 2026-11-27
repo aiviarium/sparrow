@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev324 (draft); hub-admin rev25 (draft)",
+  "spec_revision": "core rev347 (draft); hub-admin rev35 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "schema",
   "vectors": [

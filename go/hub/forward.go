@@ -232,7 +232,7 @@ func (h *Hub) moduleRejected(principal string, c *session.ServerCall) {
 func (h *Hub) forward(ctx context.Context, start time.Time, v *viewer, c *session.ServerCall, actors []Actor, cc *callContext, n *node, lf *listedFacet) {
 	fail := func(code status.Code, msg string) { _ = c.Fail(&session.Error{Code: code, Message: msg}) }
 	deadline, hasDeadline := c.Deadline()
-	wait := h.o.StartTimeout
+	wait := h.o.ConnectTimeout
 	if hasDeadline {
 		if left := time.Until(deadline); left < wait {
 			wait = left
@@ -241,7 +241,7 @@ func (h *Hub) forward(ctx context.Context, start time.Time, v *viewer, c *sessio
 	l, err := h.waitLink(ctx, n, wait)
 	if err != nil {
 		if hasDeadline && !time.Now().Before(deadline) {
-			fail(status.DeadlineExceeded, "the deadline passed while the node was starting")
+			fail(status.DeadlineExceeded, "the deadline passed while waiting for the node to connect")
 			return
 		}
 		fail(status.Unavailable, err.Error())

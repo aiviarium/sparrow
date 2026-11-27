@@ -77,7 +77,7 @@ func authHub(t *testing.T, tune func(*Options), grants ...Grant) *fixture {
 
 func (f *fixture) commitAuth(grants ...Grant) uint64 {
 	return f.commit(&admin.Config{Nodes: map[string]*admin.NodeConfig{
-		"echo":  spawnEcho("echo"),
+		"echo":  f.echo("echo"),
 		"proxy": dialInConfig("proxy-1"),
 	}, Extensions: policy(grants...)})
 }

@@ -31,10 +31,9 @@ type Options struct {
 	Store *Store
 	// Clock drives confirmation deadlines; nil is the wall clock.
 	Clock session.Clock
-	// Extension and OtherKind validate hub-specific contents (see
-	// ValidateEnv); nil supports nothing.
+	// Extension validates hub-specific extensions (see ValidateEnv); nil
+	// supports none.
 	Extension func(node, key string, value []byte) error
-	OtherKind func(kind string, params []byte) error
 	// WatchQueue is how many events a watcher may fall behind before it is
 	// ended with resource_exhausted (section 4); default 256.
 	WatchQueue int
@@ -264,7 +263,6 @@ func (m *Manager) env() ValidateEnv {
 		SecretValue:  m.SecretValue,
 		StoredFacet:  m.StoredFacet,
 		Extension:    m.o.Extension,
-		OtherKind:    m.o.OtherKind,
 	}
 }
 

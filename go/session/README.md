@@ -9,11 +9,11 @@ the raw API described below.
 | `transport` | The `Conn` / `Stream` abstraction (4.1, 4.4): whole messages per stream, stream headers, read limit, resets with core status codes, close with code and reason. |
 | `transport/webtransport` | WebTransport over HTTP/3 (4.5) on quic-go and webtransport-go: shared lane (header `0x00`), leased streams (`0x01`) in both directions, header rules, resets and session close carrying core codes, a server you mount on an `http3.Server`, a dialer with `serverCertificateHashes`-style pinning, `SelfSigned` certificates. |
 | `transport/websocket` | WebSocket (4.6) on coder/websocket: subprotocol `sparrow.v1`, one binary message per Sparrow message, Origin check hook, close codes 1000 / 4000+code with the reason cut to 123 bytes. |
-| `transport/pipe` | The pipe binding (4.7): any byte stream, varint length prefixes, no header; `Stdio()` for a process a hub starts, `Spawn(cmd)` for the hub side. |
+| `transport/pipe` | The pipe binding (4.7): any byte stream, varint length prefixes, no header; `Stdio()` for a started process, `Spawn(cmd)` for the side that starts it (generic: a hub never starts nodes). |
 | `transport/mem` | In-memory binding with leased streams, for tests. |
 | `session` | One session in either role: handshake, control messages, schemas, calls, credit, leases. |
 | `node` | Facet builder, node runtime (stdio, dial, serve, reconnect), calls by name, runtime publishing. |
-| `examples/echo-node` | A node a hub can spawn over stdio (or that dials a hub with `-url`). |
+| `examples/echo-node` | An example node that dials in to a hub (`-hub URL -credential ...`), waits to be dialed (`-listen ADDR`, printing its URL and SPKI pin), or speaks the pipe binding on stdio. |
 
 ## Session API
 

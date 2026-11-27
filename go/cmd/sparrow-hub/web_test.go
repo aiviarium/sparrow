@@ -4,12 +4,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/ed25519"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -18,13 +14,11 @@ import (
 	"time"
 
 	"github.com/aiviarium/sparrow-rpc/go/cbor"
-	"github.com/aiviarium/sparrow-rpc/go/hub"
 	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
 	"github.com/aiviarium/sparrow-rpc/go/internal/vectors"
 	"github.com/aiviarium/sparrow-rpc/go/node"
 	"github.com/aiviarium/sparrow-rpc/go/session"
 	"github.com/aiviarium/sparrow-rpc/go/status"
-	"github.com/aiviarium/sparrow-rpc/go/transport/webtransport"
 	"github.com/aiviarium/sparrow-rpc/go/web"
 	"github.com/aiviarium/sparrow-rpc/go/websign"
 	"github.com/aiviarium/sparrow-rpc/go/wire"
@@ -78,47 +72,10 @@ func moduleEntry(t *testing.T, id, version string, file []byte, key ed25519.Priv
 	return raw
 }
 
-// dialedNode serves a node over WebTransport for the hub to dial.
-func dialedNode(t *testing.T, cred string) (url string, pin []byte) {
-	n := node.New(node.Options{})
-	b := node.NewFacet("dialed", "1.0.0")
-	b.Service("D").Method("ping", node.Unit, node.String, func(ctx context.Context, c *session.ServerCall) (any, error) {
-		return "pong from dialed", nil
-	})
-	if _, err := n.Add(context.Background(), b.MustBuild()); err != nil {
-		t.Fatal(err)
-	}
-	cert, _, err := webtransport.SelfSigned("127.0.0.1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	leaf, _ := x509.ParseCertificate(cert.Certificate[0])
-	srv := webtransport.NewServer(webtransport.ServerOptions{TLSConfig: &tls.Config{Certificates: []tls.Certificate{cert}}, CheckOrigin: func(*http.Request) bool { return true }})
-	mux := http.NewServeMux()
-	mux.Handle("/node", srv.Handler(func(c *webtransport.Conn, _ *http.Request) {
-		_ = n.Serve(context.Background(), c, func(a *wire.Auth) error {
-			if a == nil || a.Scheme != "link" {
-				return &session.Error{Code: status.Unauthenticated, Message: "link credential required"}
-			}
-			if s, _ := cbor.NewDecoder(a.Credentials).Text(); s != cred {
-				return &session.Error{Code: status.Unauthenticated, Message: "bad link credential"}
-			}
-			return nil
-		})
-	}))
-	srv.WT.H3.Handler = mux
-	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	go func() { _ = srv.Serve(pc) }()
-	t.Cleanup(func() { _ = srv.Close() })
-	return fmt.Sprintf("https://127.0.0.1:%d/node", pc.LocalAddr().(*net.UDPAddr).Port), hub.PinFor(leaf)
-}
-
-// webHub starts the sparrow-hub binary with the Web Profile on, a spawned
-// echo node shipping two client modules (one signed by the root key, one
-// by an uncertified key) and a dialed node.
+// webHub starts the sparrow-hub binary with the Web Profile on and two
+// examples/echo-node processes: echo, which dials in and ships two client
+// modules (one signed by the root key, one by an uncertified key), and
+// dialed, which the hub dials.
 func webHub(t *testing.T, extra map[string]any) (*hubProc, *webKeys, []byte) {
 	dir := t.TempDir()
 	k := loadWebKeys(t)
@@ -140,7 +97,7 @@ func webHub(t *testing.T, extra map[string]any) (*hubProc, *webKeys, []byte) {
 		"bootstrap": []map[string]string{{"principal": "user:admin", "credential": "admin-secret"}},
 		"tokens":    []map[string]any{{"token": "alice-token", "principal": "user:alice", "groups": []string{"group:eng"}}},
 		"web":       map[string]any{"modulesDir": mods, "rootKeys": []string{hex.EncodeToString(k.rootPub)}, "minHostApi": "3.0.0"},
-		"log":       "debug", "shutdownGraceMs": 3000, "startTimeoutMs": 5000,
+		"log":       "debug", "shutdownGraceMs": 3000, "connectTimeoutMs": 5000,
 	}
 	for k, v := range extra {
 		cfg[k] = v
@@ -152,8 +109,9 @@ func webHub(t *testing.T, extra map[string]any) (*hubProc, *webKeys, []byte) {
 		t.Fatalf("no web address: %+v", p.addrs)
 	}
 
-	url, pin := dialedNode(t, "dial-secret")
+	_, url, pin := echoListening(t, "dialed", "dial-secret")
 	p.admin(t, p.addrs.WebSocket, "set-secret", "dialed-cred", "dial-secret")
+	p.admin(t, p.addrs.WebSocket, "set-secret", "echo-cred", "echo-secret")
 	webExt := cbor.AppendMapHead(nil, 3)
 	webExt = cbor.AppendRaw(cbor.AppendText(webExt, "web.keys"), cbor.AppendRaw(cbor.AppendArrayHead(nil, len(k.certs)), bytes.Join(func() [][]byte {
 		out := make([][]byte, len(k.certs))
@@ -167,8 +125,8 @@ func webHub(t *testing.T, extra map[string]any) (*hubProc, *webKeys, []byte) {
 	webExt, _ = cbor.Canonical(webExt, cbor.Options{})
 	doc := map[string]any{
 		"nodes": map[string]any{
-			"echo":   map[string]any{"start": map[string]any{"spawn": map[string]any{"command": []string{bins["echo-node"], "-id", "echo", "-web-modules", entriesFile}}}},
-			"dialed": map[string]any{"start": map[string]any{"dial": map[string]any{"url": url, "pin": hex.EncodeToString(pin), "credential": "dialed-cred"}}}},
+			"echo":   map[string]any{"credential": "echo-cred"},
+			"dialed": map[string]any{"dial": map[string]any{"url": url, "pin": pin, "credential": "dialed-cred"}}},
 		"extensions": map[string]string{"ref.web": hex.EncodeToString(webExt)},
 		"policy":     [][3]string{{"group:eng", "echo", "use"}, {"group:eng", "dialed", "use"}},
 	}
@@ -178,6 +136,7 @@ func webHub(t *testing.T, extra map[string]any) (*hubProc, *webKeys, []byte) {
 	if out := p.admin(t, p.addrs.WebSocket, "commit", "-confirm-within", "10000", "-confirm", docFile); !strings.Contains(out, `"revision": 1`) {
 		t.Fatalf("commit: %s", out)
 	}
+	p.echoDialIn(t, "echo", "echo-secret", "-web-modules", entriesFile)
 	// Wait until both nodes are connected, so the schema stays put.
 	probe := p.client(t, p.addrs.WebSocket, "alice-token", nil)
 	testutil.Eventually(t, 20*time.Second, func() bool {
@@ -191,7 +150,7 @@ func webHub(t *testing.T, extra map[string]any) (*hubProc, *webKeys, []byte) {
 
 // TestWebEndToEnd runs the built sparrow-hub with the Web Profile and goes
 // through what a browser client does, over WebTransport and over
-// WebSocket: /connect, a ticket in Hello, calls to the spawned and the
+// WebSocket: /connect, a ticket in Hello, calls to the dial-in and the
 // dialed node, ticket replay refused, AuthRefresh with a refreshed ticket,
 // the schema resource, and module fetch and verification into a snapshot.
 func TestWebEndToEnd(t *testing.T) {
@@ -248,7 +207,7 @@ func TestWebEndToEnd(t *testing.T) {
 			if v, err := c.Call(ctx, "echo", "whoami", nil); err != nil || v != "user:alice" {
 				t.Fatalf("whoami: %v %v", v, err)
 			}
-			if v, err := c.Call(ctx, "dialed", "ping", nil); err != nil || v != "pong from dialed" {
+			if v, err := c.Call(ctx, "dialed", "reverse", "dialed"); err != nil || v != "delaid" {
 				t.Fatalf("dialed: %v %v", v, err)
 			}
 			// A ticket is single-use.

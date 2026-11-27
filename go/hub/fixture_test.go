@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -23,6 +25,7 @@ import (
 	"github.com/aiviarium/sparrow-rpc/go/internal/testutil"
 	nd "github.com/aiviarium/sparrow-rpc/go/node"
 	"github.com/aiviarium/sparrow-rpc/go/session"
+	"github.com/aiviarium/sparrow-rpc/go/status"
 	"github.com/aiviarium/sparrow-rpc/go/transport/webtransport"
 	"github.com/aiviarium/sparrow-rpc/go/wire"
 )
@@ -61,8 +64,10 @@ type fixture struct {
 	wsURL    string
 	certHash []byte
 	pin      []byte // SPKI pin of the WebTransport listener
+	wsAddr   string // TCP address of the plain WebSocket listener
 	closers  []func()
 	mu       sync.Mutex
+	echoes   map[string]*echoNode // echo-node processes (echo, dialedEcho)
 }
 
 type testLogWriter struct {
@@ -98,8 +103,8 @@ func baseOptions(t *testing.T, dir string) Options {
 			{Token: aliceToken, Principal: "user:alice", Groups: []string{"group:eng"}},
 			{Token: bobToken, Principal: "user:bob"},
 		},
-		Logger:       testLogger(t),
-		StartTimeout: 3 * time.Second,
+		Logger:         testLogger(t),
+		ConnectTimeout: 3 * time.Second,
 	}
 }
 
@@ -109,6 +114,13 @@ func newFixture(t *testing.T, tune func(*Options)) *fixture {
 }
 
 func startFixture(t *testing.T, dir string, tune func(*Options)) *fixture {
+	return startFixtureOn(t, dir, "", tune)
+}
+
+// startFixtureOn is startFixture with the plain WebSocket listener on a
+// given address ("" for any), so that a restarted hub is found again by
+// nodes that dial in.
+func startFixtureOn(t *testing.T, dir, wsAddr string, tune func(*Options)) *fixture {
 	o := baseOptions(t, dir)
 	if tune != nil {
 		tune(&o)
@@ -117,7 +129,7 @@ func startFixture(t *testing.T, dir string, tune func(*Options)) *fixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f := &fixture{t: t, dir: dir, h: h, opts: o}
+	f := &fixture{t: t, dir: dir, h: h, opts: o, echoes: map[string]*echoNode{}}
 	cert, hash, err := webtransport.SelfSigned("127.0.0.1")
 	if err != nil {
 		t.Fatal(err)
@@ -135,7 +147,20 @@ func startFixture(t *testing.T, dir string, tune func(*Options)) *fixture {
 	}
 	go func() { _ = srv.Serve(pc) }()
 	f.wtURL = fmt.Sprintf("https://127.0.0.1:%d/sparrow/wt", pc.LocalAddr().(*net.UDPAddr).Port)
-	ws := httptest.NewServer(h.WebSocketHandler(func(*http.Request) bool { return true }))
+	ws := httptest.NewUnstartedServer(h.WebSocketHandler(func(*http.Request) bool { return true }))
+	if wsAddr != "" {
+		var l net.Listener
+		// The old hub's port may take a moment to become free.
+		testutil.Eventually(t, 10*time.Second, func() bool {
+			var err error
+			l, err = net.Listen("tcp", wsAddr)
+			return err == nil
+		}, "cannot listen on %s again", wsAddr)
+		ws.Listener.Close()
+		ws.Listener = l
+	}
+	ws.Start()
+	f.wsAddr = ws.Listener.Addr().String()
 	f.wsURL = "ws" + strings.TrimPrefix(ws.URL, "http")
 	stopped := false
 	stop := func() {
@@ -233,6 +258,7 @@ func (f *fixture) commit(cfg *admin.Config) uint64 {
 	if err != nil {
 		f.t.Fatalf("commit: %v %v", err, admin.ProblemsOf(err))
 	}
+	f.startEchoes()
 	return rev
 }
 
@@ -244,9 +270,137 @@ func (f *fixture) secret(name, value string) {
 	}
 }
 
-func spawnEcho(id string, extra ...string) *admin.NodeConfig {
-	cmd := append([]string{echoBin, "-id", id}, extra...)
-	return &admin.NodeConfig{Start: &admin.Start{Spawn: &admin.Spawn{Command: cmd}}}
+// echoNode is an examples/echo-node process: it dials in (echo) or waits
+// to be dialed (dialedEcho). The hub never starts it.
+type echoNode struct {
+	id, cred string
+	hub      string // the URL it dials in to; "" for the WebSocket listener
+	args     []string
+	nc       *admin.NodeConfig
+	p        *testutil.Proc
+	url      string // dialedEcho: where it listens
+	pin      []byte
+	keyFile  string
+}
+
+// echo returns the configuration of a dial-in node id run by examples/
+// echo-node as a separate process over WebSocket (-hub). Its credential is
+// stored now as the secret "<id>-link"; the process starts after the next
+// f.commit (or f.startEchoes), so its first attempt is accepted. Asking
+// again for the same id returns the same node.
+func (f *fixture) echo(id string, extra ...string) *admin.NodeConfig {
+	f.t.Helper()
+	if e := f.echoes[id]; e != nil {
+		return e.nc.Clone()
+	}
+	e := &echoNode{id: id, cred: "cred-of-" + id, args: extra}
+	f.storeSecret(id+"-link", e.cred)
+	e.nc = &admin.NodeConfig{Credential: strp(id + "-link")}
+	f.echoes[id] = e
+	return e.nc.Clone()
+}
+
+// echoWT is echo for a node that dials in over WebTransport and checks the
+// hub's SPKI pin (-hub-pin).
+func (f *fixture) echoWT(id string) *admin.NodeConfig {
+	f.t.Helper()
+	nc := f.echo(id, "-hub-pin", hex.EncodeToString(f.pin))
+	f.echoes[id].hub = f.wtURL
+	return nc
+}
+
+// storeSecret stores a secret, which may already be stored (with the same
+// value) from before a restart.
+func (f *fixture) storeSecret(name, value string) {
+	f.t.Helper()
+	c, _ := f.adminClient("websocket")
+	if err := c.SetSecret(tctx(f.t), name, []byte(value)); err != nil && session.Code(err) != status.AlreadyExists {
+		f.t.Fatal(err)
+	}
+}
+
+// startEchoes starts the dial-in echo processes not yet running.
+func (f *fixture) startEchoes() {
+	for _, e := range f.echoes {
+		if e.p == nil && e.url == "" {
+			f.runEcho(e)
+		}
+	}
+}
+
+func (f *fixture) runEcho(e *echoNode) {
+	url := e.hub
+	if url == "" {
+		url = f.wsURL
+	}
+	args := append([]string{"-id", e.id, "-hub", url, "-credential", e.cred}, e.args...)
+	e.p = testutil.StartProc(f.t, "echo-node "+e.id, echoBin, args...)
+}
+
+// restartEcho stops (or with crash, kills) an echo process and starts it
+// again with the same identity, key and address.
+func (f *fixture) restartEcho(id string, crash bool) {
+	f.t.Helper()
+	e := f.echoes[id]
+	f.stopEcho(id, crash)
+	if e.url == "" {
+		f.runEcho(e)
+		return
+	}
+	f.listenEcho(e, strings.TrimSuffix(strings.TrimPrefix(e.url, "https://"), "/sparrow/node"))
+}
+
+// stopEcho ends an echo process: SIGTERM (it closes its session with
+// GoAway), or with crash SIGKILL.
+func (f *fixture) stopEcho(id string, crash bool) {
+	e := f.echoes[id]
+	if e.p == nil {
+		return
+	}
+	if crash {
+		e.p.Kill()
+	} else {
+		_ = e.p.Stop()
+	}
+	e.p = nil
+}
+
+// dialedEcho starts examples/echo-node as a separate process listening
+// for WebTransport (-listen), and returns the configuration of a node the
+// hub dials at its URL and SPKI pin, presenting the secret "<id>-link".
+func (f *fixture) dialedEcho(id string, extra ...string) *admin.NodeConfig {
+	f.t.Helper()
+	e := &echoNode{id: id, cred: "dial-cred-of-" + id, args: extra, keyFile: filepath.Join(f.t.TempDir(), id+".key")}
+	f.storeSecret(id+"-link", e.cred)
+	f.listenEcho(e, "127.0.0.1:0")
+	e.nc = &admin.NodeConfig{Dial: &admin.Dial{URL: e.url, Pin: e.pin, Credential: id + "-link"}}
+	f.echoes[id] = e
+	return e.nc.Clone()
+}
+
+func (f *fixture) listenEcho(e *echoNode, addr string) {
+	f.t.Helper()
+	args := append([]string{"-id", e.id, "-listen", addr, "-credential", e.cred, "-key-file", e.keyFile}, e.args...)
+	var line string
+	// A restart on the same port may find it still in use for a moment.
+	for i := 0; ; i++ {
+		e.p = testutil.StartProc(f.t, "echo-node "+e.id, echoBin, args...)
+		var err error
+		if line, err = e.p.Line(15 * time.Second); err == nil {
+			break
+		}
+		if i == 20 {
+			f.t.Fatalf("echo-node %s does not listen: %v\n%s", e.id, err, e.p.Log())
+		}
+		_ = e.p.Stop()
+		time.Sleep(100 * time.Millisecond)
+	}
+	var a struct{ WebTransport, Pin string }
+	if err := json.Unmarshal([]byte(line), &a); err != nil {
+		f.t.Fatalf("echo-node output %q: %v", line, err)
+	}
+	e.url = a.WebTransport
+	e.pin, _ = hex.DecodeString(a.Pin)
 }
 
 func strp(s string) *string { return &s }

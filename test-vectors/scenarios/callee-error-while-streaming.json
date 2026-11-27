@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "spec_revision": "core rev324 (draft); hub-admin rev25 (draft)",
+  "spec_revision": "core rev347 (draft); hub-admin rev35 (draft)",
   "generator": "tools/vectorgen-go",
   "name": "callee-error-while-streaming",
   "description": "The callee fails a client-stream call while input is still arriving. It MUST keep reading and discarding the caller's input until the caller's half is finished. An Item already on its way when the Error was sent is discarded; when the Error arrives the caller sends End next, with no further Item or Bytes (7.1).",
