@@ -17,6 +17,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/quic-go/quic-go"
+
 	"github.com/aiviarium/sparrow-rpc/go/admin"
 	"github.com/aiviarium/sparrow-rpc/go/adminiface"
 	"github.com/aiviarium/sparrow-rpc/go/cbor"
@@ -812,7 +814,7 @@ func (s *dialer) dialOnce(d *admin.Dial) error {
 		return fmt.Errorf("secret %q is missing", d.Credential)
 	}
 	dctx, cancel := context.WithTimeout(s.ctx, h.o.DialTimeout)
-	conn, err := dialPinned(dctx, d.URL, d.Pin, h.o.DialLinger)
+	conn, err := dialPinned(dctx, d.URL, d.Pin, h.o.DialLinger, h.o.DialQUICConfig)
 	cancel()
 	if err != nil {
 		return err
@@ -879,11 +881,11 @@ func pinVerifier(pin []byte) func(cs tls.ConnectionState) error {
 }
 
 // dialPinned connects to a node and verifies its SPKI pin.
-func dialPinned(ctx context.Context, url string, pin []byte, linger time.Duration) (transport.Conn, error) {
+func dialPinned(ctx context.Context, url string, pin []byte, linger time.Duration, qc *quic.Config) (transport.Conn, error) {
 	tc := &tls.Config{InsecureSkipVerify: true, VerifyConnection: pinVerifier(pin), NextProtos: nil}
 	switch {
 	case strings.HasPrefix(url, "https://"):
-		return webtransport.Dial(ctx, url, &webtransport.DialOptions{TLSConfig: tc, Linger: linger})
+		return webtransport.Dial(ctx, url, &webtransport.DialOptions{TLSConfig: tc, Linger: linger, QUICConfig: qc})
 	case strings.HasPrefix(url, "wss://"):
 		hc := &http.Client{Transport: &http.Transport{TLSClientConfig: tc, ForceAttemptHTTP2: false}}
 		return websocket.Dial(ctx, url, &websocket.DialOptions{HTTPClient: hc})

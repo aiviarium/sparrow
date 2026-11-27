@@ -21,6 +21,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/quic-go/quic-go"
+
 	"github.com/aiviarium/sparrow-rpc/go/admin"
 	"github.com/aiviarium/sparrow-rpc/go/adminiface"
 	"github.com/aiviarium/sparrow-rpc/go/cbor"
@@ -155,6 +157,10 @@ type Options struct {
 	// DialLinger is the WebTransport linger of connections to nodes the
 	// hub dials (webtransport.DefaultLinger, 2 s).
 	DialLinger time.Duration
+	// DialQUICConfig tunes the QUIC connections to nodes the hub dials
+	// over WebTransport (idle timeout, keep-alive, handshake timeout); nil
+	// uses quic-go's defaults.
+	DialQUICConfig *quic.Config
 }
 
 // Hub is a running hub.

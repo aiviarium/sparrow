@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/quic-go/quic-go"
+
 	"github.com/aiviarium/sparrow-rpc/go/names"
 	"github.com/aiviarium/sparrow-rpc/go/schema"
 	"github.com/aiviarium/sparrow-rpc/go/session"
@@ -313,6 +315,9 @@ type DialOptions struct {
 	// the certificate, for development).
 	TLSConfig  *tls.Config
 	CertHashes [][]byte
+	// QUICConfig tunes WebTransport's QUIC connection (idle timeout,
+	// keep-alive, handshake timeout); nil uses quic-go's defaults.
+	QUICConfig *quic.Config
 	Header     http.Header
 	HTTPClient *http.Client
 }
@@ -343,7 +348,7 @@ func dialAny(ctx context.Context, url string, o DialOptions) (transport.Conn, er
 			wctx, cancel = context.WithTimeout(ctx, wait)
 			defer cancel()
 		}
-		c, err := webtransport.Dial(wctx, url, &webtransport.DialOptions{TLSConfig: o.TLSConfig, CertHashes: o.CertHashes, Header: o.Header})
+		c, err := webtransport.Dial(wctx, url, &webtransport.DialOptions{TLSConfig: o.TLSConfig, CertHashes: o.CertHashes, Header: o.Header, QUICConfig: o.QUICConfig})
 		if err == nil {
 			return c, nil
 		}
