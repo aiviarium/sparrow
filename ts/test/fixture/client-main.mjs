@@ -18,9 +18,12 @@ try {
   });
   const done = await runClientSuite(session, lib, process.env.SPARROW_VERBOSE ? log : () => {});
   log(`passed ${done.length} checks: ${done.join(' ')}`);
-  // Give the server a moment to call back before closing (it may call our facet after the suite).
-  if (process.env.SPARROW_WAIT_FOR_SERVER) await session.closed;
-  else await session.close(lib.Status.going_away, 'done');
+  if (process.env.SPARROW_WAIT_FOR_SERVER) {
+    // Tell the server the suite passed; it may still call this side's facet, then ends the session with GoAway.
+    session.notify('interop.test', 'log', 'suite passed');
+    const info = await session.closed;
+    if (session.goAwayReceived?.status !== lib.Status.going_away) throw new Error(`want GoAway(going_away), got ${JSON.stringify(info)}`);
+  } else await session.close(lib.Status.going_away, 'done');
   process.exitCode = 0;
 } catch (e) {
   log(`FAILED: ${e?.stack ?? e}`);

@@ -22,6 +22,7 @@ program (section "Hub" below); phase 4 the Web Profile server (section "Web Prof
 | `web` | The Web Profile (core section 9): `/sparrow/connect`, tickets, schema and module resources, the `web.*` annotations, and a client that follows the browser rules (signatures, rollback, revocation, snapshots). |
 | `cmd/sparrow-hub` | The reference server program. |
 | `cmd/sparrow-admin` | A command-line controller for `sparrow.hub.admin`. |
+| `cmd/sparrow-interop` | Tests only: the Go side of the TypeScript interop tests (`../ts/test/interop.test.ts`) over the pipe binding, as the started client (`client`) or the starting server (`server CMD...`). |
 | `conformance` | Tests only: checks the library against every vector in `../test-vectors`, and the messages of every behaviour scenario in `../test-vectors/scenarios`. |
 | `netsimtest`, `internal/netsim` | Tests only: the hub, clients and nodes through simulated bad networks (section "Network faults"). |
 | `internal/fuzzseed` | Fuzz corpus seeds from the test vectors. |
