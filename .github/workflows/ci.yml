@@ -115,3 +115,31 @@ jobs:
         env:
           SPARROW_BROWSER: '1'
         run: go test -count=1 -run TestBrowser -v ./cmd/sparrow-hub
+
+  ts:
+    name: ts (Node ${{ matrix.node-version }}, typecheck, tests, Go interop)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['20', '22']
+    defaults:
+      run:
+        working-directory: ts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Type-check sources and tests
+        run: npm run typecheck
+      - name: Test (vectors, scenarios, sessions, bindings, Go interop)
+        run: npm test

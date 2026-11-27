@@ -730,14 +730,18 @@ export class Session {
     this.hs = 'open';
     this.welcomeWaiter.wake();
     this.slotWaiter.wake();
-    if (this.optimistic) return;
-    try {
-      this.write(encodeMessage({ kind: 2, schemaHash: st.hash }));
-    } catch {
-      return;
+    const queued = this.preAuth;
+    this.preAuth = [];
+    if (!this.optimistic) {
+      try {
+        this.write(encodeMessage({ kind: 2, schemaHash: st.hash }));
+      } catch {
+        return;
+      }
+      this.readyDone = true;
+      this.finishHandshake();
     }
-    this.readyDone = true;
-    this.finishHandshake();
+    for (const b of queued) this.onMessage(b);
   }
 
   private async loadOffer(o: SchemaOffer): Promise<Schema> {
@@ -895,9 +899,23 @@ export class Session {
     this.lastRecv = Date.now();
     this.pingSent = false;
     if (this.isClosed) return;
-    if (this.role === 'server' && this.hs === 'handshaking') {
+    if (this.hs === 'handshaking') {
+      // The server buffers while the credential is checked (5.2); the client while it loads the offered
+      // schema, except a GoAway, which ends the handshake at once.
+      if (this.role === 'client') {
+        let g: Message | undefined;
+        try {
+          g = decodeMessage(b);
+        } catch {
+          g = undefined;
+        }
+        if (g?.kind === 9) {
+          this.onGoAway(g);
+          return;
+        }
+      }
       this.preAuthLen += b.length;
-      if (this.preAuthLen > SessionDefaults.preAuthLimit) {
+      if (this.role === 'server' && this.preAuthLen > SessionDefaults.preAuthLimit) {
         this.fail(Status.resource_exhausted, 'more than 64 KiB before the credential was verified');
         return;
       }
@@ -1946,7 +1964,7 @@ export class Session {
       if (this.draining) throw new SparrowError(Status.going_away, 'the session is shutting down', undefined, { notDispatched: true });
       if (this.outOpen < this.peerLimits.maxConcurrentCalls) break;
       await this.slotWaiter.wait();
-      opts.signal?.throwIfAborted();
+      if (opts.signal?.aborted) throw new SparrowError(Status.cancelled, 'cancelled', undefined, { notDispatched: true });
     }
     if (this.optimistic && !this.welcomeDone) {
       while (!this.welcomeDone && this.sentPreWelcome + raw.length + 64 > SessionDefaults.preAuthLimit && this.sentPreWelcome > 0) {
@@ -2037,8 +2055,8 @@ export class Session {
         if (!isStream(t)) throw new SparrowError(Status.internal, 'the method has no output stream');
         return { value: c.codec!.decode(t[1], it.raw, { trusted: true }), done: false };
       }
-      if (c.peerError) throw c.peerError;
       if (c.localErr) throw c.localErr;
+      if (c.peerError) throw c.peerError;
       if (c.calleeDone) return { value: undefined, done: true };
       if (c.ended) throw this.closedError();
       await c.waiter.wait();
@@ -2048,9 +2066,9 @@ export class Session {
   /** @internal Waits for the callee's final message; returns the Response output (encoded) if any. */
   async finalOf(c: CallState): Promise<Uint8Array | undefined> {
     for (;;) {
-      if (c.peerError) throw c.peerError;
-      if (c.response && (!c.outputEnds || c.calleeDone)) return c.response;
+      if (c.response && (!c.outputEnds || c.calleeDone) && !c.peerError) return c.response;
       if (c.localErr) throw c.localErr;
+      if (c.peerError) throw c.peerError;
       if (c.calleeDone) return c.response;
       if (c.ended) throw this.closedError();
       await c.waiter.wait();
@@ -2151,7 +2169,7 @@ export class ClientCall implements AsyncIterable<unknown> {
     this.failure = new Promise<never>((_, rej) => (this.fail = rej));
     this.failure.catch(noop);
     this.started = (async () => {
-      opts.signal?.throwIfAborted();
+      if (opts.signal?.aborted) throw new SparrowError(Status.cancelled, 'cancelled', undefined, { notDispatched: true });
       return session.startCall(facet, method, input, opts);
     })();
     this.started.catch(noop);

@@ -11,7 +11,8 @@
 //
 // Generic JS representation of a CBOR data item:
 //
-//   unsigned/negative integer   number when |n| <= 2^53-1, otherwise bigint
+//   unsigned/negative integer   number when |n| <= 2^53-1, otherwise bigint (encoders
+//                               write a number outside the safe range as a float)
 //   float                       number; a float with an integral value (or -0)
 //                               decodes as a Float, so it re-encodes as a float
 //   byte string                 Uint8Array
@@ -265,7 +266,8 @@ export class Writer {
         this.text(v);
         return;
       case 'number':
-        if (Number.isInteger(v) && !Object.is(v, -0)) this.int(v);
+        // Like cbor2: a number beyond the safe integer range is not exact, so it travels as a float.
+        if (Number.isSafeInteger(v) && !Object.is(v, -0)) this.int(v);
         else this.float(v);
         return;
       case 'bigint':
@@ -822,7 +824,7 @@ export function stripSelfDescribed(b: Uint8Array): Uint8Array {
 /** Reports whether a generic value contains a float anywhere. */
 export function containsFloat(v: unknown): boolean {
   if (v instanceof Float) return true;
-  if (typeof v === 'number') return !Number.isInteger(v) || Object.is(v, -0);
+  if (typeof v === 'number') return !Number.isSafeInteger(v) || Object.is(v, -0);
   if (Array.isArray(v)) return v.some(containsFloat);
   if (v instanceof Map) {
     for (const [k, x] of v) if (containsFloat(k) || containsFloat(x)) return true;

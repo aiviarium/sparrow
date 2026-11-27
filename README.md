@@ -22,6 +22,7 @@ test-vectors/scenarios/    Behaviour scenarios: scripted message sequences with 
 tools/vectorgen-go/        Go program that generates the vectors (canonical reference)
 tools/verify-js/           Independent Node.js verifier (cbor2 + node:crypto)
 go/                        Go reference implementation (see go/README.md)
+ts/                        TypeScript implementation, @aiviarium/sparrow-rpc (see ts/README.md)
 e2e/browser/               Browser end-to-end test: a minimal page in headless Chromium (Playwright)
 .github/workflows/ci.yml    CI: Go vet/gofmt/race tests, vectors (regenerate, drift, verify-js), fuzzing, browser test
 ```
