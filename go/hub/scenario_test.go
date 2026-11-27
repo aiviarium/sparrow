@@ -190,6 +190,8 @@ type hscenarioRun struct {
 	// credited records the calls the hub granted credit to (Credit
 	// messages the script skips).
 	credited map[uint64]bool
+	// sid is the session ID of the scripted client's session (Welcome).
+	sid []byte
 }
 
 func TestScenariosThroughHub(t *testing.T) {
@@ -375,6 +377,17 @@ func (r *hscenarioRun) hubSession() *session.Session {
 		if len(ss) == 0 {
 			return false
 		}
+		if r.sid != nil {
+			// The scripted client's own session, not one of an earlier
+			// scenario of the same principal still closing under load.
+			for _, s := range ss {
+				if bytes.Equal(s.SessionID(), r.sid) {
+					out = s
+					return true
+				}
+			}
+			return false
+		}
 		out = ss[len(ss)-1]
 		for _, s := range ss {
 			// A session that ended (an earlier attempt) is not the one.
@@ -390,6 +403,7 @@ func (r *hscenarioRun) hubSession() *session.Session {
 func (r *hscenarioRun) handshake(host *schema.Schema) {
 	r.send("shared", (&wire.Hello{Versions: []uint64{1}, Auth: bearer("v4.public.TEST-ONLY-TICKET")}).AppendTo(nil))
 	w := r.recv("shared", wire.KindWelcome).(*wire.Welcome)
+	r.sid = w.SessionID
 	if !bytes.Equal(w.ServerSchema.Hash, schemaHash(r.t, host)) {
 		r.t.Fatal("Welcome hash")
 	}

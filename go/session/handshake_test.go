@@ -354,8 +354,11 @@ func TestLeaseBeforeWelcome(t *testing.T) {
 	}}, mem.Options{})
 	defer close(release)
 	p.send(hello(nil))
-	ls, _ := p.conn.OpenStream(context.Background())
-	p.sendOn(ls, reqMsg(2, tFacet, mEcho, cbor.AppendText(nil, "x")))
+	// The server may take the stream and close the session before the
+	// write: then it fails, which is fine.
+	if ls, err := p.conn.OpenStream(context.Background()); err == nil {
+		_ = ls.WriteMessage(reqMsg(2, tFacet, mEcho, cbor.AppendText(nil, "x")).AppendTo(nil))
+	}
 	// Authenticate is still running, so Welcome has certainly not gone
 	// out whenever the server takes the stream.
 	if g := p.expectGoAway(); status.Code(g.Status) != status.ProtocolError {
