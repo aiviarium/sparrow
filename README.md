@@ -13,7 +13,7 @@ server is Go and the primary client is a browser.
 ## Repository layout
 
 ```
-spec/core.md             Core protocol specification with the Web and Hub profiles (snapshot of draft revision 180)
+spec/core.md             Core protocol specification with the Web and Hub profiles (snapshot of draft revision 183)
 SPEC-ISSUES.md           Resolution log of spec questions raised while writing the test vectors
 test-vectors/            Test vectors, one JSON file per area, and their format (README.md)
 tools/vectorgen-go/      Go program that generates the vectors (canonical reference)

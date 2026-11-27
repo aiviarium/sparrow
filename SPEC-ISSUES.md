@@ -1,8 +1,15 @@
 # Spec issues: resolution log
 
 Questions raised while writing the test vectors, and how the spec author resolved them. The current
-spec is `spec/core.md`, revision 180. Every item below is **resolved**, and the vectors follow
+spec is `spec/core.md`, revision 183. Every item below is **resolved**, and the vectors follow
 each decision.
+
+## Raised against revision 180 (resolved in revision 183)
+
+| # | Question | Decision (rev183) | Vectors |
+| --- | --- | --- | --- |
+| 24 | Variant names were missing from the 6.1 ASCII rule | Names of types, services, methods, fields, variants and sigils are ASCII (6.1) | `schema/delta-invalid-variant-name-non-ascii` |
+| 25 | Is `principal` set on a forwarded notification? | Yes: no `context`, but the hub still sets `principal`; the node calls the hub as itself (10.5) | `forward/notification` |
 
 ## Raised against revision 164 (resolved in revision 180)
 

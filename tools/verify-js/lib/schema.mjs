@@ -144,12 +144,12 @@ const LAST_BUILTIN = 11;
 const isAscii = (str) => /^[\x00-\x7f]*$/.test(str);
 export const NAME = /^([a-z0-9-]+(\.[a-z0-9-]+)*\/)?[a-z0-9-]+(\.[a-z0-9-]+)*$/;
 
-// Names of types, services, methods, fields and sigils are ASCII (6.1).
+// Names of types, services, methods, fields, variants and sigils are ASCII (6.1).
 function checkNames(where, types, services, sigils) {
   const bad = (n) => { throw new DeltaError('invalid_name', `${where}: ${JSON.stringify(n)}`); };
   for (const t of types) {
     if (!isAscii(t[2])) bad(t[2]);
-    if (t[0] === 0) for (const f of t[3]) if (!isAscii(f[1])) bad(f[1]);
+    if (t[0] === 0 || t[0] === 2) for (const f of t[3]) if (!isAscii(f[1])) bad(f[1]);
   }
   for (const s of services) {
     if (!isAscii(s[1])) bad(s[1]);

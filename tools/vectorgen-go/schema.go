@@ -543,7 +543,7 @@ func isASCII(s string) bool {
 }
 
 // checkASCIINames: names of types, services, methods, fields and sigils are
-// ASCII (6.1). Variant names are not listed in 6.1 and are not checked.
+// ASCII, and so are variant names (6.1).
 func checkASCIINames(where string, types, services, sigils []any) *deltaError {
 	bad := func(kind, n string) *deltaError {
 		return derr("invalid_name", "%s: %s name %q is not ASCII", where, kind, n)
@@ -553,10 +553,10 @@ func checkASCIINames(where string, types, services, sigils []any) *deltaError {
 		if !isASCII(td[2].(string)) {
 			return bad("type", td[2].(string))
 		}
-		if num(td[0]) == 0 {
+		if num(td[0]) == 0 || num(td[0]) == 2 {
 			for _, f := range td[3].([]any) {
 				if n := f.([]any)[1].(string); !isASCII(n) {
-					return bad("field", n)
+					return bad("field or variant", n)
 				}
 			}
 		}

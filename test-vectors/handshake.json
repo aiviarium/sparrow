@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev180 (draft)",
+  "spec_revision": "core rev183 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "handshake",
   "vectors": [

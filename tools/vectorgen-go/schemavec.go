@@ -579,6 +579,8 @@ func schemaVectors() O {
 			"schema/delta-1-replace-part", "invalid_name", r.a, []any{[]any{0, partDoc(19, "Acme.Tools", "1.0.0", nil, nil, nil, nil, nil, nil)}}},
 		{"schema/delta-invalid-type-name-non-ascii", "Add a part whose struct is named 'Gr\u00fc\u00dfe'. Type names are ASCII (6.1).",
 			"schema/delta-1-replace-part", "invalid_name", r.a, []any{[]any{0, partDoc(19, "acme.greetings", "1.0.0", list(structDef(64, "Gr\u00fc\u00dfe", list(field(0, "text", tString, 0, nil)), 0, nil)), nil, nil, nil, nil, nil)}}},
+		{"schema/delta-invalid-variant-name-non-ascii", "Add a part whose union has a variant named 'gel\u00f6scht'. Variant names are ASCII (6.1).",
+			"schema/delta-1-replace-part", "invalid_name", r.a, []any{[]any{0, partDoc(19, "acme.events", "1.0.0", list(unionDef(64, "Event", list(variant(0, "gel\u00f6scht", tUnit, 0, nil)), nil)), nil, nil, nil, nil, nil)}}},
 		{"schema/delta-invalid-part1-mismatch", "Replace part 1 with sparrow.web version 1.0.1. Part 1 MUST match its definition exactly, by part hash (6.1).",
 			"schema/delta-1-replace-part", "part1_mismatch", r.a, []any{[]any{0, func() []any { p := webPart(); p[pVersion] = "1.0.1"; return p }()}}},
 		{"schema/delta-invalid-readd-renamed", "Part 17 was removed in epoch 2. Bringing ID 17 back with a different name ('acme.maps') is not allowed (section 6.1).",

@@ -1,5 +1,5 @@
 {
-  "spec_revision": "core rev180 (draft)",
+  "spec_revision": "core rev183 (draft)",
   "generator": "tools/vectorgen-go",
   "area": "schema",
   "vectors": [
@@ -12286,6 +12286,49 @@
       "expected_valid": false,
       "expected_error": "invalid_name",
       "error_detail": "part 19: type name \"Grüße\" is not ASCII"
+    },
+    {
+      "name": "schema/delta-invalid-variant-name-non-ascii",
+      "description": "Add a part whose union has a variant named 'gelöscht'. Variant names are ASCII (6.1).",
+      "spec": "6.1, 6.6, 6.7",
+      "type": "delta",
+      "from": "schema/delta-1-replace-part",
+      "from_hash": "01a2482b3ceb692645b7eaf65a6e54e38fd075465c7c77eb182dc20f0d184597fa",
+      "delta": [
+        [
+          0,
+          [
+            19,
+            "acme.events",
+            "1.0.0",
+            [
+              [
+                2,
+                64,
+                "Event",
+                [
+                  [
+                    0,
+                    "gelöscht",
+                    0,
+                    0,
+                    {}
+                  ]
+                ],
+                {}
+              ]
+            ],
+            [],
+            [],
+            null,
+            [],
+            {}
+          ]
+        ]
+      ],
+      "expected_valid": false,
+      "expected_error": "invalid_name",
+      "error_detail": "part 19: field or variant name \"gelöscht\" is not ASCII"
     },
     {
       "name": "schema/delta-invalid-part1-mismatch",

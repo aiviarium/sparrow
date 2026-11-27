@@ -2,7 +2,7 @@
 
 Nov 26, 2026 · Christoph Feuerer
 
-> Snapshot of the live draft, revision 180, exported for this repository. The live document is the source of truth; diagrams are not included here.
+> Snapshot of the live draft, revision 183, exported for this repository. The live document is the source of truth; diagrams are not included here.
 
 ## 1. Overview
 
@@ -324,7 +324,7 @@ A schema is a set of **parts**. Each part is self-contained, usually one plugin 
 - **All IDs in a call belong to the callee's schema.** The part ID picks a part of the callee's schema; method, type and sigil IDs are local to that part.
 - **No reference crosses a part.** Every type reference, sigil and `dynamic` value refers to the part of the method being called. Parts that share a contract each carry identical copies of its definitions (section 6.5).
 - **Part IDs** are unique within a schema. 0–15 are reserved for parts this spec defines: part 1 is `sparrow.web` (section 9.4), which MUST match its definition exactly, by part hash. The other reserved IDs MUST NOT appear. Other parts use 16 and up, and a schema lists its parts sorted by ID.
-  - **Names** of parts and node IDs match `[a-z0-9-]+(\.[a-z0-9-]+)*`, ASCII only, except that a hub may prefix imported part names with `<peer-id>/` (section 10.8). Names of types, services, methods, fields and sigils are ASCII as well.
+  - **Names** of parts and node IDs match `[a-z0-9-]+(\.[a-z0-9-]+)*`, ASCII only, except that a hub may prefix imported part names with `<peer-id>/` (section 10.8). Names of types, services, methods, fields, variants and sigils are ASCII as well.
 - **IDs inside a part:**
 
 | Space | Reserved, same meaning in every part | Free |
@@ -858,7 +858,7 @@ The rules for the two calls, caller to hub and hub to node:
 - **Size:** if a message is larger than the next hop's `maxMessageSize`, the hub ends both calls: `Error(message_too_large)` toward the caller and `Cancel(message_too_large)` toward the node.
 - **Endings:** the method flags, identical on both hops, decide how each half ends. If either link drops, the hub ends the other call: `Error(unavailable)` toward the caller and `Cancel(unavailable)` toward the node.
 - **No retries:** the hub never retries a call by itself; retrying is the caller's decision (section 5.2).
-- **Notifications** are relayed best-effort, with call ID 0 on both hops and no `context`, since no call stays open to bind one to; a node handling a notification acts as itself.
+- **Notifications** are relayed best-effort, with call ID 0 on both hops and no `context`, since no call stays open to bind one to. The hub still sets `principal`, and a node handling a notification calls the hub as itself.
 
 A call from a node to any part is handled the same way: authorized, then answered by the hub or forwarded to the node that owns the part.
 

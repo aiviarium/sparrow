@@ -99,7 +99,7 @@ func hubVectors() O {
 	notifNode := []any{16, 0, 16, 3, map[any]any{37: "user:alice"}, "dark"}
 	add(o(
 		"name", "forward/notification",
-		"description", "A notification (setTheme, method 3, flag 0x2) is relayed with call ID 0 on both hops and no context (10.5); the caller's context and principal are dropped. The vector sets principal to the session principal, as step 2 of 10.5 still applies. The node handles it as itself.",
+		"description", "A notification (setTheme, method 3, flag 0x2) is relayed with call ID 0 on both hops and no context (10.5); the caller's context and principal are dropped. The hub still sets principal to the session principal (10.5). The node handles it as itself.",
 		"spec", "10.5, 10.6",
 		"type", "forward_notification",
 		"session_principal", "user:alice",
