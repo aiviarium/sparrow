@@ -197,7 +197,9 @@ func (b *FacetBuilder) Enum(name string, values ...string) (schema.TypeRef, map[
 
 // ErrorCode defines an application error code (a kind-1 sigil); return it
 // from a handler with &session.Error{Code: code}.
-func (b *FacetBuilder) ErrorCode(name string) status.Code { return status.Code(b.sigil(name, schema.SigilError)) }
+func (b *FacetBuilder) ErrorCode(name string) status.Code {
+	return status.Code(b.sigil(name, schema.SigilError))
+}
 
 // Symbol defines an interned symbol (kind-2 sigil).
 func (b *FacetBuilder) Symbol(name string) uint64 { return b.sigil(name, schema.SigilSymbol) }

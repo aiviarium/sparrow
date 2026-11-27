@@ -226,11 +226,8 @@ func newConn(sess *wt.Session, role wire.Role, linger time.Duration, onClose fun
 		sharedReady: make(chan struct{}), done: make(chan struct{})}
 	c.acceptCond = sync.NewCond(&c.acceptMu)
 	c.limit.Store(wire.DefaultMaxMessageSize)
+	// acceptLoop ends with the session's close error (code and reason).
 	go c.acceptLoop()
-	go func() {
-		<-sess.Context().Done()
-		c.remoteClosed(context.Cause(sess.Context()))
-	}()
 	return c
 }
 

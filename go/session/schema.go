@@ -1,10 +1,10 @@
 package session
 
 import (
-	"time"
 	"bytes"
 	"context"
 	"errors"
+	"time"
 
 	"github.com/aiviarium/sparrow-rpc/go/schema"
 	"github.com/aiviarium/sparrow-rpc/go/status"
@@ -48,7 +48,10 @@ func (s *Session) PeerSchema() *schema.State {
 	return s.peer
 }
 
-func codecFor(mu interface{ Lock(); Unlock() }, cache map[*schema.Facet]*value.Codec, f *schema.Facet) (*value.Codec, error) {
+func codecFor(mu interface {
+	Lock()
+	Unlock()
+}, cache map[*schema.Facet]*value.Codec, f *schema.Facet) (*value.Codec, error) {
 	mu.Lock()
 	defer mu.Unlock()
 	if c, ok := cache[f]; ok {

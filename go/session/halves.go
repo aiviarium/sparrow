@@ -7,7 +7,7 @@ import "github.com/aiviarium/sparrow-rpc/go/wire"
 // Cancel; Cancel always finishes it); the callee's half by Response unless
 // the method has flag 0x10 (then by End); Error finishes it at any time.
 type halves struct {
-	inputEnds, outputEnds bool
+	inputEnds, outputEnds  bool
 	callerDone, calleeDone bool
 }
 

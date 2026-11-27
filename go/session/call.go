@@ -45,33 +45,34 @@ type call struct {
 
 	sendMu sync.Mutex // serializes sends, keeping a call's messages ordered
 
-	mu          sync.Mutex
-	sig         chan struct{}
-	h           halves
-	cancelSent  bool
-	cancelCode  status.Code
-	sendWin     wire.CreditWindow // credit the peer granted us
-	recvWin     wire.CreditWindow // credit we granted the peer
-	recvInit    uint64
-	unacked     uint64
-	manual      bool
-	q           []*Msg
-	buffered    uint64
-	maxBuffered uint64
-	ended       bool   // both halves finished, or the call failed
-	removed     bool   // endCall ran
-	forgotten   bool   // forgetLocked ran
-	localErr    *Error // why the call failed locally, for the application
-	gaveUp      bool
-	sentTokens  map[uint64]bool
-	recvTokens  map[uint64]bool
-	autoAnswer  bool
-	cancelRecv  bool
+	mu             sync.Mutex
+	sig            chan struct{}
+	h              halves
+	cancelSent     bool
+	cancelCode     status.Code
+	sendWin        wire.CreditWindow // credit the peer granted us
+	recvWin        wire.CreditWindow // credit we granted the peer
+	recvInit       uint64
+	sendInit       uint64
+	unacked        uint64
+	manual         bool
+	q              []*Msg
+	buffered       uint64
+	maxBuffered    uint64
+	ended          bool   // both halves finished, or the call failed
+	removed        bool   // endCall ran
+	forgotten      bool   // forgetLocked ran
+	localErr       *Error // why the call failed locally, for the application
+	gaveUp         bool
+	sentTokens     map[uint64]bool
+	recvTokens     map[uint64]bool
+	autoAnswer     bool
+	cancelRecv     bool
 	cancelRecvCode status.Code
-	counted     bool // counts toward maxConcurrentCalls
-	giveUpT     Timer
-	brokenT     Timer
-	deadlineT   Timer
+	counted        bool // counts toward maxConcurrentCalls
+	giveUpT        Timer
+	brokenT        Timer
+	deadlineT      Timer
 
 	typed typedState
 }

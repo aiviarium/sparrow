@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/rand/v2"
 	"net/http"
 	"sort"
 	"strings"
@@ -56,6 +57,7 @@ type Node struct {
 	sess    *session.Session
 	trusted bool
 	connErr error
+	lastGA  *wire.GoAway
 	ready   chan struct{}
 }
 
@@ -277,6 +279,7 @@ func (n *Node) attach(s *session.Session, trusted bool) {
 		if n.sess == s {
 			n.sess = nil
 			n.connErr = s.Err()
+			n.lastGA = s.GoAwayReceived()
 		}
 		n.mu.Unlock()
 	}()
@@ -343,6 +346,43 @@ func dialAny(ctx context.Context, url string, o DialOptions) (transport.Conn, er
 		return websocket.Dial(ctx, o.WebSocketURL, &websocket.DialOptions{HTTPClient: o.HTTPClient, Header: o.Header})
 	}
 	return nil, fmt.Errorf("node: unsupported URL scheme in %q", url)
+}
+
+// RunDial keeps the node connected to url until ctx ends: after the session
+// ends it reconnects with exponential backoff and jitter, from about
+// 500 ms up to about 30 s (5.6). It returns ctx's error.
+func (n *Node) RunDial(ctx context.Context, url string, o DialOptions) error {
+	backoff := 500 * time.Millisecond
+	for {
+		err := n.Dial(ctx, url, o)
+		if err == nil {
+			backoff = 500 * time.Millisecond
+			_ = n.Wait(ctx)
+			if s := n.Session(); s != nil {
+				s.Close(status.OK, "reconnecting")
+			}
+			if g := n.lastGoAway(); g != nil && g.RetryAfterMs != nil {
+				backoff = time.Duration(*g.RetryAfterMs) * time.Millisecond
+			}
+		} else if n.opts.Logger != nil {
+			n.opts.Logger.Warn("dial failed", "url", url, "err", err)
+		}
+		jitter := time.Duration(rand.Int64N(int64(backoff/2) + 1))
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(backoff/2 + jitter):
+		}
+		if backoff *= 2; backoff > 30*time.Second {
+			backoff = 30 * time.Second
+		}
+	}
+}
+
+func (n *Node) lastGoAway() *wire.GoAway {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	return n.lastGA
 }
 
 // Session returns the current session, or nil.

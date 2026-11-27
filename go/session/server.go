@@ -123,6 +123,11 @@ func (sc *ServerCall) Deadline() (time.Time, bool) {
 	return sc.c.typed.deadline, !sc.c.typed.deadline.IsZero()
 }
 
+// CallerCredit returns the initial credit the caller granted for the
+// callee's half: its credit metadata key, or the default for its stream. A
+// hub forwarding the call may set credit no higher than this (10.5).
+func (sc *ServerCall) CallerCredit() uint64 { return sc.c.sendInit }
+
 // SetManualCredit makes RecvRaw leave credit to Release (10.5).
 func (sc *ServerCall) SetManualCredit(on bool) {
 	sc.c.mu.Lock()
@@ -316,7 +321,8 @@ func (s *Session) onRequest(l *lane, r *wire.Request, b []byte) {
 		md: r.Metadata, req: r, reqRaw: b, recvInit: recvInit}
 	c.h = newHalves(flags)
 	c.h.request()
-	c.sendWin = *wire.NewCreditWindow(wire.InitialCredit(peerL, leased, override))
+	c.sendInit = wire.InitialCredit(peerL, leased, override)
+	c.sendWin = *wire.NewCreditWindow(c.sendInit)
 	c.recvWin = *wire.NewCreditWindow(recvInit)
 	if f != nil && def != nil {
 		c.codec, _ = codecFor(&s.codecMu, s.localCodecs, f)

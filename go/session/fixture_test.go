@@ -337,11 +337,11 @@ func wsBinding() binding {
 }
 
 var (
-	wtOnce   sync.Once
-	wtURL    string
-	wtHash   []byte
-	wtConns  = make(chan transport.Conn, 16)
-	wtErr    error
+	wtOnce  sync.Once
+	wtURL   string
+	wtHash  []byte
+	wtConns = make(chan transport.Conn, 16)
+	wtErr   error
 )
 
 func wtBinding() binding {

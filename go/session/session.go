@@ -297,7 +297,7 @@ func newSession(conn transport.Conn, cfg Config, role wire.Role) *Session {
 		ctx: ctx, cancel: cancel, done: make(chan struct{}),
 		localLimits: cfg.Params.Limits(role),
 		welcomeCh:   make(chan struct{}), readyCh: make(chan struct{}), helloCh: make(chan struct{}),
-		calls:       map[uint64]*call{},
+		calls:         map[uint64]*call{},
 		pendingFacets: map[uint64]uint64{},
 		methodFlags:   map[[2]uint64]uint64{},
 		localCodecs:   map[*schema.Facet]*value.Codec{},

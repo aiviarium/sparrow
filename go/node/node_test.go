@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -63,8 +64,8 @@ func TestEchoNodeStdio(t *testing.T) {
 		t.Fatalf("build: %v\n%s", err, out)
 	}
 	cmd := exec.Command(bin, "-id", "echo")
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
+	stderr := &syncBuffer{}
+	cmd.Stderr = stderr
 	conn, err := pipe.Spawn(cmd)
 	if err != nil {
 		t.Fatal(err)
@@ -148,6 +149,10 @@ func TestEchoNodeStdio(t *testing.T) {
 	if err := hub.Notify(ctx, f, m, "a log line"); err != nil {
 		t.Fatal(err)
 	}
+	deadline := time.Now().Add(5 * time.Second)
+	for !strings.Contains(stderr.String(), "a log line") && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
 	// Drain: the node exits cleanly.
 	hub.GoAway(status.GoingAway, "hub stopping", nil)
 	done := make(chan error, 1)
@@ -164,6 +169,23 @@ func TestEchoNodeStdio(t *testing.T) {
 	if !strings.Contains(stderr.String(), "a log line") {
 		t.Fatalf("notification not handled; stderr:\n%s", stderr.String())
 	}
+}
+
+type syncBuffer struct {
+	mu sync.Mutex
+	b  strings.Builder
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.b.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.b.String()
 }
 
 func greeter(t *testing.T, name, version string, extra bool) *Facet {
@@ -336,5 +358,49 @@ func TestBuilderFlags(t *testing.T) {
 	}
 	if _, err := NewFacet("Bad Name", "1.0.0").Build(); err == nil {
 		t.Fatal("bad facet name accepted")
+	}
+}
+
+// TestRunDialReconnects: after the hub drains a session, the node dials
+// again (after retry_after_ms) and republishes its facets.
+func TestRunDialReconnects(t *testing.T) {
+	sessions := make(chan *session.Session, 4)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+		s, err := session.NewServer(context.Background(), c, session.Config{MaxClientSchemaSize: -1})
+		if err == nil {
+			sessions <- s
+		}
+	}))
+	defer srv.Close()
+	n := New(Options{ID: "greeter"})
+	ctx, cancel := context.WithCancel(tctx(t))
+	defer cancel()
+	if _, err := n.Add(ctx, greeter(t, "greeter", "1.0.0", false)); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- n.RunDial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http"), DialOptions{}) }()
+	first := <-sessions
+	if first.PeerFacet("greeter") == nil {
+		t.Fatal("no facet")
+	}
+	retry := uint64(10)
+	first.GoAway(status.GoingAway, "redeploy", &retry)
+	select {
+	case second := <-sessions:
+		f, m := methodID(t, second, "greeter", "greet")
+		if v, err := second.Unary(ctx, f, m, value.Struct{0: "again"}, nil); err != nil || v != "hello again" {
+			t.Fatalf("%v %v", v, err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("no reconnect")
+	}
+	cancel()
+	if err := <-done; err != context.Canceled {
+		t.Fatal(err)
 	}
 }
