@@ -149,3 +149,107 @@ func TestLeasedStreamBeforeWelcomeWriteReturns(t *testing.T) {
 	}
 	r.s.Close(status.OK, "test done")
 }
+
+// TestCloseSendAfterCalleeFinished: an upload whose callee answers as soon
+// as the last chunk arrives has its caller half finished by the session
+// (End on the caller's behalf, 7.1); the documented CloseSend after the
+// writer then succeeds instead of reporting the call as ended.
+func TestCloseSendAfterCalleeFinished(t *testing.T) {
+	for _, b := range []binding{memBinding(), wsBinding()} {
+		t.Run(b.name, func(t *testing.T) {
+			cli, _ := stdPair(t, b, newTestHandlers(), nil)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			cc, err := cli.Call(ctx, tFacet, mUpload, nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := cc.Writer(ctx, 0).WriteAll([]byte("abc")); err != nil {
+				t.Fatal(err)
+			}
+			if out, err := cc.Response(ctx); err != nil || out != uint64(3) {
+				t.Fatalf("got %v %v", out, err)
+			}
+			// The session's End has gone out and the call has ended.
+			testutilEventually(t, func() bool {
+				cc.c.mu.Lock()
+				defer cc.c.mu.Unlock()
+				return cc.c.ended
+			})
+			if err := cc.CloseSend(nil); err != nil {
+				t.Fatalf("CloseSend after the callee finished: %v", err)
+			}
+		})
+	}
+}
+
+// responseGate holds the server's write of a Response, after it has gone
+// out, until the server's reader has handled the next message it received.
+type responseGate struct {
+	transport.Conn
+	reads   atomic.Int32
+	waitFor atomic.Int32 // 0: no Response held
+}
+
+func (g *responseGate) SharedLane(ctx context.Context) (transport.Stream, error) {
+	st, err := g.Conn.SharedLane(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &responseGateStream{Stream: st, g: g}, nil
+}
+
+type responseGateStream struct {
+	transport.Stream
+	g *responseGate
+}
+
+func (s *responseGateStream) ReadMessage() ([]byte, error) {
+	s.g.reads.Add(1)
+	return s.Stream.ReadMessage()
+}
+
+func (s *responseGateStream) WriteMessage(b []byte) error {
+	err := s.Stream.WriteMessage(b)
+	if k, _, _ := wire.PeekCall(b); k == wire.KindResponse && s.g.waitFor.Load() == 0 {
+		// Wait until the reader has taken the next message and come back
+		// for another (it handled the next Request meanwhile).
+		target := s.g.reads.Load() + 1
+		s.g.waitFor.Store(target)
+		deadline := time.Now().Add(2 * time.Second)
+		for s.g.reads.Load() < target && time.Now().Before(deadline) {
+			time.Sleep(time.Millisecond)
+		}
+	}
+	return err
+}
+
+// TestCalleeUncountsBeforeFinalMessage: with maxConcurrentCalls 1, a
+// caller that starts its next call as soon as it has the Response of the
+// previous one is within the limit (7.6): the callee must not still count
+// the first call while it finishes writing that Response.
+func TestCalleeUncountsBeforeFinalMessage(t *testing.T) {
+	cc, sc := mem.Pipe(mem.Options{NoLeases: true})
+	scfg := Config{Schema: testSchema("s"), Handler: newTestHandlers().mux(tFacet)}
+	scfg.Params.Set(wire.ParamMaxConcurrentCalls, 1)
+	g := &responseGate{Conn: sc}
+	go func() {
+		if s, err := NewServer(context.Background(), g, scfg); err == nil {
+			t.Cleanup(func() { s.Close(0, "") })
+		}
+	}()
+	lane, err := cc.SharedLane(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := newRawPeer(t, cc, lane)
+	p.handshake(nil)
+	p.send(reqMsg(2, tFacet, mEcho, cbor.AppendText(nil, "a")))
+	if r, ok := p.recv().(*wire.Response); !ok || r.CallID != 2 {
+		t.Fatalf("got %#v", r)
+	}
+	p.send(reqMsg(4, tFacet, mEcho, cbor.AppendText(nil, "b")))
+	if r, ok := p.recv().(*wire.Response); !ok || r.CallID != 4 {
+		t.Fatalf("second call within the limit: got %#v", r)
+	}
+}

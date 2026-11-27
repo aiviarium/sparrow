@@ -149,7 +149,12 @@ func (l *lane) readEnded(err error) {
 			c.failLocal(&Error{Code: re.Code, Message: "stream reset", Remote: re.Remote})
 		}
 		// The peer reset its direction: end ours too (4.2 rule 5), never
-		// with STOP_SENDING.
+		// with STOP_SENDING. An acceptor stops counting the stream before
+		// its end goes out: the opener may open a replacement as soon as
+		// it sees that end.
+		if !l.opened {
+			s.laneClosed(l)
+		}
 		resetWrite(l.st, re.Code)
 		s.laneClosed(l)
 		return
@@ -180,6 +185,9 @@ func (l *lane) readEnded(err error) {
 	s.mu.Unlock()
 	if c != nil {
 		c.failLocal(&Error{Code: status.Unavailable, Message: "stream finished during the call"})
+	}
+	if needClose && !l.opened {
+		s.laneClosed(l) // before the end goes out, as for a reset
 	}
 	if needClose {
 		if c != nil || err != io.EOF {
@@ -248,6 +256,11 @@ func (s *Session) resetLane(l *lane, code status.Code, failCall bool) {
 	}
 	if l.opened {
 		s.pool.removeIdle(l)
+	} else {
+		// An acceptor stops counting a stream it resets as soon as it has
+		// sent its end (4.2 rule 5), so before that end goes out: the
+		// opener may open a replacement the moment it sees the reset.
+		s.uncountLocked(l)
 	}
 	s.mu.Unlock()
 	switch {

@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"errors"
 	"io"
 	"time"
 
@@ -200,9 +201,22 @@ func (cc *ClientCall) SendRawItem(ctx context.Context, raw cbor.Raw) error {
 }
 
 // CloseSend finishes the caller's half with End (methods with flag 0x8).
+// When the callee finished first (an upload answered as soon as its last
+// chunk arrived), the session has already sent End on the caller's behalf
+// (7.1) and CloseSend returns nil: the half is finished either way.
 func (cc *ClientCall) CloseSend(trailers wire.Metadata) error {
-	b := (&wire.End{CallID: cc.c.id, Trailers: trailers}).AppendTo(nil)
-	return cc.c.send(context.Background(), wire.KindEnd, b, 0, false)
+	c := cc.c
+	b := (&wire.End{CallID: c.id, Trailers: trailers}).AppendTo(nil)
+	err := c.send(context.Background(), wire.KindEnd, b, 0, false)
+	if errors.Is(err, ErrCallEnded) || errors.Is(err, ErrHalfClosed) {
+		c.mu.Lock()
+		behalf := c.h.calleeDone && c.localErr == nil
+		c.mu.Unlock()
+		if behalf {
+			return nil
+		}
+	}
+	return err
 }
 
 // Recv returns the next output stream element; io.EOF after End, or the

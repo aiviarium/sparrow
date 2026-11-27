@@ -249,7 +249,6 @@ func NewServer(ctx context.Context, conn transport.Conn, cfg Config) (*Session, 
 			s.terminate(status.DeadlineExceeded, "no Hello within the timeout", false)
 		}
 	})
-	go s.acceptLoop()
 	lctx, cancel := context.WithCancel(ctx)
 	go func() {
 		select {
@@ -271,6 +270,11 @@ func NewServer(ctx context.Context, conn transport.Conn, cfg Config) (*Session, 
 	s.shared = &lane{s: s, st: sl, shared: true}
 	s.mu.Unlock()
 	go s.shared.readLoop()
+	// Leased streams are taken only once the shared lane is there: one
+	// opened before Welcome fails the session with GoAway(protocol_error),
+	// which needs the lane (a stream accepted earlier would close the
+	// session without it).
+	go s.acceptLoop()
 	select {
 	case <-s.helloCh:
 	case <-s.done:

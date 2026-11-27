@@ -292,7 +292,14 @@ func TestPreAuthLimit(t *testing.T) {
 	p.send(hello(nil))
 	pad := cbor.AppendText(nil, string(make([]byte, 1000)))
 	for i := 0; i < 70; i++ {
-		p.send(&wire.Request{CallID: 0, FacetID: tFacet, MethodID: mNotify, Input: pad})
+		// The server may close as soon as it has more than 64 KiB, before
+		// the rest is written.
+		if err := p.lane.WriteMessage((&wire.Request{CallID: 0, FacetID: tFacet, MethodID: mNotify, Input: pad}).AppendTo(nil)); err != nil {
+			if i < 64 {
+				t.Fatalf("send %d: %v", i, err)
+			}
+			break
+		}
 	}
 	if g := p.expectGoAway(); status.Code(g.Status) != status.ResourceExhausted {
 		t.Fatalf("got %+v", g)
@@ -336,11 +343,12 @@ func TestLeaseBeforeWelcome(t *testing.T) {
 		<-release
 		return "", nil
 	}}, mem.Options{})
+	defer close(release)
 	p.send(hello(nil))
 	ls, _ := p.conn.OpenStream(context.Background())
 	p.sendOn(ls, reqMsg(2, tFacet, mEcho, cbor.AppendText(nil, "x")))
-	time.Sleep(20 * time.Millisecond)
-	close(release)
+	// Authenticate is still running, so Welcome has certainly not gone
+	// out whenever the server takes the stream.
 	if g := p.expectGoAway(); status.Code(g.Status) != status.ProtocolError {
 		t.Fatalf("got %+v", g)
 	}

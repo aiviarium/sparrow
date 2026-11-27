@@ -192,7 +192,10 @@ func TestSchemaUpdateBadHash(t *testing.T) {
 	}()
 	cli, err := NewClient(tctx(t), cc, Config{})
 	if err != nil {
-		t.Fatal(err)
+		// The raw server sends the update right after Ready, so the
+		// session may already have closed when NewClient checks it.
+		mustCode(t, err, status.SchemaMismatch)
+		return
 	}
 	<-cli.Done()
 	mustCode(t, cli.Err(), status.SchemaMismatch)

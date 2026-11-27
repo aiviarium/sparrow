@@ -343,6 +343,13 @@ func (c *call) send(ctx context.Context, k wire.Kind, b []byte, n uint64, gate b
 	if c.h.ended() && !c.ended {
 		c.ended = true
 		ended = true
+		if !c.caller {
+			// The callee stops counting the call before its final message
+			// goes out: the caller frees its slot as soon as it reads that
+			// message and may start the next call at once, which must not
+			// find this one still counted (7.6).
+			c.s.uncountCall(c)
+		}
 	}
 	c.broadcastLocked()
 	c.mu.Unlock()
@@ -587,6 +594,27 @@ func (s *Session) endCall(c *call) {
 	}
 }
 
+// uncountCall frees the call's concurrency slot (c.mu held).
+func (s *Session) uncountCall(c *call) {
+	s.mu.Lock()
+	s.uncountCallLocked(c)
+	s.mu.Unlock()
+}
+
+// uncountCallLocked frees the call's concurrency slot (c.mu and s.mu held).
+func (s *Session) uncountCallLocked(c *call) {
+	if !c.counted {
+		return
+	}
+	c.counted = false
+	if c.caller {
+		s.outOpen--
+		s.signalOutLocked()
+	} else {
+		s.inOpen--
+	}
+}
+
 // forgetLocked removes the call from the session's books (c.mu held): its
 // ID, its concurrency slot, and its leased stream. It reports whether a
 // drain just completed.
@@ -600,15 +628,7 @@ func (s *Session) forgetLocked(c *call) bool {
 	if s.calls[c.id] == c {
 		delete(s.calls, c.id)
 	}
-	if c.counted {
-		c.counted = false
-		if c.caller {
-			s.outOpen--
-			s.signalOutLocked()
-		} else {
-			s.inOpen--
-		}
-	}
+	s.uncountCallLocked(c)
 	if c.ln != nil && !c.ln.shared && c.ln.current == c {
 		s.releaseLaneLocked(c.ln)
 	}
