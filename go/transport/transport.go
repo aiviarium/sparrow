@@ -6,6 +6,8 @@
 //     streams;
 //   - websocket: one Sparrow message per binary WebSocket message (4.6),
 //     shared lane only;
+//   - pipe: one ordered byte stream, such as a child process's standard
+//     input and output (4.7), shared lane only;
 //   - mem: an in-memory binding with leased streams, for tests.
 //
 // A binding moves whole messages. It handles stream headers (0x00 shared

@@ -179,3 +179,9 @@ Also decided here, without a spec change: "waits until every session that sees i
 | A13, A14 | `trace` format; Ping and AuthStatus field types | 26 bytes; uint and timestamp (5.5, 7.2) |
 | A15 | Status for a drain | `going_away` (5.6) |
 | B16–B27 | Signed bytes, certificate rules, URL hashes, credit counting, trailing nulls, varints, deltas, ID ranges, End flags, annotations, `params` keys | Settled in 3.4, 4.1, 6.1, 6.3, 6.4, 6.6, 7.4, 9.1 and 9.5 |
+
+## Reinstated: the pipe binding
+
+| # | Change | Spec | Go / vectors |
+| --- | --- | --- | --- |
+| R1 | The pipe binding of S3 comes back as section 4.7 (transport selection is 4.8 again): one ordered byte stream, varint length prefixes, no stream header, the started process is the client. It is optional and local: a hub still never starts processes. Requested by Heron, whose extension host speaks Sparrow to the extension processes it starts | core 4, 4.7 | `transport/pipe` restored as before S8; the session tests run on it too (`pipeBinding` in `allBindings`); TS binding in `ts/` |

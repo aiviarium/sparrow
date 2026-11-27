@@ -114,7 +114,7 @@ The core spec defines no other tags. Profiles MAY register more.
 
 ## 4. Streams and transport bindings
 
-A session uses one **shared lane** for control messages and small, long-lived calls, plus a pool of **leased streams** that calls take one at a time and give back. The number of streams follows peak concurrency rather than the number of calls, and large transfers do not share a stream with other calls. Servers MUST support both bindings; clients MUST support WebTransport and SHOULD support WebSocket.
+A session uses one **shared lane** for control messages and small, long-lived calls, plus a pool of **leased streams** that calls take one at a time and give back. The number of streams follows peak concurrency rather than the number of calls, and large transfers do not share a stream with other calls. Servers MUST support both network bindings; clients MUST support WebTransport and SHOULD support WebSocket. The pipe binding (section 4.7) is for peers on one machine and is optional.
 
 ### 4.1 Two kinds of stream
 
@@ -183,7 +183,17 @@ Used when WebTransport is unavailable, for example on networks that block UDP. A
 - `maxMessageSize` applies to the WebSocket message size.
 - Servers MUST check the `Origin` header on the upgrade request.
 
-### 4.7 Transport selection
+### 4.7 Pipe binding
+
+For a single ordered byte stream, such as a child process's standard input and output, a unix socket or an SSH channel. A supervisor can use it to talk to a process it starts, for example a tool that runs plugins as child processes; a hub itself never starts processes (section 10.2).
+
+- The side that speaks first with `Hello` is the Sparrow client. A started process is the client, on its standard input and output.
+- There is a shared lane and nothing else: each message is preceded by its length as a QUIC variable-length integer (shortest form when sending, any valid form when receiving), with no stream header. Every call runs as on the shared lane, with `sharedCredit`. `maxStreams` does not apply.
+- `maxMessageSize` applies to the length in the prefix; a receiver rejects a longer message before reading it.
+- Closing the byte stream ends the session. Status and reason travel only in `GoAway`.
+- Standard error, where there is one, is not part of the protocol.
+
+### 4.8 Transport selection
 
 Transport choice is the client's job. A client SHOULD try WebTransport first, fall back to WebSocket after a short timeout (a value around 3 s is RECOMMENDED), and MAY remember the result per origin. Endpoint URLs come from the profile (for the web profile, from `/connect`, section 9.1).
 

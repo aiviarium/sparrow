@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/aiviarium/sparrow-rpc/go/transport/pipe"
 	"io"
 	"net"
 	"net/http"
@@ -373,8 +374,15 @@ func wtBinding() binding {
 	}, true}
 }
 
+func pipeBinding() binding {
+	return binding{"pipe", func(t testing.TB) (transport.Conn, transport.Conn) {
+		a, b := net.Pipe()
+		return pipe.New(a), pipe.New(b)
+	}, false}
+}
+
 func allBindings() []binding {
-	return []binding{memBinding(), wsBinding(), wtBinding()}
+	return []binding{memBinding(), wsBinding(), wtBinding(), pipeBinding()}
 }
 
 // pair connects a client and a server session.
