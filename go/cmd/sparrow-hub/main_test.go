@@ -253,9 +253,26 @@ func TestBinary(t *testing.T) {
 		t.Fatal(err)
 	}
 	read := func() string { b, _ := os.ReadFile(wf.Name()); return string(b) }
-	testutil.Eventually(t, 30*time.Second, func() bool { return strings.Contains(read(), `"node":"echo"`) }, "watch output %q", read())
+	exited := make(chan error, 1)
+	go func() { exited <- w.Wait() }()
+	// The output is read when the wait ends (not when it starts), and a
+	// watch that exits early (an error) fails at once with what it printed.
+	deadline := time.After(30 * time.Second)
+	for !strings.Contains(read(), `"node":"echo"`) {
+		select {
+		case err := <-exited:
+			if !strings.Contains(read(), `"node":"echo"`) {
+				t.Fatalf("watch exited (%v): %q", err, read())
+			}
+			exited <- err
+		case <-deadline:
+			_ = w.Process.Kill()
+			t.Fatalf("watch output after 30 s: %q", read())
+		case <-time.After(20 * time.Millisecond):
+		}
+	}
 	_ = w.Process.Signal(os.Interrupt)
-	_ = w.Wait()
+	<-exited
 	wf.Close()
 	if !strings.HasPrefix(read(), `{"snapshot"`) {
 		t.Fatalf("watch: %s", read())
