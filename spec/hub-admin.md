@@ -1,6 +1,6 @@
 # Sparrow Hub Administration (sparrow.hub.admin v1)
 
-> Companion to the core specification (`core.md`, section 10.9). Snapshot of the live draft, revision 35, exported for this repository. The live document is the source of truth.
+> Companion to the core specification (`core.md`, section 10.9). Snapshot of the live draft, revision 36, exported for this repository. The live document is the source of truth.
 
 A hub that implements this interface can be configured entirely at run time by a controlling application, such as an orchestrator that runs the hub in a container. The controller pushes one desired-state document; the hub validates it, applies it as a whole, and rolls it back by itself unless the controller confirms it in time. A bootstrap administrator can always reach the interface, so no document can lock the hub out of administration.
 
@@ -19,21 +19,20 @@ The hub's configuration is one document with a **revision** number.
 - **Commits replace the whole document.** There is no patch format; a controller reads the document, changes it and commits the result against the revision it read.
 - **Optimistic concurrency:** a commit names the revision it is based on, and fails with `Error(aborted)` if that is no longer current. When no commit is pending, a commit whose document is byte-for-byte equal to the applied one in canonical encoding changes nothing and returns the current revision, whatever its base, so retrying a commit whose reply was lost is safe.
 - **Validation first:** a commit is validated as a whole before anything changes (section 3). If any problem is found, it fails with `Error(failed_precondition)`, and nothing changes.
-- **Content by reference:** secrets and facet documents are stored separately, cannot be changed once stored, and are referenced from the document by name or hash. The document stays small, and every change to what a node presents goes through a commit, so confirmation and rollback cover it.
+- **Secrets by reference:** secrets are stored separately, cannot be changed once stored, and are referenced from the document by name. The document stays small, and every credential change goes through a commit, so confirmation and rollback cover it.
 
-### 2.1 Stored secrets and facets
+### 2.1 Stored secrets
 
 - `setSecret` stores a secret under a new name. A name that already exists fails with `Error(already_exists)`: to rotate a secret, store it under a new name and commit a document that refers to it. No method ever returns a secret's value.
-- `putFacet` stores a facet document, which the hub puts into canonical form and which must be valid as in core spec section 6.6 rule 3 with its facet ID ignored and set to 0, and returns its **stored-facet key**: `0x01 || SHA-256` of those canonical bytes, name included. Storing the same facet again returns the same key.
-- `deleteSecret` and `deleteFacet` succeed when the item does not exist, and fail with `Error(failed_precondition)` while the applied document or the rollback target of a pending commit refers to it.
+- `deleteSecret` succeeds when the secret does not exist, and fails with `Error(failed_precondition)` while the applied document or the rollback target of a pending commit refers to it.
 - Secret names follow the node-ID grammar (Hub Profile, section 10.2).
 
 ### 2.2 Applying a commit
 
-When a commit passes validation, the hub switches to the new document at once and then **reconciles** in the background. `commit` returns after the switch, not after reconciliation; progress is visible in `watch`.
+When a commit passes validation, the hub switches to the new document at once and then **reconciles** in the background. `commit` returns after the switch, not after reconciliation; progress is visible in `watch`. The hub registers nodes and never runs them (Hub Profile, section 10.10).
 
-- A node added to the document is dialed, or accepted when it dials in, as its configuration says. The hub never starts, installs or supervises nodes: whatever runs a node (an orchestrator, a service manager, a person) starts it and gives it the hub's URL and its credential, or registers its URL and key hash here.
-- A dialed node whose URL, key hash or credential changed is dialed again, and the new session supersedes the old one. The old session ends when the new one is ready or the first new attempt fails, whichever comes first, so a node is never served under a configuration that was replaced. A disabled dial-in node that dials in is refused with `GoAway(failed_precondition)`. A dial-in node whose credential changed has its session closed with `GoAway(unauthenticated)` and must dial in again (Hub Profile, section 10.2).
+- A node added to the document is dialed, or accepted when it dials in, as its `link` says.
+- A node that a revision removes or disables, or whose `link` or `peer` it changes, has its session ended at once, as the Hub Profile, section 10.2, describes: a dialed node is dialed anew under the new configuration, and a dial-in node must dial in again. Until a new session is ready the node is offline, and calls wait or fail as in section 10.7 of the Hub Profile. A node is therefore never served under a configuration that was replaced.
 
 ### 2.3 Confirmation and rollback
 
@@ -50,7 +49,7 @@ A controller SHOULD confirm over a new session, which shows that new connections
 
 ### 2.4 Persistence and bootstrap
 
-The hub persists the last confirmed document with its revision, the highest revision number it has handed out, the stored secrets and facets, its facet-ID table and the last known facets of every node (Hub Profile, sections 10.3 and 10.7). It records the high-water mark before `commit` returns, so a revision number is never handed out twice. A pending commit is never persisted as confirmed. The static configuration (listen addresses, TLS settings and the bootstrap administrator) is up to the implementation. Upgrading the hub's program is the job of whatever runs the hub, never of this interface.
+The hub persists the last confirmed document with its revision, the highest revision number it has handed out, the stored secrets, its facet-ID table and the last known facets of every node (Hub Profile, sections 10.3 and 10.7). It records the high-water mark before `commit` returns, so a revision number is never handed out twice. A pending commit is never persisted as confirmed. The static configuration (listen addresses, TLS settings and the bootstrap administrator) is up to the implementation.
 
 ## 3. The document
 
@@ -62,13 +61,14 @@ Config = {
 }
 
 NodeConfig = {
-  ? dial:        Dial,           ; the hub dials the node; absent: the node dials in
-  ? credential:  secret-name,    ; what a dial-in node must present; only without dial
-  ? facets:      [* bstr],       ; stored-facet keys, listed until the node is first seen
+  link:          Link,
   ? peer:        bool,           ; the node is another hub (Hub Profile, section 10.8)
   ? enabled:     bool,           ; default true
   ? extensions:  { * tstr => bstr }
 }
+
+Link     = [0, Dial]             ; the hub dials the node
+         / [1, secret-name]      ; the node dials in and presents this credential
 
 Dial     = { url: tstr, pin: bstr, credential: secret-name }
            ; pin: SHA-256 of the node's SubjectPublicKeyInfo
@@ -78,10 +78,8 @@ Dial     = { url: tstr, pin: bstr, credential: secret-name }
 A document is valid when:
 
 - every node ID follows the node-ID grammar and is not reserved (Hub Profile, section 10.2);
-- every node has exactly one link direction: either a `dial`, or a `credential` for dialing in, never both and never neither;
-- every referenced secret and stored facet exists, every listed facet appears once, and no secret named by a `Dial.credential` is also named by a `NodeConfig.credential`, and no secret named by a `Dial.credential` has the same value as one named by a `NodeConfig.credential`, so a credential the hub presents can never be replayed to it, and no two dial-in nodes name secrets with the same value;
+- every referenced secret exists, every secret named by a link is named once in the document, and the values of all those secrets are pairwise distinct, so no credential presented to one party can be replayed to another;
 - every `Dial.url` is an `https` (WebTransport) or `wss` (WebSocket) URL, and every `pin` is 32 bytes;
-- every listed facet is named after its node, and no node with `peer` lists facets;
 - every `defaults` key is a 33-byte interface hash and every value a syntactically valid facet name;
 - every `extensions` key is one the hub supports, with valid contents.
 
@@ -92,8 +90,9 @@ Defaults are preferences, not checked against live facets: where the named facet
 `watch` streams the hub's state:
 
 1. The first event is a full `Snapshot`, followed by one `NodeEvent` for each configured node with its current state.
-2. Then every `RevisionEvent` and `NodeEvent`, in the order they happen. A `NodeEvent` names the revision whose configuration it reflects, so a controller can tell whether a node is up under the configuration it just committed. After each applied revision the hub sends a `NodeEvent` for every configured node, changed or not.
-3. A hub MAY end a watch that falls too far behind with `Error(resource_exhausted)`; the controller starts a new one, which begins with a snapshot again.
+2. Then every `RevisionEvent` and `NodeEvent`, in the order they happen. A `NodeEvent`'s `revision` is the latest revision whose configuration of that node the reported state reflects, so a controller can tell whether a node is up under the configuration it just committed. After each applied revision R the hub sends a `NodeEvent` for every configured node; a node whose configuration R did not change is reported with R.
+3. A node that R removes gets one `NodeEvent` with state `removed` and is not reported again. An `offline` event's `message` gives the last connection failure, such as a pin mismatch or a refused facet.
+4. A hub MAY end a watch that falls too far behind with `Error(resource_exhausted)`; the controller starts a new one, which begins with a snapshot again.
 
 ## 5. The interface
 
@@ -104,23 +103,23 @@ The types and methods below make up the interface `sparrow.hub.admin` v1. The in
 | TypeId | Name | Kind | Fields or values (tag: name type) |
 | --- | --- | --- | --- |
 | 64 | `Config` | struct | 0: nodes `map<string, NodeConfig>`; 1: defaults `optional map<bytes, string>`; 2: extensions `optional map<string, bytes>` |
-| 65 | `NodeConfig` | struct | 0: dial `optional Dial`; 1: credential `optional string`; 2: facets `optional list<bytes>`; 3: peer `optional bool`; 4: enabled `optional bool`; 5: extensions `optional map<string, bytes>` |
-| 66 | `Dial` | struct | 0: url `string`; 1: pin `bytes`; 2: credential `string` |
-| 67 | `Snapshot` | struct | 0: revision `uint`; 1: config `Config`; 2: state `RevisionState`; 3: confirmInMs `optional uint` |
-| 68 | `CommitRequest` | struct | 0: base `uint`; 1: config `Config`; 2: confirmWithinMs `uint` |
-| 69 | `ValidateRequest` | struct | 0: base `uint`; 1: config `Config` |
-| 70 | `Problem` | struct | 0: path `list<string>`; 1: message `string` |
-| 71 | `Problems` | alias | `list<Problem>` |
-| 72 | `Secret` | struct | 0: name `string`; 1: value `bytes` |
-| 73 | `Names` | alias | `list<string>` |
-| 74 | `Hashes` | alias | `list<bytes>` |
+| 65 | `NodeConfig` | struct | 0: link `Link`; 1: peer `optional bool`; 2: enabled `optional bool`; 3: extensions `optional map<string, bytes>` |
+| 66 | `Link` | union | 0: dial `Dial`; 1: credential `string` |
+| 67 | `Dial` | struct | 0: url `string`; 1: pin `bytes`; 2: credential `string` |
+| 68 | `Snapshot` | struct | 0: revision `uint`; 1: config `Config`; 2: state `RevisionState`; 3: confirmInMs `optional uint` |
+| 69 | `CommitRequest` | struct | 0: base `uint`; 1: config `Config`; 2: confirmWithinMs `uint` |
+| 70 | `ValidateRequest` | struct | 0: base `uint`; 1: config `Config` |
+| 71 | `Problem` | struct | 0: path `list<string>`; 1: message `string` |
+| 72 | `Problems` | alias | `list<Problem>` |
+| 73 | `Secret` | struct | 0: name `string`; 1: value `bytes` |
+| 74 | `Names` | alias | `list<string>` |
 | 75 | `Event` | union | 0: snapshot `Snapshot`; 1: revision `RevisionEvent`; 2: node `NodeEvent` |
 | 76 | `RevisionEvent` | struct | 0: revision `uint`; 1: state `RevisionState`; 2: confirmInMs `optional uint` |
 | 77 | `RevisionState` | enum | sigils 64 `pending`, 65 `confirmed`, 66 `rolledBack` |
 | 78 | `NodeEvent` | struct | 0: node `string`; 1: revision `uint`; 2: state `NodeState`; 3: message `optional string` |
 | 79 | `NodeState` | enum | sigils 67 `connected`, 68 `offline`, 69 `disabled`, 70 `removed` |
 
-Sigils 64–70 are kind 0 (enum values). `confirmInMs` is the time left before the deadline, measured by the hub when it sent the message, so clocks need not agree. A `Problem.path` lists the keys from the document root to the problem, using the field names of section 3, with a union's variant name (such as `snapshot`) as one more key, with list positions as decimal strings and byte-string map keys as lowercase hex, such as `["nodes", "acme.charts", "start"]`.
+Sigils 64–70 are kind 0 (enum values). `confirmInMs` is the time left before the deadline, measured by the hub when it sent the message, so clocks need not agree. A `Problem.path` lists the keys from the document root to the problem, using the field names of section 3 and a union's variant name as one more key, with byte-string map keys as lowercase hex, such as `["nodes", "acme.charts", "link", "dial", "pin"]`.
 
 ### 5.2 Methods
 
@@ -130,15 +129,12 @@ One service, 0 `Admin`:
 | --- | --- | --- | --- | --- | --- |
 | 0 | `get` | `unit` | `Snapshot` | idempotent | The applied revision and document, and its state. |
 | 1 | `validate` | `ValidateRequest` | `Problems` | idempotent | Validates without changing anything; an empty list means valid. A stale `base` fails with `aborted`. |
-| 2 | `commit` | `CommitRequest` | `uint` |  | Validates and applies (sections 2.2, 2.3); returns the new revision. Errors: `aborted` (stale base, or a commit is pending), `failed_precondition` (invalid; `details` is the `dynamic` value `[71, problems]`). |
+| 2 | `commit` | `CommitRequest` | `uint` |  | Validates and applies (sections 2.2, 2.3); returns the new revision. Errors: `aborted` (stale base, or a commit is pending), `failed_precondition` (invalid; `details` is the `dynamic` value `[72, problems]`). |
 | 3 | `confirm` | `uint` | `unit` | idempotent | Errors: `not_found`. |
 | 4 | `rollback` | `uint` | `uint` |  | Rolls a pending revision back at once and returns the new revision. Errors: `not_found`. |
 | 5 | `setSecret` | `Secret` | `unit` |  | Errors: `already_exists`, `invalid_argument` (bad name). |
 | 6 | `deleteSecret` | `string` | `unit` | idempotent | Errors: `failed_precondition` (still referenced). |
 | 7 | `listSecrets` | `unit` | `Names` | idempotent | Secret names only. |
-| 8 | `putFacet` | `bytes` | `bytes` | idempotent | Returns the stored-facet key. Errors: `invalid_argument` (`details` as for `commit`). |
-| 9 | `deleteFacet` | `bytes` | `unit` | idempotent | Errors: `failed_precondition` (still referenced). |
-| 10 | `listFacets` | `unit` | `Hashes` | idempotent | Stored-facet keys. |
-| 11 | `watch` | `unit` | `[3, Event]` | output ends with `End` | Section 4. |
+| 8 | `watch` | `unit` | `[3, Event]` | output ends with `End` | Section 4. |
 
 `watch`'s output is a stream, so it sets flag 0x10; no other half is a stream or reaches `[4]`. `watch` does not set the hint flag 0x4, because its first event holds the whole document.

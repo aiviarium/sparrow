@@ -2,7 +2,7 @@
 
 Nov 26, 2026 · Christoph Feuerer
 
-> Snapshot of the live draft, revision 347, exported for this repository. The live document is the source of truth; diagrams are not included here.
+> Snapshot of the live draft, revision 360, exported for this repository. The live document is the source of truth; diagrams are not included here.
 
 ## 1. Overview
 
@@ -182,15 +182,6 @@ Used when WebTransport is unavailable, for example on networks that block UDP. A
 - Every call runs as it would on the shared lane, with `sharedCredit`. `maxStreams` does not apply.
 - `maxMessageSize` applies to the WebSocket message size.
 - Servers MUST check the `Origin` header on the upgrade request.
-
-### 4.7 Pipe binding
-
-For a single ordered byte stream, such as a child process's standard input and output, a unix socket or an SSH channel. A supervisor can use it to talk to a process it starts, for example over `ssh`; a hub itself never starts processes (section 10.2).
-
-- The side that speaks first with `Hello` is the Sparrow client. A started process is the client, on its standard input and output.
-- There is a shared lane and nothing else: each message is preceded by its length as a QUIC variable-length integer (shortest form when sending, any valid form when receiving), with no stream header. Every call runs as on the shared lane, with `sharedCredit`. `maxStreams` does not apply.
-- Closing the byte stream ends the session. Status and reason travel only in `GoAway`.
-- Standard error, where there is one, is not part of the protocol.
 
 ### 4.8 Transport selection
 
@@ -508,12 +499,12 @@ Every call has a call ID chosen by the caller, whether it runs on the shared lan
 ### 7.1 Call IDs and call lifetime
 
 - The caller assigns the ID. Client IDs are even and server IDs are odd, so they never collide. ID 0 is reserved for notifications, which get no reply.
-- A sender's IDs, apart from 0, MUST strictly increase. Receivers track the IDs of open calls. A `Request` whose ID belongs to an open call, or that arrives on a leased stream whose call has not ended, is a `protocol_error`. Receivers need not detect reuse of ended IDs, which would take unbounded memory.
+- A sender's IDs, apart from 0, MUST strictly increase. A callee tracks the IDs of calls it has not finished. A `Request` whose ID belongs to one of them, or that arrives on a leased stream whose call has not ended, is a `protocol_error`. Receivers need not detect reuse of ended IDs, which would take unbounded memory.
 - The **caller's half** is finished by the `Request` itself, unless the method has flag 0x8 (*input ends with End*, section 6.4); then by `End` or `Cancel`.
 - The **callee's half** is finished by `Response`, unless the method has flag 0x10 (*output ends with End*); then by `End`. `Error` finishes it at any time. These flags are fixed for the life of the method, so both peers always agree whether `End` is coming, even while the schema changes.
 - `End`, `Error` and `Cancel` also close every byte token their sender opened in the call. Data not yet marked `fin` is cut off, and the receiver discards any later `Bytes` for the call. A referenced token that was cut off or never sent reaches the application as data_loss.
 - The call **ends** when both halves are finished. Both peers then forget its ID, and a leased stream it ran on is idle again.
-- If the callee finishes first while input is still arriving, it MUST keep reading and discarding that input until the caller's half is finished. When the callee's final message arrives, the caller MUST send `End` (or `Cancel`) next, with no further `Item` or `Bytes`.
+- If the callee finishes first while input is still arriving, it forgets the call and ignores that input (section 7.6). When the callee's final message arrives, the caller MUST send `End` (or `Cancel`) next, with no further `Item` or `Bytes`.
 - Messages for an unknown or ended call ID are ignored. A `Request` naming a facet or method the callee does not have is answered with `Error(unimplemented)`; a notification naming one is dropped. The callee remembers the flags of every method it has published in the session and decides from them whether the caller's half is still open; for a method it never published it assumes no flags. A call-ID-0 `Request` for a method without flag 0x2 is dropped, and a `Request` with another ID for a method with flag 0x2 is answered with `Error(invalid_argument)`.
 
 ### 7.2 Call messages
@@ -574,12 +565,12 @@ Every call is flow-controlled with credit, per direction, on every stream.
 
 - The caller cancels with `Cancel(status)`, normally `cancelled`. `Cancel` may be sent while the callee's half is open. It finishes the caller's half if that was still open, closes its byte tokens, and asks the callee to stop.
 - The callee SHOULD stop work and MUST answer with a final message, normally `Error(cancelled)`, unless it has already sent one. The call then ends as in section 7.1, so a leased stream returns to the pool in a clean state.
-- If no final message arrives within about 5 s, the caller gives up. On a leased stream it resets the stream (section 4.2), which also tells the callee. On the shared lane it keeps counting the call toward `maxConcurrentCalls` until the final message arrives; if none arrives within 30 s, the peer is broken and the caller closes the session with `GoAway(protocol_error)`.
+- If no final message arrives within about 5 s, the caller gives up. On a leased stream it resets the stream (section 4.2), which also tells the callee, and keeps counting the call until it has seen the end of the stream's other direction, or for 5 s, as for the stream itself. On the shared lane it keeps counting the call toward `maxConcurrentCalls` until the final message arrives; if none arrives within 30 s, the peer is broken and the caller closes the session with `GoAway(protocol_error)`.
 - When a `deadline` passes, the callee sends `Error(deadline_exceeded)`. The caller MAY also send `Cancel(deadline_exceeded)` when its own timer fires.
 
 ### 7.6 Concurrency
 
-- A peer MUST NOT have more than `maxConcurrentCalls` calls open as caller, counting the shared lane and leased streams together. The caller counts a call until it has both sent its own last message and seen the callee's; the callee counts it only until it has sent its own final message, because QUIC does not order streams and a new request can arrive before the old call's `End` (as in section 4.2, rule 5). The callee answers excess requests with `Error(resource_exhausted)`, and MAY close a session that keeps more than twice `maxConcurrentCalls` calls with the caller's half still open with `GoAway(resource_exhausted)`. Notifications do not count.
+- A peer MUST NOT have more than `maxConcurrentCalls` calls open as caller, counting the shared lane and leased streams together. The caller counts a call until it has both sent its own last message and seen the callee's final one. The callee counts a call from its `Request` until it has sent its own final message, and then forgets it: later messages for it are ignored (section 7.1). Because the callee always stops counting first, a caller within its limit is never refused, even though QUIC does not order streams (as in section 4.2, rule 5); the callee answers excess requests with `Error(resource_exhausted)`. Notifications do not count.
 - Messages of one call are ordered because they share a stream. Calls are independent of each other.
 
 ### 7.7 Example
@@ -806,18 +797,18 @@ A node publishes its facets in whichever schema it owns on the link, and the hub
 | The node dials in | WebTransport or WebSocket | node | `Hello.client_schema` |
 | The hub dials a configured node at its URL | WebTransport or WebSocket | hub | `Welcome.server_schema` |
 
-- **Identity** comes from the link, never from message content. The hub never starts nodes: whatever runs a node starts it (section 10.10). Whichever side opens a link to the other authenticates with `["link", credential]` in `Hello`, and the accepting side maps the credential to the configured node or hub it belongs to; a node that dials in does so. A node the hub dials is configured with its URL and the SHA-256 of its public key (SubjectPublicKeyInfo), which the hub verifies on every connection; the hub MUST authenticate to it in turn, with `["link", credential]` in `Hello` or with mutual TLS. Which nodes exist, with their credentials, URLs and key hashes, is the hub's configuration (section 10.9); a node listed there is a configured node. A node MUST honour `principal` and `context` only on an authenticated link to its hub.
+- **Identity** comes from the link, never from message content. The side that opens a link presents `["link", credential]` in `Hello`, and the accepting side maps the credential to the configured node or hub it belongs to. Each configured node has exactly one link direction, so only a node configured to dial in has a dial-in credential; any other credential, or one of a disabled node, is refused with `GoAway(unauthenticated)`. When the hub dials, it checks that the SHA-256 of the node's SubjectPublicKeyInfo equals the configured pin, which replaces certificate-chain validation, and it always sends `Hello.client_schema`, empty if the node may call nothing yet. Which nodes exist, with their credentials, URLs and pins, is the hub's configuration (section 10.9); a node listed there is a configured node. A node MUST honour `principal` and `context` only on a link authenticated as its hub.
 - **Node IDs** are stable, part of the hub's configuration, and match `[a-z0-9-]+(\.[a-z0-9-]+)*`.
 - **Facet names belong to their node.** Every facet a node publishes MUST be named after the node: the name equals the node ID or starts with the node ID and a dot. The hub closes a session that breaks this with `GoAway(invalid_argument)`. Two nodes therefore can never claim the same facet. Node IDs `sparrow` and `sparrow.*` are reserved, and a hub names its own facets `sparrow.*`, so a node's facets never collide with the hub's.
-- **One session per node.** A new session from a node ID that already has one supersedes it, and a reconnect and an upgrade are the same event. Each configured node has exactly one link direction, so only a node configured to dial in has a dial-in credential; any other credential is refused with `GoAway(unauthenticated)`. The hub keeps the old session fully open until it switches. If the new session's facets differ from those the hub lists, it first relays the change as in section 10.3 and waits until every session that sees the change has acknowledged it; until then calls keep going to the old session, or wait (within the connect timeout of section 10.7) for a node that was offline. When it switches, it routes new calls to the new session and sends `GoAway(going_away)` to the old one, whose running calls finish there.
-- **Limits:** the 64 KiB limit on client schemas (section 5.4) does not apply between a hub and its nodes, in either direction; either side MAY set its own. The hub re-validates a dial-in credential at least every 60 s and closes the session with `GoAway(unauthenticated)` once it is revoked or changed. Revocation takes effect at once, ahead of the takeover rule above; the node must dial in again.
+- **One session per node.** A node that dials in again supersedes its existing session, so a reconnect and an upgrade are the same event. The hub keeps the old session fully open until it switches. If the new session's facets differ from those the hub lists, it first relays the change as in section 10.3 and waits until every session that sees the change has acknowledged it; until then calls keep going to the old session, or wait (within the connect timeout of section 10.7) for a node that was offline. When it switches, it routes new calls to the new session and sends `GoAway(going_away)` to the old one, whose running calls finish there. If the new session's facets are refused (section 10.3), the old session is kept.
+- **Limits:** the 64 KiB limit on client schemas (section 5.4) does not apply between a hub and its nodes, in either direction; either side MAY set its own. When the configuration removes or disables a node, or changes its credential, link or `peer` setting, the hub ends the node's session at once: with `GoAway(unauthenticated)` for a node that dialed in, which must dial in again, and with `GoAway(going_away)` for a node the hub dialed, which it then dials anew. Until a new session is ready the node is offline (section 10.7). When the node link is at the node's `maxConcurrentCalls`, the hub answers further calls with `Error(resource_exhausted)` and does not queue them.
 
 ### 10.3 Composition
 
 - **Schemas:** for each session the hub builds its schema from the hub's own facets and every node facet `visible` to the session's principal (section 10.4). A node's own facets are left out of the schema the hub sends to that node.
 - **Facet IDs** are stable for the triple (node ID, facet name, major version) across sessions and restarts. A new major version is a new facet: one delta removes the old facet and adds the new one. A node moves its own facet to a new major version the same way, by removing it and adding it under a new node-local facet ID, or by reconnecting. A hub never reuses a facet ID: removing a node retires its facet IDs, and a node added again gets new ones. A disabled node's facets are hidden but keep their IDs. Within a major version a replacement MUST be compatible (section 6.6, rule 2); the hub verifies this and closes a node session whose update is not with `GoAway(schema_mismatch)`.
 - **Interfaces:** the hub MUST verify a facet's `implements` claim (section 6.5) against the interface document, and treats a failed claim, or a claim to an interface it holds no document for, like an incompatible update. How a hub obtains interface documents is its configuration. Clients find every implementation of an interface by reading `implements` in their schema. For every interface with at least one visible implementation, the hub names one as the default in the top-level schema annotation `sparrow.defaults`, a map from interface hash (bytes) to facet ID; a caller with no reason to choose calls the default.
-- **Offline nodes:** the hub keeps listing the facets of a configured node while it is offline, so caches stay valid (section 10.7).
+-
 - **Client facets** are scoped to their session. The hub may call them itself, but never adds them to another session's schema. Nodes reach a client only through calls the client makes, such as responses and server streams.
 - **Relaying updates:** when a node's `SchemaUpdate` changes what other sessions see, the hub sends each of them a `SchemaUpdate` and acks the node only once each has acked or been closed. Each downstream session gets 5 s to ack an update from a node, and 2 s to ack one the hub relays from a peer hub, before the hub closes it with `GoAway(schema_mismatch)`. A node gives its hub at least 10 s to ack, so a hub's limit runs out before its node's, and an update crossing a peer link still finishes within it. The same limits apply to the change a superseding session brings (section 10.2). Until the node receives the ack it uses no new IDs (section 6.6, rule 1), so no session ever receives an ID it cannot decode.
 
@@ -848,7 +839,7 @@ Principals are strings of the form `kind:id`, where `kind` is `user`, `group` or
 When a call arrives for a node's facet, the hub:
 
 1. Authorizes it (section 10.4).
-2. Opens a call on the node's link with a new call ID, the node's own facet ID, and the same method ID, metadata and input. It sets `context` (towards a node that is not a peer hub) and `principal` (section 10.6), replacing any values the caller sent. It lowers `deadline` by the time already spent, start-up time included, and may set `credit` to any value no higher than the caller's, or than the default for the caller's stream if the caller sent none.
+2. Opens a call on the node's link with a new call ID, the node's own facet ID, and the same method ID, metadata and input. It sets `context` (towards a node that is not a peer hub) and `principal` (section 10.6), replacing any values the caller sent. It lowers `deadline` by the time already spent, including any wait for the node (section 10.7), and may set `credit` to any value no higher than the caller's, or than the default for the caller's stream if the caller sent none.
 3. Relays every later message of the call except `Credit`, changing only the call ID.
 
 The rules for the two calls, caller to hub and hub to node:
@@ -872,11 +863,11 @@ A call from a node to any facet is handled the same way: authorized, then answer
 
 ### 10.7 Offline nodes
 
-The hub lists the **last known facets** of every configured node, whether or not the node is connected: the facets the node last published or, for a node never seen, facets given in the hub's configuration. Once a node has published a schema, configured facets are no longer used for it. Notifications to a node that is offline are dropped.
+The hub lists the **last known facets** of every enabled configured node, the facets it last published, whether or not it is connected, so caches stay valid; a node never seen has none yet. Removing a node discards them, and a disabled node's are hidden (section 10.3). A call to a facet ID of a removed or disabled node fails with `Error(unimplemented)`.
 
-- A call to a facet of a node that is not connected waits until that node's session is ready (its `Ready`, or the hub's own `Ready` when the hub dialed), for at most a connect timeout (RECOMMENDED 10 s), and then fails with `Error(unavailable)`.
-- When the node connects, its facets are handled like those of any new session (section 10.2): changes are relayed and acknowledged before calls reach it, and a facet that is not a compatible successor within its major version is refused with `GoAway(schema_mismatch)`.
--
+- The hub keeps a session open to every enabled node it dials: it dials when the node is configured or the hub starts, and after a session ends it redials with exponential backoff and jitter, as a client reconnects (section 5.6).
+- A call to a facet of a node that is not connected waits until that node's session is ready (its `Ready`, or the hub's own `Ready` when the hub dialed), for at most a connect timeout (RECOMMENDED 10 s), and then fails with `Error(unavailable)`. A call whose deadline passes while it waits fails with `Error(deadline_exceeded)`, and one the caller cancels is never forwarded. Calls waiting for a node that is removed or disabled fail with `Error(unavailable)`. Notifications to a node that is not connected are dropped.
+- A node that comes back with a facet that is not a compatible successor of its last known version, such as an older minor release, is refused (section 10.3) until it publishes a compatible one or moves the facet to a new major version.
 
 ### 10.8 Federation
 
@@ -894,7 +885,7 @@ Administering a hub is a facet like any other. An operator or a controlling appl
 
 ### 10.10 Out of scope
 
-Facilities such as storage, jobs, blobs, secrets and events are ordinary facets, provided by the hub or by nodes. Standard contracts for them are interfaces published separately from this spec, never protocol sections. High availability, spreading one facet over several nodes, and resumable streams are implementation or application concerns. A hub never installs, starts or supervises nodes: a separate system (an orchestrator, a service manager, a person) provisions and runs them, then either lets them dial in with credentials it hands out or registers their URL and key hash through the administration interface, which standardizes only how nodes are configured. The credentials a hub keeps for its own links are part of its configuration, not a secrets facility. An application that needs to resume passes a cursor in its own methods.
+Facilities such as storage, jobs, blobs, secrets and events are ordinary facets, provided by the hub or by nodes. Standard contracts for them are interfaces published separately from this spec, never protocol sections. High availability, spreading one facet over several nodes, and resumable streams are implementation or application concerns. A hub never installs, starts or supervises nodes. A separate system (an orchestrator, a service manager, a person) provisions and runs them, and registers each with the hub: for a node that dials in, the credential it handed the node; for a node the hub dials, its URL and pin. The administration interface standardizes only this registration. The credentials a hub keeps for its own links are part of its configuration, not a secrets facility. An application that needs to resume passes a cursor in its own methods.
 
 ## 11. Security considerations
 
