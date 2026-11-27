@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Sparrow browser e2e</title></head>
+<body>
+<pre id="out">loading</pre>
+<script type="module">
+import { connect, session, b64urlToBytes } from './sparrow-mini.js';
+
+// runE2E: /connect, then a WebTransport session (pinned with
+// serverCertificateHashes) and a WebSocket session, each with
+// Hello / Welcome / Ready and one unary call to echo.echo.
+window.runE2E = async ({ base, token, input, only }) => {
+  const result = { webTransportAvailable: typeof WebTransport === 'function' };
+  for (const binding of ['webtransport', 'websocket']) {
+    if (only && only !== binding) continue;
+    try {
+      const cr = await connect(base, token); // a ticket is single-use: one per session
+      const url = binding === 'webtransport' ? cr.endpoints.webtransport : cr.endpoints.websocket;
+      const certHash = cr.serverCertificateHashes && cr.serverCertificateHashes.length ? b64urlToBytes(cr.serverCertificateHashes[0]) : undefined;
+      result[binding] = await session({ binding, url, certHash, ticket: cr.ticket, facetName: 'echo', methodName: 'echo', input });
+    } catch (e) {
+      result[binding] = { ok: false, error: String(e && e.stack || e) };
+    }
+  }
+  document.getElementById('out').textContent = JSON.stringify(result, null, 2);
+  return result;
+};
+document.getElementById('out').textContent = 'ready';
+</script>
+</body>
+</html>

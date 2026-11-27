@@ -119,7 +119,7 @@ func dialedNode(t *testing.T, cred string) (url string, pin []byte) {
 // webHub starts the sparrow-hub binary with the Web Profile on, a spawned
 // echo node shipping two client modules (one signed by the root key, one
 // by an uncertified key) and a dialed node.
-func webHub(t *testing.T) (*hubProc, *webKeys, []byte) {
+func webHub(t *testing.T, extra map[string]any) (*hubProc, *webKeys, []byte) {
 	dir := t.TempDir()
 	k := loadWebKeys(t)
 	mods := filepath.Join(dir, "mods")
@@ -141,6 +141,9 @@ func webHub(t *testing.T) (*hubProc, *webKeys, []byte) {
 		"tokens":    []map[string]any{{"token": "alice-token", "principal": "user:alice", "groups": []string{"group:eng"}}},
 		"web":       map[string]any{"modulesDir": mods, "rootKeys": []string{hex.EncodeToString(k.rootPub)}, "minHostApi": "3.0.0"},
 		"log":       "debug", "shutdownGraceMs": 3000, "startTimeoutMs": 5000,
+	}
+	for k, v := range extra {
+		cfg[k] = v
 	}
 	b, _ := json.Marshal(cfg)
 	_ = os.WriteFile(filepath.Join(dir, "hub.json"), b, 0o600)
@@ -192,7 +195,7 @@ func webHub(t *testing.T) (*hubProc, *webKeys, []byte) {
 // dialed node, ticket replay refused, AuthRefresh with a refreshed ticket,
 // the schema resource, and module fetch and verification into a snapshot.
 func TestWebEndToEnd(t *testing.T) {
-	p, keys, certHash := webHub(t)
+	p, keys, certHash := webHub(t, nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	wc := &web.Client{Base: p.addrs.Web, HTTP: pinnedClient(certHash),
