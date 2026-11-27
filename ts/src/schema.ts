@@ -376,7 +376,7 @@ function arr(v: unknown, what: string, ...want: number[]): unknown[] {
 
 function uintOf(v: unknown, what: string): number {
   if (typeof v === 'number' && Number.isInteger(v) && v >= 0) return v;
-  if (typeof v === 'bigint') throw err('malformed', `${what}: ${v} is too large`);
+  if (typeof v === 'bigint') throw err('malformed', `${what}: ${v} is beyond 2^53 - 1`);
   throw err('malformed', `${what}: expected a uint`);
 }
 
@@ -397,7 +397,7 @@ function annotationsOf(v: unknown, what: string): Annotations {
 
 export function typeRefOf(v: unknown): TypeRef {
   if (typeof v === 'number') return uintOf(v, 'type-ref');
-  if (typeof v === 'bigint') throw err('malformed', `type-ref: ${v} is too large`);
+  if (typeof v === 'bigint') throw err('malformed', `type-ref: ${v} is beyond 2^53 - 1`);
   if (!Array.isArray(v)) throw err('malformed', 'type-ref: expected a uint or an array');
   if (v.length === 0) throw err('bad_type_ref', 'empty type-ref');
   const op = uintOf(v[0], 'type-ref form');

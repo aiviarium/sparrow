@@ -163,9 +163,9 @@ func readParams(d *cbor.Decoder) (Params, error) {
 			continue
 		}
 		vd := cbor.NewDecoder(v)
-		u, err := vd.Uint()
+		u, err := vd.SafeUint()
 		if err != nil {
-			return Params{}, fmt.Errorf("wire: params %q must be a uint", k)
+			return Params{}, fmt.Errorf("wire: params %q must be a uint of at most 2^53 - 1", k)
 		}
 		p.Set(k, u)
 	}

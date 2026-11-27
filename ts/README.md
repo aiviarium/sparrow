@@ -270,9 +270,12 @@ plain objects tagged with `kind` (`{ kind: 16, callId, facetId, methodId, metada
 payloads (`input`, `output`, `value`, `details`, schemas, deltas) stay encoded `Uint8Array` views.
 Also: `encodeVarint`, `decodeVarint`, `frame`, `FrameDecoder` (rejects a frame above
 `maxMessageSize` from its prefix), `kindRange`, `classifyStreamHeader`, `limitsOf`, `checkParams`,
-`DEFAULTS`, `MetaKeys`, `countedBytes`, `CreditWindow`. Numbers that the protocol puts in a JS
-`number` (IDs, counts, lengths, timestamps in messages) must stay within 2^53 - 1: a larger one is
-refused as malformed, and a larger credit amount or `retry_after_ms` saturates there.
+`DEFAULTS`, `MetaKeys`, `countedBytes`, `CreditWindow`. Every integer a message defines itself
+(IDs, counts, lengths, credit, `retry_after_ms`, deadlines, epochs, timestamps, metadata sigil keys,
+params) lies within ±(2^53 - 1) (3.1), so it is a JS `number`; a larger one makes the message
+malformed (`DecodeError`, answered as `protocol_error`). Schemas refuse larger IDs the same way, and
+the value codec refuses larger sigils, type IDs, variant and field tags and byte tokens, while
+`int` and `uint` values keep their 64-bit range.
 
 ### Transports
 
@@ -331,5 +334,5 @@ are cut to 1024 bytes.
 | `test/pipe.test.ts`, `test/websocket.test.ts` | The bindings: in-process streams, a child process on its stdio, a `ws` server. |
 | `test/pipefaults.test.ts` | The pipe binding with writes cut into 1-7 bytes, stalls, the stream ending mid-message and at every point of the handshake, a child process killed in the middle of a call and of a download: calls end with `unavailable`, no session counts a call. |
 | `test/fuzz.test.ts` | Property tests of every decoder (CBOR, messages, framing, schemas, facets, interfaces, deltas, values, the handshake of both roles) on the vectors' bytes and seeded mutations: only the library's error types, round trips, nothing held beyond the input. `SPARROW_FUZZ_ITERS` (default 2000), `SPARROW_FUZZ_SEED`; crashers stay in `test/helpers/fuzz.ts`. |
-| `test/interop.test.ts` | Against Go (`go/cmd/sparrow-interop`): a TS client started by a Go `session.NewServer`, and a Go client started by a TS server, each running the interop suite of `test/fixture/interop.mjs` (unary, server/client/bidi streams, notification, error with details, cancel, deadline, progress, a byte-identical round trip of every value type, byte streams, headers and trailers, calls to the client's facet). A differential check sends the fuzzing inputs to `sparrow-interop decode`: Go and TS must accept and reject the same CBOR, messages, schemas and timestamps and re-encode them to the same bytes (known differences: integers beyond 2^53 - 1, times beyond `Date`). |
+| `test/interop.test.ts` | Against Go (`go/cmd/sparrow-interop`): a TS client started by a Go `session.NewServer`, and a Go client started by a TS server, each running the interop suite of `test/fixture/interop.mjs` (unary, server/client/bidi streams, notification, error with details, cancel, deadline, progress, a byte-identical round trip of every value type, byte streams, headers and trailers, calls to the client's facet). A differential check sends the fuzzing inputs to `sparrow-interop decode`: Go and TS must accept and reject the same CBOR, messages, schemas and timestamps and re-encode them to the same bytes (the known difference: times beyond `Date`, which Go keeps). |
 | `test/cbor.test.ts` | The codec against `cbor2` on random values, random and truncated input, SHA-256. |

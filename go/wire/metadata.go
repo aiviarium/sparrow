@@ -71,7 +71,7 @@ func (m Metadata) uintKey(k uint64) (uint64, bool, error) {
 		return 0, false, nil
 	}
 	d := cbor.NewDecoder(v)
-	u, err := d.Uint()
+	u, err := d.SafeUint()
 	if err != nil || !d.Done() {
 		return 0, true, fmt.Errorf("%w: key %d must be a uint", ErrMetadataValue, k)
 	}
@@ -208,7 +208,10 @@ func readMetadata(d *cbor.Decoder) (Metadata, error) {
 		}
 		switch maj {
 		case cbor.MajorUint:
-			s, _ := d.Uint()
+			s, err := d.SafeUint()
+			if err != nil {
+				return nil, fmt.Errorf("wire: metadata key: %w", err)
+			}
 			k = SigilKey(s)
 		case cbor.MajorText:
 			t, err := d.Text()
@@ -226,9 +229,26 @@ func readMetadata(d *cbor.Decoder) (Metadata, error) {
 		if err != nil {
 			return nil, err
 		}
+		if !k.IsText && (k.Sigil == KeyDeadline || k.Sigil == KeyCredit) {
+			if err := checkSafeInt(v); err != nil {
+				return nil, fmt.Errorf("wire: metadata key %d: %w", k.Sigil, err)
+			}
+		}
 		m[k] = v
 	}
 	return m, nil
+}
+
+// checkSafeInt refuses an integer value beyond ±(2^53 - 1): the deadline
+// and credit keys are integers the protocol defines (section 3.1). A value
+// of another type is left to the typed accessors.
+func checkSafeInt(v cbor.Raw) error {
+	d := cbor.NewDecoder(v)
+	if maj, _ := d.PeekMajor(); maj != cbor.MajorUint && maj != cbor.MajorNeg {
+		return nil
+	}
+	_, err := d.SafeInt()
+	return err
 }
 
 // TextMap is a map with text keys and raw values: caps, props

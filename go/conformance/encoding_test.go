@@ -3,6 +3,7 @@ package conformance
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"math"
 	"strconv"
 	"strings"
@@ -268,6 +269,27 @@ func TestEncoding(t *testing.T) {
 			}
 		}
 	}, "non_shortest")
+
+	each(t, "encoding.json", func(t *testing.T, v vectors.Vector) {
+		cb := v.Hex("cbor")
+		if !bytes.Equal(cb, v.CBOR("message")) {
+			t.Fatalf("cbor differs from typed JSON message")
+		}
+		m, err := wire.Decode(cb)
+		if !v.Bool("expected_valid") {
+			var de *wire.DecodeError
+			if !errors.As(err, &de) || v.String("expected_error") != "protocol_error" {
+				t.Fatalf("Decode = %v, want a DecodeError (protocol_error)", err)
+			}
+			return
+		}
+		if err != nil {
+			t.Fatalf("Decode: %v", err)
+		}
+		if got := wire.Encode(m); !bytes.Equal(got, cb) {
+			t.Fatalf("re-encoded %x, want %x", got, cb)
+		}
+	}, "integer_range")
 }
 
 // checkMapEntries checks a map vector's logical entries against its bytes:

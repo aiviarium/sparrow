@@ -302,6 +302,7 @@ func TestDecodeErrors(t *testing.T) {
 		{"trailing", append(append([]byte{}, good...), 0x00), CodeMalformed},
 		{"annotations key not text", []byte{0x85, 0x02, 0x60, 0x60, 0x80, 0xa1, 0x01, 0x01}, CodeMalformed},
 		{"name not text", []byte{0x85, 0x02, 0x01, 0x60, 0x80, 0xa0}, CodeMalformed},
+		{"facet ID beyond 2^53 - 1", []byte{0x85, 0x02, 0x60, 0x60, 0x81, 0x89, 0x1b, 0, 0x20, 0, 0, 0, 0, 0, 0, 0x60, 0x60, 0x80, 0x80, 0x80, 0xf6, 0x80, 0xa0, 0xa0}, CodeMalformed},
 	}
 	for _, tc := range tests {
 		_, err := DecodeSchema(tc.in)
@@ -322,6 +323,7 @@ func TestDecodeErrors(t *testing.T) {
 		{[]byte{0x82, 0x01, 0x00}, CodeBadTypeRef},
 		{[]byte{0x61, 0x61}, CodeMalformed},
 		{[]byte{0x20}, CodeMalformed},
+		{[]byte{0x1b, 0, 0x20, 0, 0, 0, 0, 0, 0}, CodeMalformed}, // a TypeId beyond 2^53 - 1 (3.1)
 	}
 	for _, tc := range refs {
 		if _, err := DecodeTypeRef(tc.in); code(err) != tc.want {

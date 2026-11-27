@@ -19,7 +19,7 @@ func PeekCall(b []byte) (Kind, uint64, error) {
 	if n == 0 {
 		return 0, 0, errors.New("wire: empty envelope")
 	}
-	k, err := d.Uint()
+	k, err := d.SafeUint()
 	if err != nil {
 		return 0, 0, err
 	}
@@ -30,7 +30,7 @@ func PeekCall(b []byte) (Kind, uint64, error) {
 	if n < 2 {
 		return kind, 0, errors.New("wire: call message without call ID")
 	}
-	id, err := d.Uint()
+	id, err := d.SafeUint()
 	return kind, id, err
 }
 
@@ -48,7 +48,7 @@ func RewriteCallID(b []byte, newID uint64) ([]byte, error) {
 	if n < 2 {
 		return nil, errors.New("wire: not a call message")
 	}
-	k, err := d.Uint()
+	k, err := d.SafeUint()
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func RewriteCallID(b []byte, newID uint64) ([]byte, error) {
 	if !kind.IsCall() || kind == KindRequest {
 		return nil, fmt.Errorf("wire: cannot rewrite the call ID of %v", kind)
 	}
-	if _, err := d.Uint(); err != nil {
+	if _, err := d.SafeUint(); err != nil {
 		return nil, err
 	}
 	rest := b[d.Offset():]

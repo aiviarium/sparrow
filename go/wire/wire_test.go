@@ -369,6 +369,61 @@ func TestDecodeErrors(t *testing.T) {
 	}
 }
 
+// TestIntegerBounds: every integer a message defines itself lies within
+// ±(2^53 - 1); a larger one makes the message malformed (protocol_error),
+// while payloads keep any integer (core 3.1).
+func TestIntegerBounds(t *testing.T) {
+	const max, big = "1b001fffffffffffff", "1b0020000000000000"
+	valid := []string{
+		"86 10 " + "1b001ffffffffffffe" + " 10 00 a0 f6", // call ID 2^53 - 2
+		"83 18 18 06 " + max,                             // Credit amount
+		"86 10 02 10 00 a0 1bffffffffffffffff",           // a uint input: a payload
+		"86 10 02 10 00 a1 1820 " + max + " f6",          // deadline key
+		"83 06 00 c1 3b001ffffffffffffe",                 // AuthStatus at -(2^53 - 1) s
+	}
+	invalid := map[string]string{
+		"kind":              "82 1b0020000000000000 00",
+		"call ID":           "86 10 " + big + " 10 00 a0 f6",
+		"facet ID":          "86 10 02 " + big + " 00 a0 f6",
+		"method ID":         "86 10 02 10 " + big + " a0 f6",
+		"credit amount":     "83 18 18 06 " + big,
+		"retry_after_ms":    "85 09 0e 60 " + big + " f6",
+		"goaway versions":   "85 09 0e 60 f6 81 " + big,
+		"progress done":     "85 15 07 " + big + " f6 f6",
+		"progress total":    "85 15 07 00 " + big + " f6",
+		"bytes token":       "85 19 02 " + big + " 40 f5",
+		"ping nonce":        "82 07 " + big,
+		"epoch":             "82 04 " + big,
+		"error status":      "85 14 02 " + big + " 60 f6",
+		"metadata key":      "86 10 02 10 00 a1 " + big + " 00 f6",
+		"deadline key":      "86 10 02 10 00 a1 1820 " + big + " f6",
+		"credit key":        "86 10 02 10 00 a1 1823 " + big + " f6",
+		"negative deadline": "86 10 02 10 00 a1 1820 3b001fffffffffffff f6",
+		"expires_at":        "83 06 00 c1 " + big,
+		"negative expires":  "83 06 00 c1 3b001fffffffffffff",
+		"params":            "88 00 8101 a0 f6 f6 f6 a1 6e6d61784d65737361676553697a65 " + big + " f4",
+		"hello versions":    "88 00 81 " + big + " a0 f6 f6 f6 a0 f4",
+		"welcome version":   "87 01 " + big + " a0 40 a0 82 00 40 a0",
+	}
+	for _, in := range valid {
+		if _, err := Decode(unhex(in)); err != nil {
+			t.Errorf("%s: %v", in, err)
+		}
+	}
+	for name, in := range invalid {
+		_, err := Decode(unhex(in))
+		var de *DecodeError
+		if !errors.As(err, &de) {
+			t.Errorf("%s: %s gives %v, want a DecodeError", name, in, err)
+		}
+	}
+	for _, in := range []string{"83 1818 " + big + " 00", "83 " + big + " 06 00"} {
+		if _, _, err := PeekCall(unhex(in)); err == nil {
+			t.Errorf("PeekCall(%s) accepted", in)
+		}
+	}
+}
+
 func TestMetadataAccessorErrors(t *testing.T) {
 	md := Metadata{
 		SigilKey(KeyDeadline):  cbor.AppendText(nil, "soon"),

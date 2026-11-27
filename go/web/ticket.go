@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aiviarium/sparrow/go/cbor"
 	"github.com/aiviarium/sparrow/go/names"
 )
 
@@ -189,7 +190,10 @@ func (t *Tickets) Parse(ticket string) (*Claims, error) {
 		return nil, refuse("bad claims")
 	}
 	now := t.Now().Unix()
+	safe := func(n int64) bool { return n >= -cbor.MaxSafeInt && n <= cbor.MaxSafeInt }
 	switch {
+	case !safe(c.IssuedAt) || !safe(c.Expires) || !safe(c.SessionExpires):
+		return nil, refuse("a time claim is beyond ±(2^53 - 1)")
 	case c.Audience != t.Audience:
 		return nil, refuse("issued for another edge (aud %q)", c.Audience)
 	case c.Expires <= now:

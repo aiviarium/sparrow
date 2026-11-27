@@ -389,7 +389,6 @@ export const MetaKeys = {
 function metaUint(md: Metadata | null | undefined, k: number): number | undefined {
   const v = md?.get(k);
   if (typeof v === 'number' && Number.isInteger(v) && v >= 0) return v;
-  if (typeof v === 'bigint' && v >= 0n) return Number.MAX_SAFE_INTEGER;
   return undefined;
 }
 
@@ -482,11 +481,11 @@ export interface AuthStatus {
 }
 export interface Ping {
   kind: 7;
-  nonce: Int;
+  nonce: number;
 }
 export interface Pong {
   kind: 8;
-  nonce: Int;
+  nonce: number;
 }
 export interface GoAway {
   kind: 9;
@@ -830,13 +829,9 @@ class Fields {
     readonly r: Reader,
     readonly cbor: DecodeOptions,
   ) {}
+  /** A uint of at most 2^53 - 1: every integer a message defines itself (3.1). */
   uint(): number {
     return this.r.uintNumber();
-  }
-  /** A uint clamped to Number.MAX_SAFE_INTEGER (credit amounts, progress counts). */
-  uintClamped(): number {
-    const v = this.r.uint();
-    return typeof v === 'bigint' ? Number.MAX_SAFE_INTEGER : v;
   }
   coreStatus(): number {
     const v = this.uint();
@@ -874,8 +869,7 @@ class Fields {
     for (const k of PARAM_KEYS) {
       if (!(k in m)) continue;
       const v = m[k];
-      if (typeof v === 'bigint' && v >= 0n) m[k] = Number.MAX_SAFE_INTEGER;
-      else if (typeof v !== 'number' || !Number.isInteger(v) || v < 0) throw new CborError(`params ${k} must be a uint`);
+      if (typeof v !== 'number' || !Number.isInteger(v) || v < 0) throw new CborError(`params ${k} must be a uint of at most 2^53 - 1`);
     }
     return m as Params;
   }
@@ -885,10 +879,14 @@ class Fields {
     for (let i = 0; i < n; i++) {
       const maj = this.r.peekMajor();
       let k: MetaKey;
-      if (maj === MAJOR_UINT) k = this.r.uint();
+      if (maj === MAJOR_UINT) k = this.uint();
       else if (maj === MAJOR_TEXT) k = this.r.text();
       else throw new CborError('metadata key is not a symbol', this.r.off);
-      out.set(k, this.generic());
+      const at = this.r.off;
+      const v = this.generic();
+      // The deadline and credit keys hold integers the protocol defines (3.1).
+      if (typeof v === 'bigint' && (k === MetaKeys.deadline || k === MetaKeys.credit)) throw new CborError(`metadata key ${k}: integer ${v} is beyond ±(2^53 - 1)`, at);
+      out.set(k, v);
     }
     return out;
   }
@@ -902,10 +900,10 @@ class Fields {
     if (t !== TAG_EPOCH_TIME) throw new CborError('expected tag 1');
     const m = this.r.peekMajor();
     if (m === MAJOR_UINT || m === MAJOR_NEG) {
-      // Integer seconds are held as a number: beyond 2^53 - 1 they would change.
+      // Integer seconds lie within ±(2^53 - 1) (3.1), so a number holds them exactly.
       const at = this.r.off;
       const v = this.r.int();
-      if (typeof v === 'bigint') throw new CborError(`integer ${v} is too large`, at);
+      if (typeof v === 'bigint') throw new CborError(`integer ${v} is beyond ±(2^53 - 1)`, at);
       return v;
     }
     return this.r.float();
@@ -947,11 +945,11 @@ export function decodeMessage(b: Uint8Array, o: DecodeOptions = {}): Message {
   try {
     n = r.arrayHead();
     if (n === 0) throw new CborError('empty envelope');
-    kind = r.uint();
+    kind = r.uintNumber();
   } catch (e) {
     throw new DecodeError((e as Error).message);
   }
-  if (typeof kind === 'bigint' || ARITY[kind] === undefined) throw new UnknownKindError(kind);
+  if (ARITY[kind] === undefined) throw new UnknownKindError(kind);
   if (n !== ARITY[kind]) throw new DecodeError(`envelope has ${n} elements, want ${ARITY[kind]}`, kind);
   const f = new Fields(r, o);
   try {
@@ -1003,13 +1001,13 @@ function fields(kind: number, f: Fields): Message {
       return { kind: 6, status: f.coreStatus(), expiresAt: f.nullable(() => f.time()) };
     case 7:
     case 8:
-      return { kind, nonce: r.uint() } as Ping | Pong;
+      return { kind, nonce: f.uint() } as Ping | Pong;
     case 9:
       return {
         kind: 9,
         status: f.coreStatus(),
         reason: r.text(),
-        retryAfterMs: f.nullable(() => f.uintClamped()),
+        retryAfterMs: f.nullable(() => f.uint()),
         versions: f.nullable(() => f.uints(false)),
       };
     case 16:
@@ -1032,8 +1030,8 @@ function fields(kind: number, f: Fields): Message {
       return {
         kind: 21,
         callId: f.uint(),
-        done: f.uintClamped(),
-        total: f.nullable(() => f.uintClamped()),
+        done: f.uint(),
+        total: f.nullable(() => f.uint()),
         note: f.nullable(() => r.text()),
       };
     case 22:
@@ -1041,7 +1039,7 @@ function fields(kind: number, f: Fields): Message {
     case 23:
       return { kind: 23, callId: f.uint(), status: f.coreStatus() };
     case 24:
-      return { kind: 24, callId: f.uint(), amount: f.uintClamped() };
+      return { kind: 24, callId: f.uint(), amount: f.uint() };
     case 25:
       return { kind: 25, callId: f.uint(), token: f.uint(), data: r.bytes(), fin: r.bool() };
   }

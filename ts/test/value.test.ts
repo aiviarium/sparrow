@@ -1,7 +1,7 @@
-// Enum value names and timestamps in the value codec (core 6.3, 6.5).
+// Enum value names, integer bounds and timestamps in the value codec (core 3.1, 6.3, 6.5).
 import { describe, expect, it } from 'vitest';
 import { toHex } from '../src/cbor.js';
-import { FacetBuilder, SchemaError, T, validateFacet } from '../src/schema.js';
+import { FacetBuilder, SchemaError, T, byteStream, field, validateFacet } from '../src/schema.js';
 import { Codec, ValueError } from '../src/value.js';
 
 const unhex = (s: string) => Uint8Array.from(s.replace(/ /g, '').match(/../g) ?? [], (h) => parseInt(h, 16));
@@ -110,7 +110,9 @@ describe('timestamps (core 6.3)', () => {
       [-0, 'c100'],
       [1.5, 'c1f93e00'],
       [-2n, 'c121'],
-      [2 ** 64, 'c1fa5f800000'], // integral, beyond int64: a float, as Go
+      [2 ** 53 - 1, 'c11b001fffffffffffff'],
+      [2 ** 53, 'c1fa5a000000'], // integral, beyond 2^53 - 1: a float, as Go
+      [2 ** 64, 'c1fa5f800000'],
     ];
     for (const [v, want] of cases) expect([v, toHex(c.encode(T.timestamp, v))]).toEqual([v, want]);
   });
@@ -128,5 +130,34 @@ describe('timestamps (core 6.3)', () => {
     expect(() => c.encode(T.timestamp, new Date(NaN))).toThrow(ValueError);
     expect(() => c.encode(T.timestamp, Infinity)).toThrow(ValueError);
     expect(() => c.encode(T.timestamp, 2n ** 63n)).toThrow(ValueError);
+    expect(() => c.encode(T.timestamp, 2n ** 53n)).toThrow(ValueError);
+  });
+});
+
+describe('integers a message defines (core 3.1)', () => {
+  const { f, mode } = facet();
+  const c = new Codec(f);
+  it('keeps the 64-bit range of int and uint values', () => {
+    for (const [t, v, h] of [
+      [T.uint, 2n ** 64n - 1n, '1bffffffffffffffff'],
+      [T.int, -(2n ** 63n), '3b7fffffffffffffff'],
+      [T.uint, 2n ** 53n, '1b0020000000000000'],
+    ] as const) {
+      expect(toHex(c.encode(t, v))).toBe(h);
+      expect(c.decode(t, unhex(h))).toBe(v);
+    }
+  });
+
+  it('refuses sigils and byte tokens beyond 2^53 - 1', () => {
+    const big = '1b0020000000000000';
+    expect(() => c.decode(mode.type, unhex(big))).toThrow(ValueError);
+    expect(() => c.decode(T.symbol, unhex(big))).toThrow(ValueError);
+    const b = new FacetBuilder('acme.up', '1.0.0', { id: 16 });
+    const up = b.struct('Up', [field('data', byteStream())]);
+    const u = new Codec(b.build());
+    expect(() => u.decode(up, unhex(`81${big.slice(0)}`))).toThrow(ValueError);
+    expect(u.decode(up, unhex('811b001fffffffffffff'))).toEqual({ data: Number.MAX_SAFE_INTEGER });
+    expect(() => u.encode(up, { data: 2n ** 53n })).toThrow(ValueError);
+    expect(() => c.encode(T.symbol, 2 ** 53)).toThrow(ValueError);
   });
 });

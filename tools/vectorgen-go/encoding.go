@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 
 	"github.com/fxamacker/cbor/v2"
 )
@@ -218,6 +219,7 @@ func encodingVectors() O {
 		[][2]any{{"maxStreams", 32}, {"maxMessageSize", 4194304}, {"leaseCredit", 2097152}, {"idleTimeoutMs", 20000}, {"sharedCredit", 65536}, {"maxInlineBytes", 65536}, {"maxConcurrentCalls", 100}})
 	depthVectors(add)
 	nonShortestVectors(add)
+	integerRangeVectors(add)
 	return o("area", "encoding", "vectors", vs)
 }
 
@@ -293,5 +295,155 @@ func nonShortestVectors(add func(O)) {
 		}
 		add(o("name", c.name, "description", c.desc, "spec", "3.1, 3.2", "type", "non_shortest",
 			"message", tj(c.msg), "cbor", hx(b), "shortest_cbor", hx(enc(c.msg)), "expected_valid", true))
+	}
+}
+
+// definedInts returns the integers message m defines itself (section 3.1):
+// its kind, IDs, counts, credit, durations, timestamps, metadata sigil keys
+// and the deadline and credit metadata values, params values, versions and
+// schema-offer forms. Payloads (input, output, value, details), caps, props,
+// auth and schemas are left out.
+func definedInts(m []any) []any {
+	out := []any{m[0]}
+	at := func(i ...int) {
+		for _, j := range i {
+			if m[j] != nil {
+				out = append(out, m[j])
+			}
+		}
+	}
+	list := func(v any) {
+		if l, ok := v.([]any); ok {
+			out = append(out, l...)
+		}
+	}
+	md := func(v any) {
+		for k, x := range v.(map[any]any) {
+			if _, text := k.(string); text {
+				continue
+			}
+			out = append(out, k)
+			if s, _ := asInt(k); s == 32 || s == 35 {
+				if _, isInt := asInt(x); isInt {
+					out = append(out, x)
+				}
+			}
+		}
+	}
+	params := func(v any) {
+		for _, x := range v.(map[string]any) {
+			out = append(out, x)
+		}
+	}
+	switch k, _ := asInt(m[0]); k {
+	case 0:
+		list(m[1])
+		params(m[6])
+	case 1:
+		at(1)
+		out = append(out, m[5].([]any)[0])
+		params(m[6])
+	case 3, 4, 7, 8:
+		at(1)
+	case 6:
+		at(1)
+		if t, ok := m[2].(cbor.Tag); ok {
+			out = append(out, t.Content)
+		}
+	case 9:
+		at(1, 3)
+		list(m[4])
+	case 16:
+		at(1, 2, 3)
+		md(m[4])
+	case 17, 18:
+		at(1)
+	case 19, 22:
+		at(1)
+		md(m[2])
+	case 20, 23, 24:
+		at(1, 2)
+	case 21:
+		at(1, 2, 3)
+	case 25:
+		at(1, 2)
+	}
+	return out
+}
+
+// asInt returns an integer of the vector values as an int64 (ok false for
+// a non-integer, and for one beyond int64, given as uint64).
+func asInt(v any) (int64, bool) {
+	switch x := v.(type) {
+	case int:
+		return int64(x), true
+	case int64:
+		return x, true
+	case uint64:
+		if x > math.MaxInt64 {
+			return math.MaxInt64, true
+		}
+		return int64(x), true
+	}
+	return 0, false
+}
+
+func integerRangeVectors(add func(O)) {
+	const big = uint64(1 << 53)
+	cases := []struct {
+		name, desc string
+		msg        []any
+	}{
+		{"range/call-id-max", "Request with call ID 2^53 - 2, the largest even (client) call ID within ±(2^53 - 1). Accepted.",
+			[]any{16, uint64(big - 2), 16, 0, map[any]any{}, nil}},
+		{"range/call-id-2^53", "Request with call ID 2^53. Every integer a message defines itself MUST lie within ±(2^53 - 1), so JavaScript holds it exactly; this message is a protocol_error.",
+			[]any{16, big, 16, 0, map[any]any{}, nil}},
+		{"range/facet-id", "Request naming facet ID 2^53: a protocol_error.",
+			[]any{16, 2, big, 0, map[any]any{}, nil}},
+		{"range/credit-max", "Credit granting 2^53 - 1 bytes. Accepted.",
+			[]any{24, 6, uint64(maxSafe)}},
+		{"range/credit-2^53", "Credit granting 2^53 bytes: a protocol_error, not a credit that saturates.",
+			[]any{24, 6, big}},
+		{"range/retry-after", "GoAway(unavailable) with retry_after_ms 2^53: a protocol_error.",
+			[]any{9, 14, "", big, nil}},
+		{"range/progress-done", "Progress with done = 2^53: a protocol_error.",
+			[]any{21, 7, big, nil, nil}},
+		{"range/bytes-token", "Bytes for token 2^53: a protocol_error.",
+			[]any{25, 2, big, []byte{}, true}},
+		{"range/ping-nonce", "Ping with nonce 2^53: a protocol_error.",
+			[]any{7, big}},
+		{"range/deadline-key", "Request whose deadline metadata key (32) is 2^53 ms: a protocol_error.",
+			[]any{16, 2, 16, 0, map[any]any{32: big}, nil}},
+		{"range/metadata-sigil-key", "Request with metadata sigil key 2^53: a protocol_error.",
+			[]any{16, 2, 16, 0, map[any]any{big: 0}, nil}},
+		{"range/expires-at-min", "AuthStatus(ok) whose expires_at is -(2^53 - 1) s. Accepted.",
+			[]any{6, 0, cbor.Tag{Number: 1, Content: int64(-maxSafe)}}},
+		{"range/expires-at", "AuthStatus(ok) whose expires_at is -(2^53) s: a protocol_error.",
+			[]any{6, 0, cbor.Tag{Number: 1, Content: int64(-maxSafe - 1)}}},
+		{"range/params", "Hello whose params set maxMessageSize to 2^53: a protocol_error.",
+			[]any{0, []any{1}, map[string]any{}, nil, nil, nil, map[string]any{"maxMessageSize": big}, false}},
+		{"range/uint-input", "Request whose input is the uint 2^64 - 1. Application values of type int or uint keep their full 64-bit range: the input is a payload, not an integer the message defines. Accepted.",
+			[]any{16, 2, 16, 0, map[any]any{}, uint64(math.MaxUint64)}},
+	}
+	for _, c := range cases {
+		valid := true
+		for _, x := range definedInts(c.msg) {
+			switch v := x.(type) {
+			case uint64:
+				valid = valid && v <= maxSafe
+			case int64:
+				valid = valid && v <= maxSafe && v >= -maxSafe
+			}
+		}
+		if valid != !strings.Contains(c.desc, "protocol_error") {
+			panic(c.name + ": verdict differs from the description")
+		}
+		b := enc(c.msg)
+		v := o("name", c.name, "description", c.desc, "spec", "3.1", "type", "integer_range",
+			"message", tj(c.msg), "diag", diag(b), "cbor", hx(b), "expected_valid", valid)
+		if !valid {
+			v = append(v, o("expected_error", "protocol_error")...)
+		}
+		add(v)
 	}
 }

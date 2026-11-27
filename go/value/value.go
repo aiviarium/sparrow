@@ -227,8 +227,8 @@ func (e *encoder) value(dst []byte, t schema.TypeRef, v any, path string, depth 
 			return nil, verr(path, "[4] must not appear inside a dynamic value")
 		}
 		tok, ok := toUint(v)
-		if !ok || tok == 0 {
-			return nil, verr(path, "a byte stream inside a value is a nonzero Token, got %v", v)
+		if !ok || tok == 0 || tok > cbor.MaxSafeInt {
+			return nil, verr(path, "a byte stream inside a value is a nonzero Token of at most 2^53 - 1, got %v", v)
 		}
 		return cbor.AppendUint(dst, tok), nil
 	}
@@ -344,8 +344,14 @@ func (e *encoder) named(dst []byte, id uint64, v any, path string, depth int, in
 			if x.IsFloat && (math.IsNaN(x.Float) || math.IsInf(x.Float, 0)) {
 				return nil, verr(path, "timestamp %v is not finite", x.Float)
 			}
+			if !x.IsFloat && (x.Sec > cbor.MaxSafeInt || x.Sec < -cbor.MaxSafeInt) {
+				return nil, verr(path, "timestamp %d s is beyond ±(2^53 - 1)", x.Sec)
+			}
 			return cbor.AppendTime(dst, x), nil
 		case time.Time:
+			if s := x.Unix(); s > cbor.MaxSafeInt || s < -cbor.MaxSafeInt {
+				return nil, verr(path, "timestamp %d s is beyond ±(2^53 - 1)", s)
+			}
 			return cbor.AppendTime(dst, cbor.FromTime(x)), nil
 		}
 		return nil, verr(path, "timestamp needs cbor.Time, got %T", v)
@@ -375,6 +381,9 @@ func (e *encoder) named(dst []byte, id uint64, v any, path string, depth int, in
 		switch x := v.(type) {
 		case Symbol:
 			if x.HasSigil {
+				if x.Sigil > cbor.MaxSafeInt {
+					return nil, verr(path, "sigil %d is beyond 2^53 - 1", x.Sigil)
+				}
 				return cbor.AppendUint(dst, x.Sigil), nil
 			}
 			return cbor.AppendText(dst, x.Text), nil
@@ -599,9 +608,9 @@ func (c *Codec) decode(d *cbor.Decoder, t schema.TypeRef, path string, depth int
 		if inDynamic {
 			return nil, verr(path, "[4] must not appear inside a dynamic value")
 		}
-		u, err := d.Uint()
+		u, err := d.SafeUint()
 		if err != nil || u == 0 {
-			return nil, verr(path, "a byte stream inside a value is a nonzero token")
+			return nil, verr(path, "a byte stream inside a value is a nonzero token of at most 2^53 - 1")
 		}
 		return Token(u), nil
 	}
@@ -653,7 +662,7 @@ func (c *Codec) decodeNamed(d *cbor.Decoder, id uint64, path string, depth int, 
 		if err != nil || n != 2 {
 			return nil, verr(path, "dynamic needs [type_id, value]")
 		}
-		tid, err := d.Uint()
+		tid, err := d.SafeUint()
 		if err != nil {
 			return nil, wrap(err)
 		}
@@ -671,7 +680,10 @@ func (c *Codec) decodeNamed(d *cbor.Decoder, id uint64, path string, depth int, 
 			return nil, wrap(err)
 		}
 		if maj == cbor.MajorUint {
-			s, _ := d.Uint()
+			s, err := d.SafeUint()
+			if err != nil {
+				return nil, wrap(err)
+			}
 			sym := Symbol{Sigil: s, HasSigil: true}
 			if sg := c.sigils[s]; sg != nil {
 				sym.Text = sg.Name
@@ -689,14 +701,14 @@ func (c *Codec) decodeNamed(d *cbor.Decoder, id uint64, path string, depth int, 
 	case schema.KindAlias:
 		return c.decode(d, td.Target, path, depth+1, inDynamic)
 	case schema.KindEnum:
-		v, err := d.Uint()
+		v, err := d.SafeUint()
 		return v, wrap(err)
 	case schema.KindUnion:
 		n, err := d.ArrayHead()
 		if err != nil || n != 2 {
 			return nil, verr(path, "union %s needs [variant_tag, value]", td.Name)
 		}
-		tag, err := d.Uint()
+		tag, err := d.SafeUint()
 		if err != nil {
 			return nil, wrap(err)
 		}
@@ -738,7 +750,7 @@ func (c *Codec) decodeStruct(d *cbor.Decoder, td *schema.TypeDef, path string, d
 			return nil, verr(path, "sparse struct %s needs a map: %v", td.Name, err)
 		}
 		for i := 0; i < n; i++ {
-			tag, err := d.Uint()
+			tag, err := d.SafeUint()
 			if err != nil {
 				return nil, verr(path, "sparse struct keys are field tags")
 			}

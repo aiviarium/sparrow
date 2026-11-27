@@ -90,10 +90,8 @@ describe.skipIf(skip)('interop with Go over the pipe binding', () => {
       let r: string;
       try {
         r = ts();
-      } catch (e) {
-        // TS holds IDs, counts and lengths as numbers: an integer beyond 2^53 - 1 where the
-        // message has a number is refused; Go takes any uint64.
-        r = /\d+ is too large/.test((e as Error).message) ? 'err (beyond 2^53)' : 'err';
+      } catch {
+        r = 'err';
       }
       want.push(r);
     };
@@ -126,15 +124,9 @@ describe.skipIf(skip)('interop with Go over the pipe binding', () => {
     const got = res.stdout.trimEnd().split('\n');
     expect(got.length).toBe(lines.length);
     const diffs: string[] = [];
-    // Known differences: a time outside Date's range (±8.64e15 ms), which Go keeps and TS refuses,
-    // and integers beyond 2^53 - 1.
-    const saturated = (g: string) => g.replace(/1b([0-9a-f]{16})/g, (x, h: string) => (BigInt(`0x${h}`) > 2n ** 53n - 1n ? '1b001fffffffffffff' : x));
+    // The known difference: a time outside Date's range (±8.64e15 ms), which Go keeps and TS refuses.
     const outOfDate = (g: string) => g.startsWith('ok ') && Math.abs(Number(g.slice(3))) > 8.64e15;
-    const known = (i: number) =>
-      (want[i] === 'err' && lines[i].startsWith('timestamp') && outOfDate(got[i])) ||
-      (want[i] === 'err (beyond 2^53)' && (got[i] === 'err' || got[i].startsWith('ok '))) ||
-      // Counts beyond 2^53 - 1 (a Credit amount, retry_after_ms) saturate there in TS.
-      (got[i].startsWith('ok ') && saturated(got[i]) === want[i]);
+    const known = (i: number) => want[i] === 'err' && lines[i].startsWith('timestamp') && outOfDate(got[i]);
     for (let i = 0; i < lines.length; i++) if (got[i] !== want[i] && !known(i)) diffs.push(`${lines[i]}\n  go: ${got[i]}\n  ts: ${want[i]}`);
     expect(diffs.slice(0, 10).join('\n')).toBe('');
   });

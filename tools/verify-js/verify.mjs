@@ -133,6 +133,13 @@ function checkEncoding(v) {
     checkEq(v.expected_valid, v.depth <= 64, v, 'verdict');
     return;
   }
+  if (v.type === 'integer_range') {
+    roundTrip(v, v.message, v.cbor);
+    checkMessageFields(v, v.message);
+    checkEq(v.expected_valid, withinBound(v.message), v, 'verdict: every integer the message defines within ±(2^53 - 1)');
+    if (!v.expected_valid) checkEq(v.expected_error, 'protocol_error', v, 'error');
+    return;
+  }
   if (v.type === 'non_shortest') {
     let d;
     try { d = decodeTJ(unhex(v.cbor)); } catch (e) { check(false, v, `decode: ${e.message}`); return; }
@@ -224,12 +231,55 @@ function checkOffer(v, offer) {
   }
 }
 
+const MAX_SAFE = 2n ** 53n - 1n;
+/** A typed-JSON integer as a BigInt, or null for anything else. */
+const tjInt = (x) => (typeof x === 'number' && Number.isInteger(x) ? BigInt(x) : x && typeof x === 'object' && '$int' in x ? BigInt(x.$int) : null);
+/** The entries of a typed-JSON map. */
+const tjEntries = (x) => (x && x.$map ? x.$map : Object.entries(x ?? {}));
+
+/**
+ * The integers a message defines itself (3.1), from its typed JSON: the kind,
+ * IDs, counts, credit, durations, timestamps, metadata sigil keys with the
+ * deadline (32) and credit (35) values, params values, versions and offer
+ * forms. Payloads, caps, props, auth and schemas are not among them.
+ */
+function definedInts(m) {
+  const out = [m[0]];
+  const at = (...i) => { for (const j of i) if (m[j] !== null) out.push(m[j]); };
+  const list = (x) => { if (Array.isArray(x)) out.push(...x); };
+  const md = (x) => {
+    for (const [k, val] of tjEntries(x)) {
+      const key = typeof k === 'string' ? null : tjInt(k);
+      if (key === null) continue;
+      out.push(k);
+      if ((key === 32n || key === 35n) && tjInt(val) !== null) out.push(val);
+    }
+  };
+  const params = (x) => { for (const [, val] of tjEntries(x)) out.push(val); };
+  switch (m[0]) {
+    case 0: list(m[1]); params(m[6]); break;
+    case 1: at(1); out.push(m[5][0]); params(m[6]); break;
+    case 3: case 4: case 7: case 8: at(1); break;
+    case 6: at(1); if (m[2] && m[2].$tag === 1) out.push(m[2].value); break;
+    case 9: at(1, 3); list(m[4]); break;
+    case 16: at(1, 2, 3); md(m[4]); break;
+    case 17: case 18: at(1); break;
+    case 19: case 22: at(1); md(m[2]); break;
+    case 20: case 23: case 24: case 25: at(1, 2); break;
+    case 21: at(1, 2, 3); break;
+  }
+  return out.map(tjInt).filter((x) => x !== null);
+}
+
+const withinBound = (m) => definedInts(m).every((x) => x <= MAX_SAFE && x >= -MAX_SAFE);
+
 function checkMessageFields(v, m) {
   const lay = LAYOUT[m[0]];
   if (!check(lay, v, `unknown kind ${m[0]}`)) return;
   checkEq(m.length, lay[1], v, `${lay[0]} array length`);
   const core = (s) => Number.isInteger(s) && s >= 0 && s <= 22;
   if (m[0] === 23 || m[0] === 9 || m[0] === 6) check(core(m[m[0] === 23 ? 2 : 1]), v, 'Cancel/GoAway/AuthStatus carry core codes only');
+  if (v.type !== 'integer_range') check(withinBound(m), v, 'every integer the message defines is within ±(2^53 - 1)');
 }
 
 function checkMessage(v) {

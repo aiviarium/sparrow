@@ -7,7 +7,7 @@ by [`tools/verify-js`](../tools/verify-js) and by the Go library's conformance t
 
 | File | Area | Spec |
 | --- | --- | --- |
-| `encoding.json` | Integers, float widths (messages only), structs (null slots, tombstones, trailing nulls), sparse structs, enums, unions, `dynamic`, `symbol`, built-ins, map key order, hub metadata keys, the 64-level nesting limit, non-shortest encodings a receiver accepts | 3.1–3.5, 6.3, 7.2 |
+| `encoding.json` | Integers, float widths (messages only), structs (null slots, tombstones, trailing nulls), sparse structs, enums, unions, `dynamic`, `symbol`, built-ins, map key order, hub metadata keys, the 64-level nesting limit, non-shortest encodings a receiver accepts, the ±(2^53 − 1) bound of the integers a message defines | 3.1–3.5, 6.3, 7.2 |
 | `framing.json` | QUIC varints (shortest and non-minimal forms), stream header byte, message-kind ranges, the section 7.7 example, stream openings, a non-minimal length prefix, WebSocket | 3.3, 4.1, 4.6, 7.7 |
 | `handshake.json` | `Hello`, `Welcome` (all four schema offers), `Ready`, `GoAway`, the handshake of a node that dials in, `params` defaults, unknown keys and minimums | 5.3–5.5, 10.2 |
 | `calls.json` | Every call message (kinds 16–25), every control message (kinds 3–9), `moduleRejected` | 5.5, 7.1–7.8, 9.4 |
@@ -67,6 +67,7 @@ must also accept other key orders.
 | `decode_only` | `cbor` a decoder must accept, and what it means |
 | `depth` | A `message`, its `cbor`, its nesting `depth` (arrays, maps and tags count, the message array is level 1, scalars add no level), `max_depth` 64, `expected_valid` |
 | `non_shortest` | A `message`, `cbor` in a valid but not shortest (or not sorted) encoding that a receiver MUST accept, and `shortest_cbor` |
+| `integer_range` | A `message`, `diag`, `cbor` and `expected_valid`: valid when every integer the message defines itself lies within ±(2^53 − 1), otherwise `expected_error` `protocol_error` |
 | `params_table` | `minimums`, and `entries`: `sent_in`, `params`, `params_cbor`, `expected` (`ok` with the `effective` limits, or `goaway` with `status` 3 and the offending `key`) |
 | `message` | `kind`, `kind_name`, `message`, `diag`, `cbor`, `length`, `framed` (varint length + CBOR), optional `refs`, and for 7.7 `spec_framed` (bytes from the spec text) |
 | `quic_varint` | `value`, `encoded`; `decode_only: true` marks a non-minimal form a receiver must accept |
@@ -125,7 +126,11 @@ Points of the spec an implementer is most likely to trip over:
    interface carries no annotations, and an optional field has flag 0x1 and its plain type.
 10. A notification naming a facet or method the callee does not have is dropped, not answered.
 11. A tombstone never changes again, apart from its name and annotations.
-12. Sigil names are unique within a facet or interface (`duplicate_sigil_name`); an enum value's sigil
+12. Every integer a message defines itself (IDs, counts, lengths, credit, durations, timestamps,
+    metadata sigil keys and the deadline and credit values, params) lies within ±(2^53 − 1); a
+    larger one is a `protocol_error` (`range/*`). Payload values of type `int` or `uint` keep their
+    64-bit range (`range/uint-input`).
+13. Sigil names are unique within a facet or interface (`duplicate_sigil_name`); an enum value's sigil
     is named `<enum name>.<value name>`, as in `Color.green` and `Kind.line`. The admin
     interface keeps the bare value names hub-admin section 5 gives (`pending`, `connected`, ...).
 

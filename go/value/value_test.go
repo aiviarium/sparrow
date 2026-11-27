@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"math"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -265,6 +266,15 @@ func TestDecodeErrors(t *testing.T) {
 		{"map from list", n(70), "80"},
 		{"map value type", n(70), "a1 6161 6161"},
 		{"undefined type", n(99), "00"},
+		// Integers the protocol defines lie within ±(2^53 - 1) (core 3.1).
+		{"token beyond 2^53 - 1", n(69), "82 6161 1b0020000000000000"},
+		{"enum sigil beyond 2^53 - 1", n(66), "1b0020000000000000"},
+		{"symbol sigil beyond 2^53 - 1", n(11), "1b0020000000000000"},
+		{"dynamic type beyond 2^53 - 1", n(10), "82 1b0020000000000000 00"},
+		{"union tag beyond 2^53 - 1", n(67), "82 1b0020000000000000 00"},
+		{"sparse tag beyond 2^53 - 1", n(65), "a1 1b0020000000000000 00"},
+		{"timestamp beyond 2^53 - 1 s", n(8), "c1 1b0020000000000000"},
+		{"timestamp beyond -(2^53 - 1) s", n(8), "c1 3b001fffffffffffff"},
 	}
 	for _, tc := range tests {
 		if v, err := c.Decode(tc.t, unhex(tc.in)); err == nil {
@@ -310,4 +320,48 @@ func FuzzDecode(f *testing.F) {
 			t.Fatalf("encoding not stable %x %x", e, e2)
 		}
 	})
+}
+
+// TestIntegerBounds: application values of type int and uint keep their
+// 64-bit range, while the integers the protocol defines inside a value
+// (tokens, sigils, timestamps) lie within ±(2^53 - 1) (core 3.1).
+func TestIntegerBounds(t *testing.T) {
+	c := codec(t)
+	n := schema.Named
+	for _, tc := range []struct {
+		t  schema.TypeRef
+		v  any
+		in string
+	}{
+		{n(schema.TypeUint), uint64(math.MaxUint64), "1bffffffffffffffff"},
+		{n(schema.TypeInt), int64(math.MinInt64), "3b7fffffffffffffff"},
+		{n(schema.TypeTimestamp), cbor.Unix(cbor.MaxSafeInt), "c1 1b001fffffffffffff"},
+		{n(schema.TypeTimestamp), cbor.Unix(-cbor.MaxSafeInt), "c1 3b001ffffffffffffe"},
+		{n(69), Struct{0: "a", 1: Token(cbor.MaxSafeInt)}, "82 6161 1b001fffffffffffff"},
+	} {
+		got, err := c.Decode(tc.t, unhex(tc.in))
+		if err != nil || !reflect.DeepEqual(got, tc.v) {
+			t.Errorf("Decode(%s) = %v, %v; want %v", tc.in, got, err, tc.v)
+		}
+		if b, err := c.Encode(tc.t, tc.v); err != nil || !bytes.Equal(b, unhex(tc.in)) {
+			t.Errorf("Encode(%v) = %x, %v; want %s", tc.v, b, err, tc.in)
+		}
+	}
+	for _, tc := range []struct {
+		t schema.TypeRef
+		v any
+	}{
+		{n(69), Struct{0: "a", 1: Token(cbor.MaxSafeInt + 1)}},
+		{n(schema.TypeSymbol), Symbol{Sigil: cbor.MaxSafeInt + 1, HasSigil: true}},
+		{n(schema.TypeTimestamp), cbor.Unix(cbor.MaxSafeInt + 1)},
+		{n(schema.TypeTimestamp), time.Unix(-cbor.MaxSafeInt-1, 0)},
+	} {
+		if b, err := c.Encode(tc.t, tc.v); err == nil {
+			t.Errorf("Encode(%v) = %x", tc.v, b)
+		}
+	}
+	// An integral float beyond the bound is sent as a float.
+	if b, err := c.Encode(n(schema.TypeTimestamp), cbor.Time{IsFloat: true, Float: 1 << 53}); err != nil || hex.EncodeToString(b) != "c1fa5a000000" {
+		t.Errorf("Encode(2^53 s) = %x, %v", b, err)
+	}
 }

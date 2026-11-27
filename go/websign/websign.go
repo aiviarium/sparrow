@@ -186,7 +186,7 @@ func DecodeRevocation(raw []byte) (*Revocation, error) {
 		return nil, fmt.Errorf("websign: revocation list has %d elements, want 4", n)
 	}
 	r := &Revocation{}
-	if r.Seq, err = d.Uint(); err != nil {
+	if r.Seq, err = d.SafeUint(); err != nil {
 		return nil, err
 	}
 	k, err := d.ArrayHead()

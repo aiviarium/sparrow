@@ -451,7 +451,7 @@ func (o DecodeOptions) Decode(b []byte) (Message, error) {
 	if n == 0 {
 		return nil, &DecodeError{Err: errors.New("empty envelope")}
 	}
-	k, err := d.Uint()
+	k, err := d.SafeUint()
 	if err != nil {
 		return nil, &DecodeError{Err: fmt.Errorf("kind: %w", err)}
 	}
@@ -501,7 +501,7 @@ func (f *fields) uint(name string) uint64 {
 	if !f.ok() {
 		return 0
 	}
-	v, err := f.d.Uint()
+	v, err := f.d.SafeUint()
 	f.fail(name, err)
 	return v
 }
@@ -522,7 +522,7 @@ func (f *fields) uintOrNull(name string) *uint64 {
 		_ = f.d.Null()
 		return nil
 	}
-	v, err := f.d.Uint()
+	v, err := f.d.SafeUint()
 	f.fail(name, err)
 	return &v
 }
@@ -644,7 +644,7 @@ func (f *fields) uints(name string, nullable, nonEmpty bool) []uint64 {
 	}
 	out := make([]uint64, n)
 	for i := range out {
-		if out[i], err = f.d.Uint(); err != nil {
+		if out[i], err = f.d.SafeUint(); err != nil {
 			f.fail(name, err)
 			return nil
 		}
@@ -692,7 +692,7 @@ func (f *fields) inlineSchema(name string) *InlineSchema {
 	}
 	var tag uint64
 	if err == nil {
-		tag, err = f.d.Uint()
+		tag, err = f.d.SafeUint()
 	}
 	if err == nil && tag != 2 {
 		err = fmt.Errorf("form %d, want 2 (inline)", tag)
@@ -722,7 +722,7 @@ func (f *fields) offer(name string) SchemaOffer {
 		err = errors.New("empty schema offer")
 	}
 	if err == nil {
-		k, err = f.d.Uint()
+		k, err = f.d.SafeUint()
 	}
 	want := map[uint64]int{0: 2, 1: 4, 2: 3, 3: 3}
 	if err == nil {

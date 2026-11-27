@@ -78,6 +78,7 @@ const MAX_DATE_MS = 8.64e15;
 const I64_MIN = -(1n << 63n);
 const I64_MAX = (1n << 63n) - 1n;
 const U64_MAX = (1n << 64n) - 1n;
+const MAX_SAFE = BigInt(Number.MAX_SAFE_INTEGER);
 
 function intOf(v: unknown): bigint | null {
   if (typeof v === 'bigint') return v;
@@ -242,7 +243,7 @@ export class Codec {
       case 4: {
         if (inDyn) throw new ValueError(path, '[4] must not appear inside a dynamic value');
         const tok = intOf(v);
-        if (tok === null || tok <= 0n) throw new ValueError(path, `a byte stream inside a value is a nonzero token, got ${describe(v)}`);
+        if (tok === null || tok <= 0n || tok > MAX_SAFE) throw new ValueError(path, `a byte stream inside a value is a nonzero token of at most 2^53 - 1, got ${describe(v)}`);
         w.uint(tok);
         return;
       }
@@ -300,9 +301,10 @@ export class Codec {
           s = v;
         } else throw new ValueError(path, `timestamp needs a Date or epoch seconds, got ${describe(v)}`);
         let n = intOf(s);
-        if (n !== null && (n < I64_MIN || n > I64_MAX)) {
-          // As Go's cbor.AppendTime: an integral number beyond int64 goes as a float.
-          if (typeof s === 'bigint') throw new ValueError(path, `timestamp ${s} s is outside the 64-bit range`);
+        if (n !== null && (n < -MAX_SAFE || n > MAX_SAFE)) {
+          // A message holds no integer beyond ±(2^53 - 1) (3.1): as Go's cbor.AppendTime,
+          // an integral number beyond it goes as a float.
+          if (typeof s === 'bigint') throw new ValueError(path, `timestamp ${s} s is beyond ±(2^53 - 1)`);
           n = null;
         }
         w.tag(TAG_EPOCH_TIME);
@@ -340,11 +342,11 @@ export class Codec {
           else w.text(v);
           return;
         }
-        if (typeof v === 'number' && Number.isInteger(v) && v >= 0) {
-          w.uint(v);
+        if (Number.isSafeInteger(v) && (v as number) >= 0) {
+          w.uint(v as number);
           return;
         }
-        throw new ValueError(path, `symbol needs a string or a sigil, got ${describe(v)}`);
+        throw new ValueError(path, `symbol needs a string or a sigil of at most 2^53 - 1, got ${describe(v)}`);
     }
     const td = this.types.get(id);
     if (!td) throw new ValueError(path, `type ${id} is not defined in facet ${this.facet.name}`);
@@ -473,9 +475,9 @@ export class Codec {
         throw new ValueError(path, "[3, T] is only allowed as a method's whole input or output");
       case 4: {
         if (inDyn) throw new ValueError(path, '[4] must not appear inside a dynamic value');
-        const u = this.wrap(path, () => r.uint());
+        const u = this.wrap(path, () => r.uintNumber());
         if (u === 0) throw new ValueError(path, 'a byte stream inside a value is a nonzero token');
-        return typeof u === 'bigint' ? Number(u) : u;
+        return u;
       }
     }
     throw new ValueError(path, 'bad type reference');
@@ -548,9 +550,8 @@ export class Codec {
       case T.symbol: {
         const m = this.wrap(path, () => r.peekMajor());
         if (m === MAJOR_UINT) {
-          const s = this.wrap(path, () => r.uint());
-          const name = typeof s === 'number' ? this.symbolNames.get(s) : undefined;
-          return name ?? s;
+          const s = this.wrap(path, () => r.uintNumber());
+          return this.symbolNames.get(s) ?? s;
         }
         if (m === MAJOR_TEXT) return this.wrap(path, () => r.text());
         throw new ValueError(path, 'symbol needs a sigil or a text string');
@@ -562,8 +563,8 @@ export class Codec {
       case 'alias':
         return this.dec(r, td.target, path, depth + 1, inDyn);
       case 'enum': {
-        const s = this.wrap(path, () => r.uint());
-        if (typeof s === 'number' && td.values.includes(s)) return this.enumValueName(td, s) ?? s;
+        const s = this.wrap(path, () => r.uintNumber());
+        if (td.values.includes(s)) return this.enumValueName(td, s) ?? s;
         return s;
       }
       case 'union': {
@@ -599,12 +600,7 @@ export class Codec {
         throw new ValueError(path, `sparse struct ${name} needs a map: ${(e as Error).message}`);
       }
       for (let i = 0; i < n; i++) {
-        const tag = this.wrap(path, () => r.uint());
-        if (typeof tag === 'bigint') {
-          this.wrap(path, () => r.skip());
-          continue;
-        }
-        field(tag);
+        field(this.wrap(path, () => r.uintNumber()));
       }
     } else {
       let n: number;

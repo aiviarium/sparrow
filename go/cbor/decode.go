@@ -184,6 +184,39 @@ func (d *Decoder) Uint() (uint64, error) {
 	return h.arg, err
 }
 
+// MaxSafeInt is 2^53 - 1, the largest integer a JavaScript number holds
+// exactly. Every integer a message defines itself (IDs, counts, lengths,
+// credit, durations, timestamps) lies within ±MaxSafeInt (section 3.1);
+// application values of type int and uint keep their full 64-bit range.
+const MaxSafeInt = 1<<53 - 1
+
+// SafeUint reads an unsigned integer of at most MaxSafeInt. On error it
+// consumes nothing.
+func (d *Decoder) SafeUint() (uint64, error) {
+	start := d.off
+	v, err := d.Uint()
+	if err == nil && v > MaxSafeInt {
+		d.off = start
+		return 0, errAt(start, "integer %d is beyond 2^53 - 1", v)
+	}
+	return v, err
+}
+
+// SafeInt reads an integer within ±MaxSafeInt. On error it consumes
+// nothing.
+func (d *Decoder) SafeInt() (int64, error) {
+	start := d.off
+	v, err := d.Int()
+	if err == nil && (v > MaxSafeInt || v < -MaxSafeInt) {
+		d.off = start
+		return 0, errAt(start, "integer %d is beyond ±(2^53 - 1)", v)
+	}
+	if err != nil {
+		d.off = start
+	}
+	return v, err
+}
+
 // Int reads an integer in the signed 64-bit range.
 func (d *Decoder) Int() (int64, error) {
 	h, err := d.peek()
@@ -479,9 +512,9 @@ func (t Time) Time() time.Time {
 	return time.Unix(int64(sec), int64(ns))
 }
 
-// integral reports whether f has no fraction and fits int64.
+// integral reports whether f has no fraction and lies within ±MaxSafeInt.
 func integral(f float64) (int64, bool) {
-	if f != math.Trunc(f) || f >= 1<<63 || f < -(1<<63) {
+	if f != math.Trunc(f) || f > MaxSafeInt || f < -MaxSafeInt {
 		return 0, false
 	}
 	return int64(f), true
@@ -489,7 +522,8 @@ func integral(f float64) (int64, bool) {
 
 // AppendTime appends tag 1 and the time's seconds: an integer when there is
 // no fraction (core 6.3), also for a float Time such as 2.0, otherwise the
-// float in its shortest exact width.
+// float in its shortest exact width. A float beyond ±MaxSafeInt stays a
+// float, since a message holds no larger integer (3.1).
 func AppendTime(dst []byte, t Time) []byte {
 	dst = AppendTag(dst, TagEpochTime)
 	if t.IsFloat {
@@ -501,8 +535,8 @@ func AppendTime(dst []byte, t Time) []byte {
 	return AppendInt(dst, t.Sec)
 }
 
-// Time reads a tag-1 timestamp holding an integer (signed 64-bit range) or
-// a float.
+// Time reads a tag-1 timestamp holding an integer within ±MaxSafeInt
+// (section 3.1) or a float.
 func (d *Decoder) Time() (Time, error) {
 	start := d.off
 	tag, err := d.Tag()
@@ -520,7 +554,7 @@ func (d *Decoder) Time() (Time, error) {
 		}
 		return Time{Float: f, IsFloat: true}, err
 	}
-	s, err := d.Int()
+	s, err := d.SafeInt()
 	if err != nil {
 		d.off = start
 	}

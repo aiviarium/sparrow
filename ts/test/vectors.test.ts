@@ -7,6 +7,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { Float, Writer, bytesEqual, decode, encode, isCanonical, Reader } from '../src/cbor.js';
 import {
   CreditWindow,
+  DecodeError,
   FrameDecoder,
   checkParams,
   classifyStreamHeader,
@@ -136,6 +137,17 @@ describe('encoding.json', () => {
         expect(isCanonical(b)).toBe(false);
         if (v.name !== 'non-shortest/unsorted-metadata') expect(() => decode(b, { requirePreferred: true })).toThrow();
         decodeMessage(b);
+        return;
+      }
+      if (v.type === 'integer_range') {
+        const b = unhex(v.cbor);
+        expect(hex(encode(fromTJ(v.message)))).toBe(v.cbor);
+        if (v.expected_valid) {
+          expect(hex(encodeMessage(decodeMessage(b)))).toBe(v.cbor);
+        } else {
+          expect(v.expected_error).toBe('protocol_error');
+          expect(() => decodeMessage(b)).toThrow(DecodeError);
+        }
         return;
       }
       if (v.type === 'decode_only') {

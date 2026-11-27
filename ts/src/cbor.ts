@@ -495,11 +495,14 @@ export class Reader {
     return this.headOf(MAJOR_UINT, 'an unsigned integer').arg;
   }
 
-  /** Reads an unsigned integer that must fit a JS number. */
+  /**
+   * Reads an unsigned integer of at most 2^53 - 1, the bound of every integer
+   * a message defines itself (3.1).
+   */
   uintNumber(): number {
     const at = this.off;
     const v = this.uint();
-    if (typeof v === 'bigint') throw new CborError(`integer ${v} is too large`, at);
+    if (typeof v === 'bigint') throw new CborError(`integer ${v} is beyond 2^53 - 1`, at);
     return v;
   }
 

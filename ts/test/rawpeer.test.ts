@@ -103,8 +103,22 @@ describe('server rules', () => {
     const log = f.server.services[0].methods.find((m: { name: string }) => m.name === 'log').id;
     raw.send({ kind: 16, callId: 2, facetId: 16, methodId: log, metadata: new Map(), input: str('x') });
     expect(await raw.next(20)).toMatchObject({ callId: 2, status: Status.invalid_argument });
-    raw.send({ kind: 7, nonce: 99n ** 9n });
-    expect(await raw.next(8)).toMatchObject({ nonce: 99n ** 9n });
+    raw.send({ kind: 7, nonce: Number.MAX_SAFE_INTEGER });
+    expect(await raw.next(8)).toMatchObject({ nonce: Number.MAX_SAFE_INTEGER });
+  });
+
+  it('an integer the message defines beyond 2^53 - 1 is a protocol_error (3.1)', async () => {
+    for (const m of [
+      [7, 2n ** 53n], // Ping nonce
+      [24, 2, 2n ** 53n], // Credit amount
+      [16, 2n ** 53n, 16, 0, new Map(), null], // call ID
+      [16, 2, 16, 0, new Map([[32, 2n ** 53n]]), null], // deadline key
+    ]) {
+      const { raw, hash } = await rawClient();
+      raw.send({ kind: 2, schemaHash: hash });
+      raw.send(encode(m));
+      expect(await raw.next(9)).toMatchObject({ status: Status.protocol_error });
+    }
   });
 
   it('the deadline key makes the callee answer deadline_exceeded', async () => {

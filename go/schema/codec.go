@@ -140,7 +140,7 @@ func (r *reader) uint(what string) uint64 {
 	if r.err != nil {
 		return 0
 	}
-	v, err := r.d.Uint()
+	v, err := r.d.SafeUint()
 	r.fail(err, what)
 	return v
 }

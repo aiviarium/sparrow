@@ -2251,6 +2251,305 @@
       "cbor": "861002101864a268782d74656e616e746461636d651820191388d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b",
       "shortest_cbor": "861002101864a2182019138868782d74656e616e746461636d65d825506f1c2e4a8b3d4f5e9a7b0c1d2e3f4a5b",
       "expected_valid": true
+    },
+    {
+      "name": "range/call-id-max",
+      "description": "Request with call ID 2^53 - 2, the largest even (client) call ID within ±(2^53 - 1). Accepted.",
+      "spec": "3.1",
+      "type": "integer_range",
+      "message": [
+        16,
+        9007199254740990,
+        16,
+        0,
+        {},
+        null
+      ],
+      "diag": "[16, 9007199254740990, 16, 0, {}, null]",
+      "cbor": "86101b001ffffffffffffe1000a0f6",
+      "expected_valid": true
+    },
+    {
+      "name": "range/call-id-2^53",
+      "description": "Request with call ID 2^53. Every integer a message defines itself MUST lie within ±(2^53 - 1), so JavaScript holds it exactly; this message is a protocol_error.",
+      "spec": "3.1",
+      "type": "integer_range",
+      "message": [
+        16,
+        {
+          "$int": "9007199254740992"
+        },
+        16,
+        0,
+        {},
+        null
+      ],
+      "diag": "[16, 9007199254740992, 16, 0, {}, null]",
+      "cbor": "86101b00200000000000001000a0f6",
+      "expected_valid": false,
+      "expected_error": "protocol_error"
+    },
+    {
+      "name": "range/facet-id",
+      "description": "Request naming facet ID 2^53: a protocol_error.",
+      "spec": "3.1",
+      "type": "integer_range",
+      "message": [
+        16,
+        2,
+        {
+          "$int": "9007199254740992"
+        },
+        0,
+        {},
+        null
+      ],
+      "diag": "[16, 2, 9007199254740992, 0, {}, null]",
+      "cbor": "8610021b002000000000000000a0f6",
+      "expected_valid": false,
+      "expected_error": "protocol_error"
+    },
+    {
+      "name": "range/credit-max",
+      "description": "Credit granting 2^53 - 1 bytes. Accepted.",
+      "spec": "3.1",
+      "type": "integer_range",
+      "message": [
+        24,
+        6,
+        9007199254740991
+      ],
+      "diag": "[24, 6, 9007199254740991]",
+      "cbor": "831818061b001fffffffffffff",
+      "expected_valid": true
+    },
+    {
+      "name": "range/credit-2^53",
+      "description": "Credit granting 2^53 bytes: a protocol_error, not a credit that saturates.",
+      "spec": "3.1",
+      "type": "integer_range",
+      "message": [
+        24,
+        6,
+        {
+          "$int": "9007199254740992"
+        }
+      ],
+      "diag": "[24, 6, 9007199254740992]",
+      "cbor": "831818061b0020000000000000",
+      "expected_valid": false,
+      "expected_error": "protocol_error"
+    },
+    {
+      "name": "range/retry-after",
+      "description": "GoAway(unavailable) with retry_after_ms 2^53: a protocol_error.",
+      "spec": "3.1",
+      "type": "integer_range",
+      "message": [
+        9,
+        14,
+        "",
+        {
+          "$int": "9007199254740992"
+        },
+        null
+      ],
+      "diag": "[9, 14, \"\", 9007199254740992, null]",
+      "cbor": "85090e601b0020000000000000f6",
+      "expected_valid": false,
+      "expected_error": "protocol_error"
+    },
+    {
+      "name": "range/progress-done",
+      "description": "Progress with done = 2^53: a protocol_error.",
+      "spec": "3.1",
+      "type": "integer_range",
+      "message": [
+        21,
+        7,
+        {
+          "$int": "9007199254740992"
+        },
+        null,
+        null
+      ],
+      "diag": "[21, 7, 9007199254740992, null, null]",
+      "cbor": "8515071b0020000000000000f6f6",
+      "expected_valid": false,
+      "expected_error": "protocol_error"
+    },
+    {
+      "name": "range/bytes-token",
+      "description": "Bytes for token 2^53: a protocol_error.",
+      "spec": "3.1",
+      "type": "integer_range",
+      "message": [
+        25,
+        2,
+        {
+          "$int": "9007199254740992"
+        },
+        {
+          "$bytes": ""
+        },
+        true
+      ],
+      "diag": "[25, 2, 9007199254740992, h'', true]",
+      "cbor": "851819021b002000000000000040f5",
+      "expected_valid": false,
+      "expected_error": "protocol_error"
+    },
+    {
+      "name": "range/ping-nonce",
+      "description": "Ping with nonce 2^53: a protocol_error.",
+      "spec": "3.1",
+      "type": "integer_range",
+      "message": [
+        7,
+        {
+          "$int": "9007199254740992"
+        }
+      ],
+      "diag": "[7, 9007199254740992]",
+      "cbor": "82071b0020000000000000",
+      "expected_valid": false,
+      "expected_error": "protocol_error"
+    },
+    {
+      "name": "range/deadline-key",
+      "description": "Request whose deadline metadata key (32) is 2^53 ms: a protocol_error.",
+      "spec": "3.1",
+      "type": "integer_range",
+      "message": [
+        16,
+        2,
+        16,
+        0,
+        {
+          "$map": [
+            [
+              32,
+              {
+                "$int": "9007199254740992"
+              }
+            ]
+          ]
+        },
+        null
+      ],
+      "diag": "[16, 2, 16, 0, {32: 9007199254740992}, null]",
+      "cbor": "8610021000a118201b0020000000000000f6",
+      "expected_valid": false,
+      "expected_error": "protocol_error"
+    },
+    {
+      "name": "range/metadata-sigil-key",
+      "description": "Request with metadata sigil key 2^53: a protocol_error.",
+      "spec": "3.1",
+      "type": "integer_range",
+      "message": [
+        16,
+        2,
+        16,
+        0,
+        {
+          "$map": [
+            [
+              {
+                "$int": "9007199254740992"
+              },
+              0
+            ]
+          ]
+        },
+        null
+      ],
+      "diag": "[16, 2, 16, 0, {9007199254740992: 0}, null]",
+      "cbor": "8610021000a11b002000000000000000f6",
+      "expected_valid": false,
+      "expected_error": "protocol_error"
+    },
+    {
+      "name": "range/expires-at-min",
+      "description": "AuthStatus(ok) whose expires_at is -(2^53 - 1) s. Accepted.",
+      "spec": "3.1",
+      "type": "integer_range",
+      "message": [
+        6,
+        0,
+        {
+          "$tag": 1,
+          "value": -9007199254740991
+        }
+      ],
+      "diag": "[6, 0, 1(-9007199254740991)]",
+      "cbor": "830600c13b001ffffffffffffe",
+      "expected_valid": true
+    },
+    {
+      "name": "range/expires-at",
+      "description": "AuthStatus(ok) whose expires_at is -(2^53) s: a protocol_error.",
+      "spec": "3.1",
+      "type": "integer_range",
+      "message": [
+        6,
+        0,
+        {
+          "$tag": 1,
+          "value": {
+            "$int": "-9007199254740992"
+          }
+        }
+      ],
+      "diag": "[6, 0, 1(-9007199254740992)]",
+      "cbor": "830600c13b001fffffffffffff",
+      "expected_valid": false,
+      "expected_error": "protocol_error"
+    },
+    {
+      "name": "range/params",
+      "description": "Hello whose params set maxMessageSize to 2^53: a protocol_error.",
+      "spec": "3.1",
+      "type": "integer_range",
+      "message": [
+        0,
+        [
+          1
+        ],
+        {},
+        null,
+        null,
+        null,
+        {
+          "maxMessageSize": {
+            "$int": "9007199254740992"
+          }
+        },
+        false
+      ],
+      "diag": "[0, [1], {}, null, null, null, {\"maxMessageSize\": 9007199254740992}, false]",
+      "cbor": "88008101a0f6f6f6a16e6d61784d65737361676553697a651b0020000000000000f4",
+      "expected_valid": false,
+      "expected_error": "protocol_error"
+    },
+    {
+      "name": "range/uint-input",
+      "description": "Request whose input is the uint 2^64 - 1. Application values of type int or uint keep their full 64-bit range: the input is a payload, not an integer the message defines. Accepted.",
+      "spec": "3.1",
+      "type": "integer_range",
+      "message": [
+        16,
+        2,
+        16,
+        0,
+        {},
+        {
+          "$int": "18446744073709551615"
+        }
+      ],
+      "diag": "[16, 2, 16, 0, {}, 18446744073709551615]",
+      "cbor": "8610021000a01bffffffffffffffff",
+      "expected_valid": true
     }
   ]
 }

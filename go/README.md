@@ -129,6 +129,13 @@ NETSIM_SEED=123 go test ./netsimtest -run TestLossyWebTransport -v
 - Receivers accept integers and lengths that are not in shortest form (3.1 binds senders);
   `cbor.Options.RequirePreferred` turns on strict checking. Senders always write preferred form,
   and map keys in deterministic order.
+- Every integer a message defines itself lies within ±(2^53 - 1) (3.1, `cbor.MaxSafeInt`):
+  `wire.Decode` refuses a larger kind, call ID, facet, method or sigil ID, token, credit amount,
+  count, epoch, nonce, `retry_after_ms`, version, params value, metadata sigil key, deadline or
+  credit value, or `AuthStatus` timestamp as malformed (`protocol_error`); the schema codec refuses
+  larger IDs, and the value codec larger tokens, sigils, type IDs, tags and integer timestamps (an
+  integral float timestamp beyond the bound is sent as a float). `int` and `uint` values keep their
+  64-bit range. Web Profile tickets with a time claim beyond the bound are refused.
 - The 64-level nesting limit applies to the whole message: arrays, maps and tags count, the outermost
   array is level 1, and scalars add no level (so 64 nested arrays holding a uint are accepted).
 - Received `params` are checked with `wire.Params.Validate` (minimums of 5.4); unknown keys are kept

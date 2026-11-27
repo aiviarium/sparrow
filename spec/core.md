@@ -58,7 +58,7 @@ Every message is a single CBOR data item (RFC 8949) in preferred serialization. 
 
 | CBOR feature | Rule |
 | --- | --- |
-| Integers | MUST use the shortest form. |
+| Integers | MUST use the shortest form. Every integer a message defines itself (IDs, counts, lengths, credit, durations, timestamps) MUST lie within ±(2^53 − 1), so JavaScript holds it exactly; a larger one is a `protocol_error`. Application values of type `int` or `uint` (section 6.3) keep their full 64-bit range. |
 | Floats | SHOULD use the shortest width that keeps the value exact (RFC 8949, section 4.1). Decoders MUST accept any float width, and MUST accept an integer where a float type is declared, because JavaScript cannot tell 3 from 3.0. |
 | Byte strings, text strings | MUST be definite length. Text MUST be valid UTF-8. |
 | Arrays, maps | MUST be definite length. Map keys MUST be unique. |

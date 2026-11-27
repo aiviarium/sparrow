@@ -506,3 +506,56 @@ func TestTime(t *testing.T) {
 		t.Errorf("Time(-1.5) = %v", got)
 	}
 }
+
+// TestSafeInts: SafeUint, SafeInt and Time refuse integers beyond
+// ±(2^53 - 1), the bound of every integer a message defines (core 3.1),
+// and consume nothing then.
+func TestSafeInts(t *testing.T) {
+	ok := []struct {
+		in string
+		u  bool
+		v  int64
+	}{
+		{"1b001fffffffffffff", true, MaxSafeInt},
+		{"00", true, 0},
+		{"3b001ffffffffffffe", false, -MaxSafeInt},
+	}
+	for _, c := range ok {
+		d := NewDecoder(unhex(c.in))
+		var got int64
+		var err error
+		if c.u {
+			var u uint64
+			u, err = d.SafeUint()
+			got = int64(u)
+		} else {
+			got, err = d.SafeInt()
+		}
+		if err != nil || got != c.v || !d.Done() {
+			t.Errorf("%s: %d, %v", c.in, got, err)
+		}
+	}
+	for _, in := range []string{"1b0020000000000000", "1bffffffffffffffff", "3b001fffffffffffff", "c1 1b0020000000000000", "c1 3b001fffffffffffff"} {
+		b := unhex(in)
+		d := NewDecoder(b)
+		var err error
+		switch {
+		case b[0] == 0xc1:
+			_, err = d.Time()
+		case b[0]>>5 == MajorUint:
+			if _, err = d.SafeUint(); err == nil {
+				t.Errorf("SafeUint(%s) accepted", in)
+			}
+			_, err = d.SafeInt()
+		default:
+			_, err = d.SafeInt()
+		}
+		if err == nil || d.Offset() != 0 {
+			t.Errorf("%s: accepted or consumed (%v, offset %d)", in, err, d.Offset())
+		}
+	}
+	// An integral float beyond the bound stays a float.
+	if got := hex.EncodeToString(AppendTime(nil, Time{IsFloat: true, Float: 1 << 53})); got != "c1fa5a000000" {
+		t.Errorf("AppendTime(2^53) = %s", got)
+	}
+}
