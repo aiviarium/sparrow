@@ -540,6 +540,9 @@ const (
 	RolledBack = RevisionState(adminiface.SigilRolledBack)
 )
 
+// String returns the value name alone, the sigil name without its
+// "RevisionState." prefix (core 6.5 lets bindings show it so): pending,
+// confirmed or rolledBack. The JSON output of sparrow-admin uses it.
 func (s RevisionState) String() string {
 	switch s {
 	case Pending:
@@ -563,6 +566,8 @@ const (
 	Removed   = NodeState(adminiface.SigilRemoved)
 )
 
+// String returns the value name alone, the sigil name without its
+// "NodeState." prefix: connected, offline, disabled or removed.
 func (s NodeState) String() string {
 	switch s {
 	case Connected:

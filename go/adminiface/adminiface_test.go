@@ -2,6 +2,7 @@ package adminiface
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/aiviarium/sparrow/go/schema"
@@ -25,6 +26,18 @@ func TestInterfaceAndFacet(t *testing.T) {
 	h, _ := i.Hash()
 	if !bytes.Equal(h, InterfaceHash()) || len(h) != schema.HashLen {
 		t.Fatalf("interface hash %x", h)
+	}
+	// Each enum value sigil is named after its enum (core 6.5).
+	names := map[uint64]string{}
+	for _, sg := range i.Sigils {
+		names[sg.ID] = sg.Name
+	}
+	for _, td := range i.Types {
+		for _, v := range td.Values {
+			if !strings.HasPrefix(names[v], td.Name+".") {
+				t.Errorf("sigil %d of enum %s is named %q", v, td.Name, names[v])
+			}
+		}
 	}
 	// fresh copies
 	Facet(20).Types[0].Name = "x"

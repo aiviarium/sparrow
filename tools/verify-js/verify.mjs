@@ -851,7 +851,8 @@ const ADMIN_FIELDS = { // type -> [tag, name, type, optional]
 };
 const ADMIN_ALIASES = { 72: [0, 71], 74: [0, 6] };
 const ADMIN_ENUMS = { 77: [64, 65, 66], 79: [67, 68, 69, 70] };
-const ADMIN_SIGILS = ['pending', 'confirmed', 'rolledBack', 'connected', 'offline', 'disabled', 'removed'];
+const ADMIN_SIGILS = ['RevisionState.pending', 'RevisionState.confirmed', 'RevisionState.rolledBack',
+  'NodeState.connected', 'NodeState.offline', 'NodeState.disabled', 'NodeState.removed'];
 const IDEM = 0x1;
 const ADMIN_METHODS = [ // id, name, input, output, flags
   [0, 'get', 0, 68, IDEM], [1, 'validate', 70, 72, IDEM], [2, 'commit', 69, 3, 0], [3, 'confirm', 3, 0, IDEM],

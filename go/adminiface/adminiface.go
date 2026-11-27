@@ -158,9 +158,13 @@ func Types() []schema.TypeDef {
 	}
 }
 
-// Sigils returns sigils 64-70, all kind 0 (enum values).
+// Sigils returns sigils 64-70, all kind 0 (enum values), each named after
+// its enum (core 6.5).
 func Sigils() []schema.Sigil {
-	names := []string{"pending", "confirmed", "rolledBack", "connected", "offline", "disabled", "removed"}
+	names := []string{
+		"RevisionState.pending", "RevisionState.confirmed", "RevisionState.rolledBack",
+		"NodeState.connected", "NodeState.offline", "NodeState.disabled", "NodeState.removed",
+	}
 	out := make([]schema.Sigil, len(names))
 	for i, n := range names {
 		out[i] = schema.Sigil{ID: SigilPending + uint64(i), Name: n, Kind: schema.SigilEnumValue, Annotations: schema.Annotations{}}

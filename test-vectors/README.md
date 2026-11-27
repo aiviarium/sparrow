@@ -133,7 +133,7 @@ Points of the spec an implementer is most likely to trip over:
 13. Sigil names are unique within a facet or interface (`duplicate_sigil_name`); an enum value's sigil
     is named `<enum name>.<value name>`, as in `Color.green` and `Kind.line`, and a kind-0 sigil is a
     value of exactly one enum (`sigil_in_two_enums`, `schema/delta-invalid-sigil-in-two-enums`). The admin
-    interface keeps the bare value names hub-admin section 5 gives (`pending`, `connected`, ...).
+    interface names its value sigils the same way (`RevisionState.pending`, `NodeState.connected`, ...).
 
 Error and reason codes such as `facets_not_sorted`, `facet1_mismatch`, `invalid_notification` and
 `invalid_name` are a vocabulary for these files only.

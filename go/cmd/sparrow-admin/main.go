@@ -18,6 +18,9 @@
 //
 // Documents use the JSON form of admin.Config; a top-level "policy" list of
 // [principal, facet, level] is accepted as the reference hub's ref.policy.
+// Revision and node states print as the value name alone (core 6.5): "state"
+// is "pending", "confirmed" or "rolledBack" for a revision, and
+// "connected", "offline", "disabled" or "removed" for a node.
 package main
 
 import (

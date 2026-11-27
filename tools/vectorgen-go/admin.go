@@ -83,9 +83,10 @@ func adminTypes() []any {
 
 func adminSigils() []any {
 	return list(
-		sigil(sgPending, "pending", 0, nil), sigil(sgConfirmed, "confirmed", 0, nil), sigil(sgRolledBack, "rolledBack", 0, nil),
-		sigil(sgConnected, "connected", 0, nil), sigil(sgOffline, "offline", 0, nil),
-		sigil(sgDisabled, "disabled", 0, nil), sigil(sgRemoved, "removed", 0, nil),
+		sigil(sgPending, "RevisionState.pending", 0, nil), sigil(sgConfirmed, "RevisionState.confirmed", 0, nil),
+		sigil(sgRolledBack, "RevisionState.rolledBack", 0, nil),
+		sigil(sgConnected, "NodeState.connected", 0, nil), sigil(sgOffline, "NodeState.offline", 0, nil),
+		sigil(sgDisabled, "NodeState.disabled", 0, nil), sigil(sgRemoved, "NodeState.removed", 0, nil),
 	)
 }
 

@@ -115,9 +115,9 @@ The types and methods below make up the interface `sparrow.hub.admin` v1. The in
 | 74 | `Names` | alias | `list<string>` |
 | 75 | `Event` | union | 0: snapshot `Snapshot`; 1: revision `RevisionEvent`; 2: node `NodeEvent` |
 | 76 | `RevisionEvent` | struct | 0: revision `uint`; 1: state `RevisionState`; 2: confirmInMs `optional uint` |
-| 77 | `RevisionState` | enum | sigils 64 `pending`, 65 `confirmed`, 66 `rolledBack` |
+| 77 | `RevisionState` | enum | sigils 64 `RevisionState.pending`, 65 `RevisionState.confirmed`, 66 `RevisionState.rolledBack` |
 | 78 | `NodeEvent` | struct | 0: node `string`; 1: revision `uint`; 2: state `NodeState`; 3: message `optional string` |
-| 79 | `NodeState` | enum | sigils 67 `connected`, 68 `offline`, 69 `disabled`, 70 `removed` |
+| 79 | `NodeState` | enum | sigils 67 `NodeState.connected`, 68 `NodeState.offline`, 69 `NodeState.disabled`, 70 `NodeState.removed` |
 
 Sigils 64–70 are kind 0 (enum values). `confirmInMs` is the time left before the deadline, measured by the hub when it sent the message, so clocks need not agree. A `Problem.path` lists the keys from the document root to the problem, using the field names of section 3 and a union's variant name as one more key, with byte-string map keys as lowercase hex, such as `["nodes", "acme.charts", "link", "dial", "pin"]`.
 
