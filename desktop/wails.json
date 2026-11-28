@@ -1,0 +1,11 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "sparrow-desktop",
+  "outputfilename": "sparrow-desktop",
+  "frontend:dir": "frontend",
+  "frontend:install": "node build.mjs",
+  "frontend:build": "node build.mjs",
+  "author": {
+    "name": "Sparrow"
+  }
+}

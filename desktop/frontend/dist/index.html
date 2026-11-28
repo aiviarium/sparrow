@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sparrow</title>
+  <script type="importmap">
+      {
+        "imports": {
+          "@aiviarium/sparrow": "/vendor/sparrow/index.js",
+          "@aiviarium/sparrow/websocket": "/vendor/sparrow/transport/websocket.js",
+          "@aiviarium/sparrow/webtransport": "/vendor/sparrow/transport/webtransport.js",
+          "@aiviarium/sparrow-client": "/vendor/sparrow-client/index.js"
+        }
+      }
+    </script>
+</head>
+
+      async function boot() {
+        const cfg = await window.go.main.App.HubConfig();
+        if (!cfg || !cfg.baseUrl) {
+          throw new Error('Local Sparrow hub did not initialize');
+        }
+        const rootEl = document.getElementById('sparrow-root');
+        const rootKeys = (cfg.rootKeys || []).map((hex) => cbor.fromHex(hex));
+        const hull = createHull({
+          baseUrl: cfg.baseUrl,
+          hostApi: '3.2.0',
+          rootKeys,
+          shared: { mount: rootEl },
+          snapshotStore: new IndexedDBSnapshotStore('sparrow-desktop'),
+          authorize: ({ headers }) => {
+            headers.Authorization = 'Bearer ' + cfg.token;
+          },
+        });
+        window.__sparrowHull = hull;
+        await hull.start();
+
+        // If no signed shell module mounted into #sparrow-root, show a minimal
+        // diagnostic readout proving the Wails WebView <-> local hub <-> Go node pipeline.
+        if (hull.loadedModules().length === 0 && rootEl && rootEl.childElementCount === 0) {
+          const sess = hull.session;
+          const facets = sess?.peerSchema?.facets?.map((f) => f.name) || [];
+          let desktopInfo = '';
+          if (sess?.peerFacet('desktop')) {
+            try {
+              desktopInfo = await sess.call('desktop', 'info', null);
+            } catch (e) {
+              desktopInfo = String(e);
+            }
+          }
+          const pre = document.createElement('pre');
+          pre.style.cssText = 'font-family:monospace;padding:16px;white-space:pre-wrap;';
+          pre.textContent =
+            'Sparrow Desktop (Wails Empty Hull)\n' +
+            '----------------------------------\n' +
+            'Status:    ' + hull.state.status + ' (' + hull.state.binding + ')\n' +
+            'Principal: ' + cfg.principal + '\n' +
+            'Local Hub: ' + cfg.baseUrl + '\n' +
+            'WT URL:    ' + cfg.webtransport + '\n' +
+            'WS URL:    ' + cfg.websocket + '\n' +
+            'Facets:    ' + (facets.join(', ') || '(none)') + '\n' +
+            (desktopInfo ? 'desktop.info(): ' + desktopInfo + '\n' : '') +
+            '\nNo web.modules configured yet — configure SPARROW_DESKTOP_CONFIG with rootKeys & peers/modulesDir to mount your app shell.';
+          rootEl.appendChild(pre);
+        }
+      }
+      const rootKeys = (cfg.rootKeys || []).map((hex) => cbor.fromHex(hex));
+      const hull = createHull({
+        baseUrl: cfg.baseUrl,
+        hostApi: '3.2.0',
+        rootKeys,
+        shared: { mount: document.getElementById('sparrow-root') },
+        snapshotStore: new IndexedDBSnapshotStore('sparrow-desktop'),
+        authorize: ({ headers }) => {
+          headers.Authorization = 'Bearer ' + cfg.token;
+        },
+      });
+      window.__sparrowHull = hull;
+      await hull.start();
+    }
+
+      boot().catch((err) => {
+        console.error('Sparrow desktop boot failed:', err);
+        const pre = document.createElement('pre');
+        pre.style.cssText = 'font-family:monospace;padding:16px;color:#b91c1c;white-space:pre-wrap;';
+        pre.textContent = String(err) + (err?.stack ? '\n' + err.stack : '');
+        document.body.appendChild(pre);
+      });
+    </script>
+  </body>
+</html>

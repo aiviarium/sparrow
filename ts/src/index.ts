@@ -49,8 +49,18 @@ export {
   type MetadataInit,
   type SessionOptions,
 } from './session.js';
-export { ConnClosedError, type CloseInfo, type Conn, type ConnHandlers } from './transport.js';
-export { memPair, type MemConnection } from './transport/mem.js';
+export { ConnClosedError, type CloseInfo, type Conn, type ConnHandlers, type Stream, type StreamCloseInfo, type StreamHandlers } from './transport.js';
+export { memLeasedPair, memPair, type MemConnection, type MemLeasedConnection } from './transport/mem.js';
 export { SUBPROTOCOL, connectWebSocket, webSocketConn, type WebSocketLike } from './transport/websocket.js';
+export {
+  connectWebTransport,
+  webTransportConn,
+  type ConnectWebTransportOptions,
+  type WebTransportBidiStreamLike,
+  type WebTransportConnOptions,
+  type WebTransportConstructor,
+  type WebTransportHash,
+  type WebTransportLike,
+} from './transport/webtransport.js';
 export type { Metadata, MetaKey, Params, Limits, Auth, GoAway, Hello, Welcome } from './wire.js';
 export { MetaKeys } from './wire.js';

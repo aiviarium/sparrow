@@ -22,6 +22,10 @@
       "types": "./dist/transport/websocket.d.ts",
       "default": "./dist/transport/websocket.js"
     },
+    "./webtransport": {
+      "types": "./dist/transport/webtransport.d.ts",
+      "default": "./dist/transport/webtransport.js"
+    },
     "./mem": {
       "types": "./dist/transport/mem.d.ts",
       "default": "./dist/transport/mem.js"

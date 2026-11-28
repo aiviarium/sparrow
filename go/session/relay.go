@@ -33,9 +33,12 @@ func ForwardRequest(in *ServerCall, facetID uint64, md wire.Metadata) RawRequest
 // caller, Cancel toward the callee).
 func Relay(ctx context.Context, in *ServerCall, out *ClientCall) error {
 	// The handler context ends when the caller cancels, but the relay must
-	// still carry the Cancel and the callee's answer: it runs until both
-	// calls have ended, which the session guarantees (give-up timers,
-	// session close).
+	// still carry the Cancel and the callee's final answer: it runs until
+	// both calls have ended, which the session guarantees (give-up timers,
+	// session close). Non-final data frames (Bytes, Item, Progress, Headers)
+	// use origCtx so a caller Cancel immediately unblocks any SendRaw stuck
+	// waiting for credit instead of deadlocking the relay.
+	origCtx := ctx
 	ctx = context.WithoutCancel(ctx)
 	in.SetManualCredit(true)
 	out.c.mu.Lock()
@@ -58,11 +61,18 @@ func Relay(ctx context.Context, in *ServerCall, out *ClientCall) error {
 				_ = out.Cancel(relayCode(err))
 				return
 			}
-			err = out.SendRaw(ctx, m.Raw)
+			sendCtx := ctx
+			if k, _, perr := wire.PeekCall(m.Raw); perr == nil && isNonFinal(k) {
+				sendCtx = origCtx
+			}
+			err = out.SendRaw(sendCtx, m.Raw)
 			in.Release(m)
 			if err != nil {
 				if errors.Is(err, ErrHalfClosed) || errors.Is(err, ErrCallEnded) {
 					continue // the callee finished first: input is discarded
+				}
+				if sendCtx == origCtx && origCtx.Err() != nil {
+					continue // caller cancelled while waiting for credit: read & forward Cancel next
 				}
 				setErr(err)
 				code := relayCode(err)
@@ -84,11 +94,18 @@ func Relay(ctx context.Context, in *ServerCall, out *ClientCall) error {
 				_ = in.Fail(&Error{Code: relayCode(err), Message: "relay: " + err.Error()})
 				return
 			}
-			err = in.SendRaw(ctx, m.Raw)
+			sendCtx := ctx
+			if k, _, perr := wire.PeekCall(m.Raw); perr == nil && isNonFinal(k) {
+				sendCtx = origCtx
+			}
+			err = in.SendRaw(sendCtx, m.Raw)
 			out.Release(m)
 			if err != nil {
 				if errors.Is(err, ErrHalfClosed) || errors.Is(err, ErrCallEnded) {
 					continue
+				}
+				if sendCtx == origCtx && origCtx.Err() != nil {
+					continue // caller cancelled while waiting for credit: drain until callee's final message
 				}
 				setErr(err)
 				code := relayCode(err)
@@ -100,6 +117,12 @@ func Relay(ctx context.Context, in *ServerCall, out *ClientCall) error {
 	}()
 	wg.Wait()
 	return firstErr
+}
+
+// isNonFinal reports whether k is a non-final data/metadata frame that may
+// safely be dropped when the caller has already cancelled the call.
+func isNonFinal(k wire.Kind) bool {
+	return k != wire.KindResponse && k != wire.KindEnd && k != wire.KindError && k != wire.KindCancel
 }
 
 // relayCode maps a failure on one hop to the status the other hop gets.
