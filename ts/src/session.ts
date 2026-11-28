@@ -31,7 +31,7 @@ import {
   type Delta,
 } from './schema.js';
 import { MAX_CORE_STATUS, Status, describeStatus, isCoreStatus, statusByName, statusName, truncateReason, type StatusName } from './status.js';
-import { ConnClosedError, type CloseInfo, type Conn } from './transport.js';
+import { ConnClosedError, type CloseInfo, type Conn, type Stream, type StreamCloseInfo } from './transport.js';
 import { Codec, type DynamicValue } from './value.js';
 import {
   CreditWindow,
@@ -77,6 +77,8 @@ export const SessionDefaults = {
   cancelBrokenMs: 30_000,
   gracePeriodMs: 30_000,
   lingerMs: 1_000,
+  leaseIdleMs: 30_000,
+  keepIdleStreams: 2,
   /** Shared-lane data the server buffers after Hello until the credential is verified (5.2). */
   preAuthLimit: 64 << 10,
   maxClientSchemaSize: 64 << 10,
@@ -374,9 +376,26 @@ interface TokenBuf {
   size: number;
 }
 
+interface LeasedLane {
+  stream: Stream;
+  opened: boolean;
+  current?: CallState;
+  writeClosed: boolean;
+  readClosed: boolean;
+  broken: boolean;
+  counted: boolean;
+  idleSince: number;
+  inPool: boolean;
+  awaitEnd: boolean;
+  awaitCallerEnd: number;
+  heldCall?: CallState;
+  resetTimer?: Timer;
+}
+
 /** @internal One call, from either side. */
 export class CallState {
   id = 0;
+  lane?: LeasedLane;
   facet?: Facet;
   service?: string;
   method?: Method;
@@ -456,6 +475,11 @@ export class Session {
   private calls = new Map<number, CallState>();
   private inOpen = 0;
   private outOpen = 0;
+  private outLeasedOpen = 0;
+  private inLeasedOpen = 0;
+  private idleLanes: LeasedLane[] = [];
+  private allLanes = new Set<LeasedLane>();
+  private shrinkTimer?: Timer;
   private slotWaiter = new Waiter();
   private local?: SchemaState;
   private peer?: SchemaState;
@@ -614,6 +638,9 @@ export class Session {
 
   private startConn(): void {
     this.conn.setReadLimit(this.localLimits.maxMessageSize);
+    if (this.conn.leases && this.conn.onStream) {
+      this.conn.onStream((st) => this.onIncomingStream(st));
+    }
     this.conn.start({
       message: (b) => this.onMessage(b),
       error: (e) => {
@@ -887,8 +914,21 @@ export class Session {
   // Writing
   // -------------------------------------------------------------------------
 
-  private write(b: Uint8Array): void {
+  private write(b: Uint8Array, lane?: LeasedLane): void {
     if (this.isClosed) throw this.closedError();
+    if (lane) {
+      if (lane.broken || lane.writeClosed) throw this.closedError();
+      try {
+        lane.stream.send(b);
+      } catch (e) {
+        if (e instanceof ConnClosedError) {
+          this.resetLane(lane, Status.unavailable, false);
+          throw this.closedError();
+        }
+        throw e;
+      }
+      return;
+    }
     try {
       this.conn.send(b);
     } catch (e) {
@@ -1142,9 +1182,9 @@ export class Session {
     this.write(encodeMessage({ kind: 6, status, expiresAt }));
   }
 
-  private trySend(m: Message): void {
+  private trySend(m: Message, lane?: LeasedLane): void {
     try {
-      this.write(encodeMessage(m));
+      this.write(encodeMessage(m), lane);
     } catch {
       // closed
     }
@@ -1318,6 +1358,24 @@ export class Session {
     for (const t of this.sessionTimers) this.clock.clearTimeout(t);
     this.sessionTimers.clear();
     if (this.idleTimer) this.clock.clearTimeout(this.idleTimer);
+    if (this.shrinkTimer) this.clock.clearTimeout(this.shrinkTimer);
+    this.shrinkTimer = undefined;
+    for (const lane of this.allLanes) {
+      if (lane.resetTimer) {
+        this.clock.clearTimeout(lane.resetTimer);
+        lane.resetTimer = undefined;
+      }
+      lane.heldCall = undefined;
+      lane.current = undefined;
+      lane.inPool = false;
+      if (!lane.broken && !lane.writeClosed) {
+        lane.broken = true;
+        lane.writeClosed = true;
+        lane.stream.reset(code);
+      }
+    }
+    this.idleLanes = [];
+    this.allLanes.clear();
     const ce = callErr ?? new SparrowError(Status.unavailable, `session closed: ${reason}`, undefined, { notDispatched });
     for (const c of [...this.calls.values()]) this.failCall(c, ce);
     this.calls.clear();
@@ -1341,7 +1399,7 @@ export class Session {
       throw new SparrowError(Status.message_too_large, `a message of ${b.length} bytes exceeds the peer's maxMessageSize ${this.peerLimits.maxMessageSize}`);
     }
     this.applySent(c, m.kind);
-    this.write(b);
+    this.write(b, c.lane);
     if (c.ended) this.endCall(c);
   }
 
@@ -1363,6 +1421,10 @@ export class Session {
         this.uncount(c);
         if (!c.callerDone) {
           this.calls.delete(c.id);
+          if (c.lane && !c.lane.opened) {
+            c.lane.awaitCallerEnd = c.id;
+            c.lane.current = undefined;
+          }
           c.ended = true;
         }
       }
@@ -1383,7 +1445,7 @@ export class Session {
           throw new SparrowError(Status.message_too_large, `a message of ${b.length} bytes exceeds the peer's maxMessageSize`);
         }
         c.sendWin.consume(n);
-        this.write(b);
+        this.write(b, c.lane);
         return;
       }
       await c.waiter.wait();
@@ -1398,10 +1460,10 @@ export class Session {
   private demand(c: CallState): void {
     if (c.recvInit !== 0 || c.demanded || c.peerHalfDone() || c.ended) return;
     c.demanded = true;
-    const g = this.localLimits.sharedCredit;
+    const g = c.lane ? this.localLimits.leaseCredit : this.localLimits.sharedCredit;
     c.recvInit = g;
     c.recvWin.grant(g);
-    this.trySend({ kind: 24, callId: c.id, amount: g });
+    this.trySend({ kind: 24, callId: c.id, amount: g }, c.lane);
   }
 
   private grant(c: CallState, n: number): void {
@@ -1412,7 +1474,7 @@ export class Session {
       const g = c.unacked;
       c.unacked = 0;
       c.recvWin.grant(g);
-      this.trySend({ kind: 24, callId: c.id, amount: g });
+      this.trySend({ kind: 24, callId: c.id, amount: g }, c.lane);
     }
   }
 
@@ -1659,7 +1721,11 @@ export class Session {
     if (this.calls.get(c.id) === c) this.calls.delete(c.id);
     for (const t of c.timers) this.clock.clearTimeout(t);
     c.timers = [];
-    this.uncount(c);
+    if (c.lane?.heldCall !== c) this.uncount(c);
+    if (c.lane) {
+      if (c.lane.current === c) c.lane.current = undefined;
+      if (c.lane.opened) this.releaseLane(c.lane);
+    }
     if (!c.caller && c.abort && !c.abort.signal.aborted) c.abort.abort(new SparrowError(Status.cancelled, 'the call ended'));
     c.wake();
     if (this.draining && this.calls.size === 0) this.drained();
@@ -1671,7 +1737,8 @@ export class Session {
     c.ended = true;
     for (const t of c.timers) this.clock.clearTimeout(t);
     c.timers = [];
-    this.uncount(c);
+    if (c.lane?.heldCall !== c) this.uncount(c);
+    if (c.lane && c.lane.current === c) c.lane.current = undefined;
     if (this.calls.get(c.id) === c) this.calls.delete(c.id);
     c.wake();
   }
@@ -1684,6 +1751,11 @@ export class Session {
       c.localErr ??= new SparrowError(c.cancelCode, 'no answer to Cancel');
       c.items = [];
       c.wake();
+      if (c.lane) {
+        // On a leased stream, abort our sending direction and drop the stream from the pool (4.2 rule 5, 7.5).
+        this.resetLane(c.lane, c.cancelCode, true);
+        return;
+      }
       // On the shared lane the call keeps counting until its final message; after cancelBrokenMs the peer is broken (7.5).
       const t2 = this.clock.setTimeout(() => {
         if (!c.ended && !c.calleeDone) this.fail(Status.protocol_error, 'a Cancel went unanswered for 30 s');
@@ -1691,6 +1763,262 @@ export class Session {
       c.timers.push(t2);
     }, giveUp);
     c.timers.push(t);
+  }
+
+  // -------------------------------------------------------------------------
+  // Leased streams (4.2, 4.3)
+  // -------------------------------------------------------------------------
+
+  private onIncomingStream(st: Stream): void {
+    if (this.isClosed) {
+      st.reset(Status.going_away);
+      return;
+    }
+    if (this.role === 'server' && !this.welcomeDone) {
+      st.reset(Status.protocol_error);
+      this.fail(Status.protocol_error, 'leased stream opened before Welcome');
+      return;
+    }
+    if (this.inLeasedOpen >= this.localLimits.maxStreams) {
+      st.resetWrite(Status.resource_exhausted);
+      st.setReadLimit(this.localLimits.maxMessageSize);
+      st.start({ message: () => {}, error: () => {}, close: () => {} });
+      this.log(`reset an extra leased stream (maxStreams ${this.localLimits.maxStreams})`);
+      return;
+    }
+    this.inLeasedOpen++;
+    const lane: LeasedLane = {
+      stream: st,
+      opened: false,
+      writeClosed: false,
+      readClosed: false,
+      broken: false,
+      counted: true,
+      idleSince: 0,
+      inPool: false,
+      awaitEnd: false,
+      awaitCallerEnd: 0,
+    };
+    this.allLanes.add(lane);
+    this.startLane(lane);
+  }
+
+  private startLane(lane: LeasedLane): void {
+    lane.stream.setReadLimit(this.localLimits.maxMessageSize);
+    lane.stream.start({
+      message: (b) => this.onLaneMessage(lane, b),
+      error: (e) => {
+        const code = e instanceof TooLargeError ? Status.message_too_large : Status.protocol_error;
+        this.resetLane(lane, code, true);
+      },
+      close: (info) => this.onLaneClose(lane, info),
+    });
+  }
+
+  private onLaneMessage(lane: LeasedLane, b: Uint8Array): void {
+    this.lastRecv = this.clock.now();
+    this.pingSent = false;
+    if (this.isClosed || lane.broken) return;
+    let m: Message;
+    try {
+      m = decodeMessage(b);
+    } catch (e) {
+      if (e instanceof UnknownKindError && e.action === 'ignore') return;
+      this.resetLane(lane, Status.protocol_error, true);
+      return;
+    }
+    if (m.kind < 16) {
+      this.fail(Status.protocol_error, 'control message on a leased stream');
+      return;
+    }
+    if (m.kind === 16) {
+      if (m.callId === NOTIFICATION_ID) {
+        this.resetLane(lane, Status.protocol_error, true);
+        return;
+      }
+      if (lane.current || lane.awaitCallerEnd !== 0) {
+        this.fail(Status.protocol_error, 'Request on a leased stream that is not idle');
+        return;
+      }
+      this.onRequest(m, b, lane);
+      return;
+    }
+    const cm = m as CallMessage;
+    if (!lane.current) {
+      if (!lane.opened && lane.awaitCallerEnd === cm.callId && (cm.kind === 19 || cm.kind === 23)) {
+        lane.awaitCallerEnd = 0;
+      }
+      return;
+    }
+    if (lane.current.id !== cm.callId) return;
+    this.deliver(cm, b);
+  }
+
+  private onLaneClose(lane: LeasedLane, info: StreamCloseInfo): void {
+    if (lane.awaitEnd) {
+      lane.readClosed = true;
+      this.laneClosed(lane);
+      return;
+    }
+    if (info.reset) {
+      const c = lane.current;
+      lane.readClosed = true;
+      lane.writeClosed = true;
+      lane.broken = true;
+      lane.current = undefined;
+      if (c) {
+        this.failCall(c, new SparrowError(info.code, 'stream reset', undefined, { remote: info.remote }));
+      }
+      if (!lane.opened) this.laneClosed(lane);
+      lane.stream.resetWrite(info.code);
+      this.laneClosed(lane);
+      return;
+    }
+    const c = lane.current;
+    lane.readClosed = true;
+    if (c) lane.broken = true;
+    const needClose = !lane.writeClosed;
+    lane.writeClosed = true;
+    if (c) {
+      this.failCall(c, new SparrowError(Status.unavailable, 'stream finished during the call'));
+    }
+    if (needClose && !lane.opened) this.laneClosed(lane);
+    if (needClose) {
+      if (c) lane.stream.resetWrite(Status.unavailable);
+      else lane.stream.closeWrite();
+    }
+    this.laneClosed(lane);
+  }
+
+  private laneClosed(lane: LeasedLane): void {
+    if (lane.resetTimer) {
+      this.clock.clearTimeout(lane.resetTimer);
+      lane.resetTimer = undefined;
+    }
+    this.allLanes.delete(lane);
+    if (!lane.counted) return;
+    lane.counted = false;
+    if (lane.heldCall) {
+      const c = lane.heldCall;
+      lane.heldCall = undefined;
+      this.uncount(c);
+    }
+    if (lane.opened) {
+      this.outLeasedOpen--;
+      this.removeIdle(lane);
+    } else {
+      this.inLeasedOpen--;
+    }
+  }
+
+  private removeIdle(lane: LeasedLane): void {
+    if (!lane.inPool) return;
+    const idx = this.idleLanes.indexOf(lane);
+    if (idx >= 0) this.idleLanes.splice(idx, 1);
+    lane.inPool = false;
+  }
+
+  private resetLane(lane: LeasedLane, code: number, failCall: boolean): void {
+    const c = lane.current;
+    const already = lane.broken && lane.readClosed && lane.writeClosed;
+    const wasWriteClosed = lane.writeClosed;
+    lane.broken = true;
+    lane.writeClosed = true;
+    lane.current = undefined;
+    const half = !already && !lane.readClosed;
+    if (c && c.caller && lane.opened && c.counted) {
+      // Keep the call counted as long as the stream (7.5).
+      lane.heldCall = c;
+    }
+    if (half && lane.opened) {
+      lane.awaitEnd = true;
+    } else if (!half) {
+      lane.readClosed = true;
+    }
+    if (lane.opened) {
+      this.removeIdle(lane);
+    } else {
+      this.laneClosed(lane);
+    }
+    if (half && !wasWriteClosed) {
+      lane.stream.resetWrite(code);
+    } else if (!half && !already) {
+      lane.stream.reset(code);
+    }
+    if (c && failCall) {
+      this.failCall(c, new SparrowError(code, 'stream reset'));
+    }
+    if (half && lane.opened) {
+      const wait = this.opts.cancelGiveUpMs ?? SessionDefaults.cancelGiveUpMs;
+      lane.resetTimer = this.clock.setTimeout(() => {
+        lane.resetTimer = undefined;
+        this.laneClosed(lane);
+      }, wait);
+      return;
+    }
+    this.laneClosed(lane);
+  }
+
+  private async acquireLane(): Promise<LeasedLane | undefined> {
+    if (!this.conn.leases || !this.conn.openStream || this.isClosed) return undefined;
+    while (this.idleLanes.length > 0) {
+      const l = this.idleLanes.pop()!;
+      l.inPool = false;
+      if (!l.broken && !l.writeClosed) return l;
+    }
+    if (this.outLeasedOpen >= this.peerLimits.maxStreams) return undefined;
+    this.outLeasedOpen++;
+    let st: Stream;
+    try {
+      st = await this.conn.openStream();
+    } catch {
+      this.outLeasedOpen--;
+      return undefined;
+    }
+    const lane: LeasedLane = {
+      stream: st,
+      opened: true,
+      writeClosed: false,
+      readClosed: false,
+      broken: false,
+      counted: true,
+      idleSince: 0,
+      inPool: false,
+      awaitEnd: false,
+      awaitCallerEnd: 0,
+    };
+    this.allLanes.add(lane);
+    this.startLane(lane);
+    return lane;
+  }
+
+  private releaseLane(lane: LeasedLane): void {
+    lane.current = undefined;
+    if (!lane.opened || lane.broken || lane.writeClosed || this.isClosed) return;
+    lane.idleSince = this.clock.now();
+    lane.inPool = true;
+    this.idleLanes.push(lane);
+    this.armShrink();
+  }
+
+  private armShrink(): void {
+    if (this.shrinkTimer || this.isClosed) return;
+    const idle = SessionDefaults.leaseIdleMs;
+    this.shrinkTimer = this.clock.setTimeout(() => {
+      this.shrinkTimer = undefined;
+      if (this.isClosed) return;
+      const now = this.clock.now();
+      while (this.idleLanes.length > SessionDefaults.keepIdleStreams) {
+        const l = this.idleLanes[0];
+        if (now - l.idleSince < idle) break;
+        this.idleLanes.shift();
+        l.inPool = false;
+        l.writeClosed = true;
+        l.stream.closeWrite();
+      }
+      if (this.idleLanes.length > SessionDefaults.keepIdleStreams) this.armShrink();
+    }, Math.max(1, Math.floor(idle / 2)));
+    (this.shrinkTimer as { unref?: () => void }).unref?.();
   }
 
   // -------------------------------------------------------------------------
@@ -1704,7 +2032,7 @@ export class Session {
     return { facet: f, method: m?.method, service: m?.service.name };
   }
 
-  private onRequest(r: Request, b: Uint8Array): void {
+  private onRequest(r: Request, b: Uint8Array, lane?: LeasedLane): void {
     void b;
     if (this.role === 'server' && this.goAwaySent && !this.readyDone) return; // a rejected optimistic start dispatches nothing (5.3)
     const { facet, method, service } = this.lookupLocal(r.facetId, r.methodId);
@@ -1722,10 +2050,13 @@ export class Session {
       this.fail(Status.protocol_error, 'Request for a call ID that is open');
       return;
     }
-    const sendInit = initialCredit(this.peerLimits, false, metaCredit(r.metadata));
-    const recvInit = initialCredit(this.localLimits, false);
+    const leased = lane !== undefined;
+    const sendInit = initialCredit(this.peerLimits, leased, metaCredit(r.metadata));
+    const recvInit = initialCredit(this.localLimits, leased);
     const c = new CallState(false, r.facetId, r.methodId, flags, sendInit, recvInit);
     c.id = r.callId;
+    c.lane = lane;
+    if (lane) lane.current = c;
     c.facet = facet;
     c.method = method;
     c.service = service;
@@ -1938,7 +2269,7 @@ export class Session {
       if (c.sentTokens.size >= SessionDefaults.maxTokens) throw new SparrowError(Status.resource_exhausted, 'a sender may open at most 64 byte tokens per call');
       c.sentTokens.add(token);
     }
-    const chunk = Math.min(SessionDefaults.sharedChunk, this.peerLimits.maxMessageSize - 64);
+    const chunk = Math.min(c.lane ? 64 << 10 : SessionDefaults.sharedChunk, this.peerLimits.maxMessageSize - 64);
     let off = 0;
     do {
       const part = data.subarray(off, Math.min(data.length, off + chunk));
@@ -2035,11 +2366,38 @@ export class Session {
       }
       this.sentPreWelcome += raw.length + 64;
     }
+    this.outOpen++;
+    const canLease =
+      this.conn.leases === true &&
+      (this.role === 'client' ? this.welcomeDone : this.readyDone) &&
+      !(m.flags & 0x4) &&
+      !(this.optimistic && !this.welcomeDone);
+    let lane: LeasedLane | undefined;
+    try {
+      if (canLease) {
+        lane = await this.acquireLane();
+      }
+      if (this.isClosed) {
+        const g = this.goAwayRecv;
+        const e = g ? new SparrowError(g.status, g.reason, undefined, { remote: true }) : this.closedError();
+        e.notDispatched = true;
+        throw e;
+      }
+      if (this.draining) throw new SparrowError(Status.going_away, 'the session is shutting down', undefined, { notDispatched: true });
+      if (opts.signal?.aborted) throw new SparrowError(Status.cancelled, 'cancelled', undefined, { notDispatched: true });
+    } catch (e) {
+      this.outOpen--;
+      this.slotWaiter.wake();
+      if (lane) this.releaseLane(lane);
+      throw e;
+    }
     const md = toMetadata(opts.metadata);
     if (opts.credit !== undefined) md.set(MetaKeys.credit, opts.credit);
     if (opts.timeoutMs !== undefined && !md.has(MetaKeys.deadline)) md.set(MetaKeys.deadline, Math.max(0, Math.ceil(opts.timeoutMs)));
-    const recvInit = metaCredit(md) ?? initialCredit(this.localLimits, false);
-    const c = new CallState(true, f.id, m.id, m.flags, initialCredit(this.peerLimits, false), recvInit);
+    const leased = lane !== undefined;
+    const recvInit = metaCredit(md) ?? initialCredit(this.localLimits, leased);
+    const c = new CallState(true, f.id, m.id, m.flags, initialCredit(this.peerLimits, leased), recvInit);
+    c.lane = lane;
     c.facet = f;
     c.method = m;
     c.codec = codec;
@@ -2047,20 +2405,22 @@ export class Session {
     c.onProgress = opts.onProgress;
     c.onHeaders = opts.onHeaders;
     c.counted = true;
-    this.outOpen++;
     c.id = this.nextId;
     this.nextId += 2;
     if (!c.inputEnds) c.callerDone = true;
     const b = encodeMessage({ kind: 16, callId: c.id, facetId: f.id, methodId: m.id, metadata: md, input: raw });
     if (b.length > this.peerLimits.maxMessageSize) {
       this.uncount(c);
+      if (lane) this.releaseLane(lane);
       throw new SparrowError(Status.message_too_large, `a Request of ${b.length} bytes exceeds the peer's maxMessageSize`, undefined, { notDispatched: true });
     }
+    if (lane) lane.current = c;
     this.calls.set(c.id, c);
     try {
-      this.write(b);
+      this.write(b, lane);
     } catch (e) {
       this.failCall(c, asSparrowError(e));
+      if (lane) this.resetLane(lane, Status.unavailable, false);
       throw e;
     }
     return c;
